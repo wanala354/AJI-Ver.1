@@ -1,0 +1,7 @@
+# Ignore everything by default
+**
+
+# Whitelist Google Apps Script production files
+!Code.js
+!index.html
+!appsscript.json
