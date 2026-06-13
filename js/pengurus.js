@@ -73,10 +73,14 @@
            availableJamaah = availableJamaah.filter(j => j.kelompokPengajian === currentUser.kelompok);
         }
         
-        const selectJamaah = document.getElementById('pengurus-jamaah-id');
-        selectJamaah.innerHTML = '<option value="">-- Pilih Jamaah --</option>';
+        const inputJamaah = document.getElementById('pengurus-jamaah-id');
+        const listJamaah = document.getElementById('pengurus-jamaah-id-list');
+        inputJamaah.value = '';
+        listJamaah.innerHTML = '';
         availableJamaah.forEach(j => { 
-          selectJamaah.innerHTML += `<option value="${j.id}">${j.namaLengkap} (${j.kelompokPengajian})</option>`; 
+          const opt = document.createElement('option');
+          opt.value = `${j.namaLengkap} (${j.id})`;
+          listJamaah.appendChild(opt);
         });
         
         const selectDapuan = document.getElementById('pengurus-dapuan');
@@ -110,14 +114,17 @@
         
         document.getElementById('pengurusModalTitle').innerHTML = '<i class="fa-solid fa-pen"></i> Edit Pengurus';
         document.getElementById('pengurus-id').value = p.id;
-        document.getElementById('pengurus-jamaah-id').value = p.jamaah_id;
+        const j = getJamaahList().find(x => x.id === p.jamaah_id);
+        document.getElementById('pengurus-jamaah-id').value = j ? `${j.namaLengkap} (${j.id})` : "";
         document.getElementById('pengurus-tingkat').value = p.tingkat_pengurus;
         document.getElementById('pengurus-dapuan').value = p.dapuan;
       }
 
       function savePengurus() {
         const id = document.getElementById('pengurus-id').value;
-        const jId = document.getElementById('pengurus-jamaah-id').value;
+        const rawVal = document.getElementById('pengurus-jamaah-id').value;
+        const match = rawVal.match(/\((J-\d+)\)/);
+        const jId = match ? match[1] : null;
         const tingkat = document.getElementById('pengurus-tingkat').value;
         const dapuan = document.getElementById('pengurus-dapuan').value;
         

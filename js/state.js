@@ -18,6 +18,11 @@
     let localMasterDapuan = [];
     let localMasterPekerjaan = [];
     let localMasterHubungan = [];
+    let localMasterMateri = [];
+    let localMasterPengajar = [];
+    let localMasterJenisPengajian = [];
+    let localJadwalPengajian = [];
+    let localPresensiKehadiran = [];
 
     // Pagination & View state
     let currentPage = 1;

@@ -6,6 +6,8 @@
       if (activeMasterTab === "Dapuan") return localMasterDapuan;
       if (activeMasterTab === "Pekerjaan") return localMasterPekerjaan;
       if (activeMasterTab === "Status Hubungan Keluarga") return localMasterHubungan;
+      if (activeMasterTab === "Materi Pengajian") return localMasterMateri;
+      if (activeMasterTab === "Jenis Pengajian") return localMasterJenisPengajian;
       return [];
     }
 
@@ -13,23 +15,112 @@
       const tbody = document.getElementById("table-master-body");
       tbody.innerHTML = "";
       
+      const thead = document.querySelector("#table-master thead");
+      if (activeMasterTab === "Pengajar") {
+        thead.innerHTML = `
+          <tr>
+            <th>ID Pengajar</th>
+            <th>Nama Jamaah</th>
+            <th>Kelompok</th>
+            <th style="width: 150px; text-align:center;">Aksi</th>
+          </tr>
+        `;
+      } else if (activeMasterTab === "Jenis Pengajian") {
+        thead.innerHTML = `
+          <tr>
+            <th>Nama Opsi</th>
+            <th>Peserta Pengajian (Peramutan)</th>
+            <th style="width: 150px; text-align:center;">Aksi</th>
+          </tr>
+        `;
+      } else {
+        thead.innerHTML = `
+          <tr>
+            <th>Nama Opsi</th>
+            <th style="width: 150px; text-align:center;">Aksi</th>
+          </tr>
+        `;
+      }
+      
+      if (activeMasterTab === "Pengajar") {
+        const list = getMasterPengajarList() || [];
+        const jamaahList = getJamaahList() || [];
+        const curUser = getCurrentUser();
+        const isAdmin = curUser && curUser.role.trim().toLowerCase() === "admin";
+        
+        // Filter list based on operator kelompok (only show teachers belonging to their kelompok)
+        let displayList = list;
+        if (!isAdmin && curUser && curUser.role.trim().toLowerCase() === "operator kelompok") {
+          const targetKelompok = curUser.kelompok;
+          displayList = list.filter(item => {
+            const j = jamaahList.find(j => j.id === item.id_jamaah);
+            return j && j.kelompokPengajian === targetKelompok;
+          });
+        }
+        
+        if (displayList.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 20px; color: var(--text-secondary);">Tidak ada opsi master.</td></tr>`;
+          return;
+        }
+        
+        displayList.forEach(item => {
+          const j = jamaahList.find(jamaah => jamaah.id === item.id_jamaah);
+          const nama = j ? j.namaLengkap : `[ID Jamaah: ${item.id_jamaah}]`;
+          const kelompok = j ? j.kelompokPengajian : "-";
+          
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td><strong>P-${String(item.id_pengajar).padStart(3, '0')}</strong></td>
+            <td>${nama}</td>
+            <td>${kelompok}</td>
+            <td style="text-align:center;">
+              <div class="action-btns" style="justify-content:center;">
+                <button class="btn-icon delete" data-id="${item.id_pengajar}" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+              </div>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+        
+        tbody.querySelectorAll(".btn-icon.delete").forEach(btn => {
+          btn.addEventListener("click", () => deletePengajarItem(btn.getAttribute("data-id")));
+        });
+        return;
+      }
+      
       const list = getSelectedMasterList();
       if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="2" style="text-align: center; padding: 20px; color: var(--text-secondary);">Tidak ada opsi master.</td></tr>`;
+        const cols = activeMasterTab === "Jenis Pengajian" ? 3 : 2;
+        tbody.innerHTML = `<tr><td colspan="${cols}" style="text-align: center; padding: 20px; color: var(--text-secondary);">Tidak ada opsi master.</td></tr>`;
         return;
       }
 
       list.forEach(item => {
         const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td><strong>${item}</strong></td>
-          <td style="text-align:center;">
-            <div class="action-btns" style="justify-content:center;">
-              <button class="btn-icon edit" data-name="${item}" title="Edit"><i class="fa-solid fa-pen"></i></button>
-              <button class="btn-icon delete" data-name="${item}" title="Hapus"><i class="fa-solid fa-trash"></i></button>
-            </div>
-          </td>
-        `;
+        if (activeMasterTab === "Jenis Pengajian") {
+          const nama = typeof item === 'object' ? item.nama : item;
+          const peserta = typeof item === 'object' ? (item.peserta_pengajian || '-') : '-';
+          tr.innerHTML = `
+            <td><strong>${nama}</strong></td>
+            <td>${peserta}</td>
+            <td style="text-align:center;">
+              <div class="action-btns" style="justify-content:center;">
+                <button class="btn-icon edit" data-name="${nama}" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                <button class="btn-icon delete" data-name="${nama}" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+              </div>
+            </td>
+          `;
+        } else {
+          tr.innerHTML = `
+            <td><strong>${item}</strong></td>
+            <td style="text-align:center;">
+              <div class="action-btns" style="justify-content:center;">
+                <button class="btn-icon edit" data-name="${item}" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                <button class="btn-icon delete" data-name="${item}" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+              </div>
+            </td>
+          `;
+        }
         tbody.appendChild(tr);
       });
 
@@ -46,7 +137,36 @@
       const modal = document.getElementById("master-modal");
       const title = document.getElementById("master-modal-title");
       const input = document.getElementById("master-form-input");
+      const pesertaContainer = document.getElementById("master-form-peserta-container");
+      const pesertaSelect = document.getElementById("master-form-peserta");
       document.getElementById("master-form-old-name").value = name || "";
+      
+      if (pesertaSelect) {
+        for (let i = 0; i < pesertaSelect.options.length; i++) {
+          pesertaSelect.options[i].selected = false;
+        }
+      }
+      
+      if (activeMasterTab === "Jenis Pengajian") {
+        if (pesertaContainer) pesertaContainer.style.display = "block";
+        if (pesertaSelect) pesertaSelect.required = true;
+        
+        if (name) {
+          const list = getSelectedMasterList();
+          const item = list.find(x => (typeof x === 'object' ? x.nama : x) === name);
+          if (item && typeof item === 'object' && item.peserta_pengajian) {
+            const currentPeserta = item.peserta_pengajian.split(",").map(p => p.trim());
+            for (let i = 0; i < pesertaSelect.options.length; i++) {
+              if (currentPeserta.includes(pesertaSelect.options[i].value)) {
+                pesertaSelect.options[i].selected = true;
+              }
+            }
+          }
+        }
+      } else {
+        if (pesertaContainer) pesertaContainer.style.display = "none";
+        if (pesertaSelect) pesertaSelect.required = false;
+      }
       
       if (name) {
         title.innerHTML = `<i class="fa-solid fa-pen"></i> Edit Opsi ${activeMasterTab}`;
@@ -77,6 +197,92 @@
             showToast("Gagal menghapus opsi master: " + err.message, "error");
           })
           .deleteMasterItemGAS(activeMasterTab, name, curUser.username);
+      }
+    }
+
+    function openPengajarMasterModal() {
+      const modal = document.getElementById("pengajar-master-modal");
+      const input = document.getElementById("pengajar-master-jamaah-select");
+      const list = document.getElementById("pengajar-master-jamaah-select-list");
+      
+      input.value = "";
+      list.innerHTML = "";
+      
+      const teacherJamaahIds = new Set((getMasterPengajarList() || []).map(p => p.id_jamaah));
+      const candidates = (getJamaahList() || []).filter(j => !teacherJamaahIds.has(j.id));
+      
+      candidates.forEach(j => {
+        const opt = document.createElement("option");
+        opt.value = `${j.namaLengkap} (${j.id})`;
+        list.appendChild(opt);
+      });
+      
+      modal.classList.add("active");
+    }
+    
+    function closePengajarMasterModal() {
+      document.getElementById("pengajar-master-modal").classList.remove("active");
+      document.getElementById("pengajar-master-form").reset();
+    }
+    
+    function savePengajarMasterForm(e) {
+      e.preventDefault();
+      const curUser = getCurrentUser();
+      const rawVal = document.getElementById("pengajar-master-jamaah-select").value;
+      const match = rawVal.match(/\((J-\d+)\)/);
+      const jamaahId = match ? match[1] : null;
+      if (!jamaahId) {
+        showToast("Pilih jamaah terlebih dahulu!", "warning");
+        return;
+      }
+      
+      const saveBtn = document.getElementById("pengajar-master-modal-save-btn");
+      const oldHtml = saveBtn.innerHTML;
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...`;
+      
+      const payload = {
+        id_jamaah: jamaahId
+      };
+      
+      saveMasterPengajar(payload, curUser ? curUser.username : null, function(saved) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = oldHtml;
+        closePengajarMasterModal();
+        showToast("Pengajar baru berhasil ditambahkan!", "success");
+        renderMasterTable();
+      }, function(err) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = oldHtml;
+        showToast("Gagal menyimpan pengajar: " + err.message, "error");
+      });
+    }
+    
+    function deletePengajarItem(id_pengajar) {
+      const curUser = getCurrentUser();
+      const item = (getMasterPengajarList() || []).find(p => p.id_pengajar == id_pengajar);
+      if (!item) return;
+      const jamaah = (getJamaahList() || []).find(j => j.id === item.id_jamaah);
+      const name = jamaah ? jamaah.namaLengkap : item.id_jamaah;
+      
+      if (confirm(`Apakah Anda yakin ingin menghapus "${name}" dari Daftar Pengajar?`)) {
+        const deleteBtn = document.querySelector(`.btn-icon.delete[data-id="${id_pengajar}"]`);
+        const oldHtml = deleteBtn ? deleteBtn.innerHTML : "";
+        if (deleteBtn) {
+          deleteBtn.disabled = true;
+          deleteBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i>`;
+        }
+        
+        deleteMasterPengajar(id_pengajar, curUser ? curUser.username : null, function() {
+          showToast(`Pengajar "${name}" berhasil dihapus!`, "success");
+          renderMasterTable();
+        }, function(err) {
+          if (deleteBtn) {
+            deleteBtn.disabled = false;
+            deleteBtn.innerHTML = oldHtml;
+          }
+          showToast("Gagal menghapus pengajar: " + err.message, "error");
+        });
       }
     }
 

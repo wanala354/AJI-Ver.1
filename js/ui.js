@@ -708,7 +708,9 @@
         }
         
         const relationship = document.getElementById("form-hubungan").value;
-        const kkId = document.getElementById("form-kepala-keluarga").value;
+        const kkValue = document.getElementById("form-kepala-keluarga").value;
+        const kkMatch = kkValue.match(/\((J-\d+)\)/);
+        const kkId = kkMatch ? kkMatch[1] : null;
         if (relationship !== "Kepala Keluarga" && !kkId) {
           showToast("Hubungan Anggota Keluarga wajib mengaitkan Kepala Keluarga!", "warning");
           return;
@@ -759,7 +761,13 @@
       });
 
       // Master Save triggers
-      document.getElementById("btn-add-master").addEventListener("click", () => openMasterModal());
+      document.getElementById("btn-add-master").addEventListener("click", () => {
+        if (activeMasterTab === "Pengajar") {
+          openPengajarMasterModal();
+        } else {
+          openMasterModal();
+        }
+      });
       document.getElementById("master-modal-close-btn").addEventListener("click", closeMasterModal);
       document.getElementById("master-modal-cancel-btn").addEventListener("click", closeMasterModal);
       
@@ -767,6 +775,20 @@
         e.preventDefault();
         const curUser = getCurrentUser();
         const value = document.getElementById("master-form-input").value.trim();
+        
+        let pesertaValue = "";
+        if (activeMasterTab === "Jenis Pengajian") {
+          const selectEl = document.getElementById("master-form-peserta");
+          if (selectEl) {
+            const selected = [];
+            for (let i = 0; i < selectEl.options.length; i++) {
+              if (selectEl.options[i].selected) {
+                selected.push(selectEl.options[i].value);
+              }
+            }
+            pesertaValue = selected.join(", ");
+          }
+        }
         
         const saveBtn = document.getElementById("master-modal-save-btn");
         saveBtn.disabled = true;
@@ -787,7 +809,7 @@
             saveBtn.innerHTML = `<i class="fa-solid fa-save"></i> Simpan`;
             showToast("Gagal menyimpan opsi master: " + err.message, "error");
           })
-          .saveMasterItemGAS(activeMasterTab, editingMasterName, value, curUser.username);
+          .saveMasterItemGAS(activeMasterTab, editingMasterName, value, curUser.username, pesertaValue);
       });
 
       // User Modal triggers
@@ -946,6 +968,7 @@
         "section-master": { title: "Pengaturan Data Master", icon: "fa-folder-tree" },
         "section-users": { title: "Manajemen Akun Pengguna", icon: "fa-users-gear" },
         "section-pengurus": { title: "Manajemen Data Pengurus", icon: "fa-sitemap" },
+        "section-pengajian": { title: "Manajemen Pengajian", icon: "fa-book-open-reader" },
         "section-profile": { title: "Profil Saya & Keamanan", icon: "fa-user-circle" },
         "section-database-settings": { title: "Koneksi Database Supabase", icon: "fa-database" },
         "section-audit": { title: "Riwayat Aktivitas & Audit Logs", icon: "fa-history" }
@@ -970,6 +993,8 @@
       } else if (sectionId === "section-pengurus") { 
         populateKelompokFilterPengurus();
         renderPengurusTable();
+      } else if (sectionId === "section-pengajian") {
+        if (typeof initPengajianModule === 'function') initPengajianModule();
       } else if (sectionId === "section-users") {
         renderUsersTable();
       } else if (sectionId === "section-database-settings") {

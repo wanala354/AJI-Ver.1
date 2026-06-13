@@ -223,7 +223,9 @@
           document.getElementById("form-peramutan").value = item.kelompokPeramutan;
           document.getElementById("form-hubungan").value = item.statusHubunganKeluarga;
           
-          document.getElementById("form-kepala-keluarga").value = item.kepalaKeluargaId || "";
+          const kkId = item.kepalaKeluargaId;
+          const kkItem = getJamaahList().find(j => j.id === kkId);
+          document.getElementById("form-kepala-keluarga").value = kkItem ? `${kkItem.namaLengkap} (${kkItem.id})` : "";
           document.getElementById("form-hp").value = item.nomorHp || "";
           document.getElementById("form-pendidikan").value = item.tingkatPendidikan;
           document.getElementById("form-pekerjaan").value = item.pekerjaanUtama;
@@ -306,17 +308,17 @@
     }
 
     function populateFormKKDropdown(kelompokPengajian) {
-      const kkSelect = document.getElementById("form-kepala-keluarga");
-      kkSelect.innerHTML = `<option value="" disabled selected>-- Pilih Kepala Keluarga --</option>`;
+      const kkListEl = document.getElementById("form-kepala-keluarga-list");
+      if (!kkListEl) return;
+      kkListEl.innerHTML = "";
       
       const kkList = getKepalaKeluargaList();
       const filteredKK = kkList.filter(kk => kk.kelompokPengajian === kelompokPengajian && kk.id !== editingJamaahId);
       
       filteredKK.forEach(kk => {
         const opt = document.createElement("option");
-        opt.value = kk.id;
-        opt.textContent = `${kk.namaLengkap} (${kk.id})`;
-        kkSelect.appendChild(opt);
+        opt.value = `${kk.namaLengkap} (${kk.id})`;
+        kkListEl.appendChild(opt);
       });
     }
 
