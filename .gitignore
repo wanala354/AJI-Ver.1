@@ -1,0 +1,10 @@
+node_modules/
+.env
+*.cjs
+temp.js
+test_form.js
+mockData.js
+.clasp.json
+appsscript.json
+.claspignore
+*.py
