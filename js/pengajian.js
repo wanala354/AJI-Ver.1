@@ -240,9 +240,10 @@ function populateJadwalJenisDropdown(selectedVal = "") {
   const list = typeof getMasterJenisPengajianList === 'function' ? getMasterJenisPengajianList() : (typeof localMasterJenisPengajian !== 'undefined' ? localMasterJenisPengajian : []);
   list.forEach(item => {
     const opt = document.createElement("option");
-    opt.value = item;
-    opt.textContent = item;
-    if (selectedVal && item.toLowerCase() === selectedVal.toLowerCase()) {
+    const val = typeof item === 'object' ? item.nama : item;
+    opt.value = val;
+    opt.textContent = val;
+    if (selectedVal && val.toLowerCase() === selectedVal.toLowerCase()) {
       opt.selected = true;
     }
     select.appendChild(opt);
