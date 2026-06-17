@@ -1,6 +1,6 @@
 
     /* ----------------------------------------------------
-       AJI v2.0 - MODERN GREEN THEME DESIGN SYSTEM
+       AJI V.1 - MODERN GREEN THEME DESIGN SYSTEM
        ---------------------------------------------------- */
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
@@ -700,25 +700,41 @@
     }
 
     .select-filter {
-      padding: 10px 12px;
-      background: var(--bg-card);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
+      padding: 10px 38px 10px 14px;
+      background-color: rgba(16, 185, 129, 0.04);
+      background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2310b981' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      background-size: 15px;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      border-radius: 10px;
       color: var(--text-primary);
       font-size: 0.9rem;
+      font-weight: 500;
       outline: none;
       cursor: pointer;
-      transition: border-color var(--transition-speed);
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    }
+
+    .select-filter:hover {
+      background-color: rgba(16, 185, 129, 0.08);
+      border-color: rgba(16, 185, 129, 0.45);
     }
 
     .select-filter:focus {
       border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
     }
 
     .select-filter option {
-      background: var(--bg-sidebar);
+      background-color: #0b1a13;
       color: #fff;
     }
+
 
     .btn-primary {
       background: var(--primary);
@@ -1876,9 +1892,62 @@ body.light-theme .calendar-cell.next-month {
   box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 
+/* Sidebar submenu styles */
+.sidebar-menu .submenu {
+  list-style: none;
+  padding-left: 20px;
+  margin: 5px 0 5px 15px;
+  display: none;
+  border-left: 1.5px solid rgba(16, 185, 129, 0.2);
+}
+
+.sidebar-menu .menu-item.open .submenu,
+.sidebar-menu .menu-item.active .submenu {
+  display: block;
+}
+
+.sidebar-menu .submenu-item {
+  margin: 4px 0;
+}
+
+.sidebar-menu .submenu-item a {
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.sidebar-menu .submenu-item a:hover {
+  color: var(--primary);
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.sidebar-menu .submenu-item.active a {
+  color: #ffffff;
+  background: var(--primary);
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+}
+
+.submenu-arrow {
+  margin-left: auto;
+  font-size: 0.8rem;
+  transition: transform 0.3s ease;
+}
+
+.menu-item.open .submenu-arrow {
+  transform: rotate(180deg);
+}
+
 /* Responsive calendar */
 @media (max-width: 768px) {
   .calendar-container {
+    min-width: 700px;
     font-size: 0.75rem;
   }
   .calendar-cell {
@@ -1894,4 +1963,172 @@ body.light-theme .calendar-cell.next-month {
     padding: 2px 4px;
   }
 }
+
+/* Session Selection Cards styling */
+.sessions-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.session-card {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+/* Unselected (tidak terseleksi) card backgrounds */
+.session-card.tingkat-kelompok:not(.active) {
+  background: #064e3b; /* Hijau Gelap */
+  color: #f0fdf4;
+  border-color: #047857;
+}
+
+.session-card.tingkat-desa:not(.active) {
+  background: #1e3a8a; /* Biru Tua */
+  color: #eff6ff;
+  border-color: #1d4ed8;
+}
+
+.session-card.tingkat-daerah:not(.active) {
+  background: #7c2d12; /* Orange Gelap */
+  color: #fff7ed;
+  border-color: #c2410c;
+}
+
+/* Ensure text inside unselected cards is highly readable */
+.session-card:not(.active) .session-info-row {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.session-card:not(.active) .session-info-row i {
+  color: #ffffff !important;
+}
+
+.session-card:not(.active) .session-type {
+  color: #ffffff !important;
+}
+
+.session-card:not(.active) .session-materi-item {
+  color: #ffffff !important;
+}
+
+.session-card:not(.active) .session-ustadz {
+  color: rgba(255, 255, 255, 0.75) !important;
+}
+
+/* Badges inside unselected cards */
+.session-card:not(.active) .session-badge.badge-tingkat-kelompok {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.session-card:not(.active) .session-badge.badge-tingkat-desa {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.session-card:not(.active) .session-badge.badge-tingkat-daerah {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.session-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: #94a3b8;
+  transition: width 0.2s ease;
+}
+
+.session-card.tingkat-kelompok::before {
+  background: #10b981;
+}
+
+.session-card.tingkat-desa::before {
+  background: #3b82f6;
+}
+
+.session-card.tingkat-daerah::before {
+  background: #f97316;
+}
+
+.session-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(16, 185, 129, 0.08);
+}
+
+body.dark-theme .session-card:hover {
+  box-shadow: 0 8px 16px rgba(16, 185, 129, 0.15);
+}
+
+/* Active (terseleksi) cards */
+.session-card.active {
+  border-color: #10b981;
+  background: #ffffff;
+  color: var(--text-primary);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+}
+
+body.dark-theme .session-card.active {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--text-primary-dark, #ffffff);
+}
+
+.session-card.active::before {
+  width: 6px;
+}
+
+.session-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+}
+
+.session-badge {
+  padding: 3px 8px;
+  border-radius: 9999px;
+  font-weight: 600;
+  font-size: 0.7rem;
+}
+
+.session-badge.badge-tingkat-kelompok {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.session-badge.badge-tingkat-desa {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+.session-badge.badge-tingkat-daerah {
+  background: rgba(249, 115, 22, 0.1);
+  color: #f97316;
+}
+
+.session-type {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.session-ustadz {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
 

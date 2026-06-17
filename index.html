@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AJI v2.0 - Aplikasi Jatiwarna Info</title>
+  <title>AJI V.1 - Aplikasi Jatiwarna Info</title>
   
   <!-- Global Error Logger (Membantu Debugging) -->
   <script>
@@ -41,7 +41,7 @@
     <div class="login-card">
       <div class="login-logo">
         <i class="fa-solid fa-mosque"></i>
-        <h1>AJI v2.0</h1>
+        <h1>AJI V.1</h1>
       </div>
       <div class="login-subtitle">LDII PC Pondok Melati - Modern Green Dashboard</div>
       
@@ -66,14 +66,9 @@
         
         <button type="submit" class="login-btn">Masuk ke Dashboard</button>
       </form>
-      
-      <div class="login-demo-accounts">
-        <p>AKUN DEMO KREDENSIAL (KLIK UNTUK ISI):</p>
-        <span onclick="fillDemoLogin('admin', 'admin123')"><i class="fa-solid fa-user-shield"></i> Admin (CRUD)</span>
-        <span onclick="fillDemoLogin('user', 'user123')"><i class="fa-solid fa-user"></i> User (Read-only)</span>
-      </div>
     </div>
   </div>
+
 
   <!-- ----------------------------------------------------
        MAIN APPLICATION LAYOUT
@@ -84,7 +79,7 @@
     <aside class="sidebar" id="app-sidebar">
       <div class="sidebar-header">
         <i class="fa-solid fa-mosque"></i>
-        <span class="brand-title">AJI Info v2.0</span>
+        <span class="brand-title">AJI V.1</span>
       </div>
       
       <div class="sidebar-user-panel">
@@ -92,19 +87,27 @@
         <div class="user-info">
           <span class="user-name" id="nav-user-name">Admin</span>
           <span class="user-role-badge" id="nav-user-role">ADMINISTRATOR</span>
+          <a href="#" class="profile-link" id="nav-profile-link" style="display: block; margin-top: 5px; font-size: 0.8rem; color: var(--primary); text-decoration: none; font-weight: 600; transition: color 0.3s;"><i class="fa-solid fa-user-gear"></i> Menu Profil</a>
         </div>
       </div>
+
       
       <ul class="sidebar-menu">
         <li class="menu-item active" data-target="section-dashboard">
           <a href="#"><i class="fa-solid fa-chart-pie"></i> Dashboard</a>
         </li>
-        <li class="menu-item" data-target="section-jamaah">
-          <a href="#"><i class="fa-solid fa-users"></i> Modul Jamaah</a>
+        <li class="menu-item has-submenu" id="menu-jamaah-parent">
+          <a href="#" class="menu-toggle"><i class="fa-solid fa-users"></i> Modul Jamaah <i class="fa-solid fa-chevron-down submenu-arrow"></i></a>
+          <ul class="submenu">
+            <li class="submenu-item" data-target="section-jamaah" id="submenu-jamaah-data">
+              <a href="#"><i class="fa-solid fa-user-group"></i> Data Jamaah</a>
+            </li>
+            <li class="submenu-item" data-target="section-kartu-keluarga" id="submenu-kartu-keluarga">
+              <a href="#"><i class="fa-solid fa-file-invoice"></i> Kartu Keluarga</a>
+            </li>
+          </ul>
         </li>
-        <li class="menu-item" data-target="section-kartu-keluarga">
-          <a href="#"><i class="fa-solid fa-file-invoice"></i> Modul Kartu Keluarga</a>
-        </li>
+
         <li class="menu-item" data-target="section-report">
           <a href="#"><i class="fa-solid fa-file-contract"></i> Laporan & Rekap</a>
         </li>
@@ -120,12 +123,10 @@
         <li class="menu-item" data-target="section-pengajian" id="menu-pengajian">
           <a href="#"><i class="fa-solid fa-book-open-reader"></i> Manajemen Pengajian</a>
         </li>
-        <li class="menu-item" data-target="section-change-password" id="menu-change-password">
-          <a href="#"><i class="fa-solid fa-key"></i> Ubah Password</a>
-        </li>
         <li class="menu-item" data-target="section-database-settings" id="menu-database-settings">
           <a href="#"><i class="fa-solid fa-database"></i> Koneksi Database</a>
         </li>
+
         <li class="menu-item" data-target="section-audit">
           <a href="#"><i class="fa-solid fa-history"></i> Audit Trail Log</a>
         </li>
@@ -247,9 +248,10 @@
           <!-- Charts Section -->
           <div style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
             <label for="dashboard-kelompok-filter" style="font-weight: 600; color: var(--text);">Filter Kelompok Pengajian:</label>
-            <select id="dashboard-kelompok-filter" class="form-input" style="width: auto; min-width: 200px;" onchange="renderDashboardCharts()">
+            <select id="dashboard-kelompok-filter" class="select-filter" style="min-width: 200px;" onchange="renderDashboardCharts()">
               <option value="">Semua Kelompok</option>
             </select>
+
           </div>
           <div class="chart-grid">
             <div class="card-panel">
@@ -834,8 +836,10 @@
                   <button class="btn-primary" id="btn-add-jadwal" style="padding: 8px 15px; font-size: 0.85rem;" onclick="openAddJadwalModal()"><i class="fa-solid fa-plus"></i> Tambah Jadwal</button>
                 </div>
               </div>
-              <div id="pengajian-calendar-container" class="calendar-container">
-                <!-- Days header and date cells will be rendered here dynamically -->
+              <div class="calendar-scroll-wrapper" style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%;">
+                <div id="pengajian-calendar-container" class="calendar-container">
+                  <!-- Days header and date cells will be rendered here dynamically -->
+                </div>
               </div>
             </div>
           </div>
@@ -854,16 +858,23 @@
                   <option value="Tingkat Daerah">Tingkat Daerah</option>
                 </select>
                 <select id="presensi-filter-periode" class="select-filter" onchange="loadPresensiSesiDropdown()">
+                  <option value="today">Hari Ini</option>
                   <option value="">Semua Periode</option>
                   <option value="1week">1 Minggu Terakhir</option>
                 </select>
               </div>
-              <div class="form-grid" style="margin-bottom: 20px;">
+              <div class="form-grid" style="margin-bottom: 20px; display: none;">
                 <div class="form-group" style="grid-column: span 12;">
                   <label for="presensi-jadwal-select" style="font-weight: 600;">Pilih Sesi Pengajian Terjadwal*</label>
                   <select id="presensi-jadwal-select" class="select-filter" style="width: 100%; max-width: 100%;" onchange="loadPresensiSheet()">
                     <option value="">-- Pilih Sesi Pengajian --</option>
                   </select>
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom: 20px;">
+                <label style="font-weight: 600; margin-bottom: 10px; display: block;">Pilih Sesi Pengajian Terjadwal*</label>
+                <div id="presensi-sessions-list" class="sessions-card-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;">
+                  <!-- Dynamically filled with styled cards -->
                 </div>
               </div>
               <div id="presensi-jadwal-info" class="card-panel" style="background: rgba(var(--primary-rgb), 0.05); border: 1px solid var(--border-color); display: none; margin-bottom: 20px; padding: 15px;">
@@ -1054,33 +1065,78 @@
           </div>
         </section>
 
-        <!-- PAGE 9: UBAH PASSWORD -->
-        <section id="section-change-password" class="page-section">
-          <div class="card-panel" style="max-width: 480px; margin: 0 auto;">
-            <div class="card-panel-header" style="margin-bottom: 20px; padding-bottom: 10px;">
-              <span class="card-panel-title"><i class="fa-solid fa-key"></i> Perbarui Password Anda</span>
-            </div>
-            <form id="change-password-form">
-              <div class="form-grid" style="display:block;">
-                <div class="form-group" style="margin-bottom: 15px;">
-                  <label for="cp-old">Password Saat Ini*</label>
-                  <input type="password" id="cp-old" required placeholder="Masukkan password saat ini">
-                </div>
-                <div class="form-group" style="margin-bottom: 15px;">
-                  <label for="cp-new">Password Baru*</label>
-                  <input type="password" id="cp-new" required placeholder="Password baru minimal 6 karakter">
-                </div>
-                <div class="form-group" style="margin-bottom: 20px;">
-                  <label for="cp-confirm">Konfirmasi Password Baru*</label>
-                  <input type="password" id="cp-confirm" required placeholder="Ulangi password baru">
-                </div>
+        <!-- PAGE 9: PROFIL SAYA & KEAMANAN -->
+        <section id="section-profile" class="page-section">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+            
+            <!-- CARD 1: EDIT PROFILE FORM -->
+            <div class="card-panel">
+              <div class="card-panel-header" style="margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">
+                <span class="card-panel-title"><i class="fa-solid fa-user-gear"></i> Pengaturan Profil</span>
               </div>
-              <button type="submit" class="btn-primary" style="width: 100%; justify-content: center; padding: 12px;">
-                <i class="fa-solid fa-shield-halved"></i> Perbarui Password
-              </button>
-            </form>
+              <form id="profile-form">
+                <div class="form-grid" style="display:block;">
+                  <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="profile-username">Nama Pengguna (Username)*</label>
+                    <input type="text" id="profile-username" required placeholder="Masukkan nama pengguna">
+                  </div>
+                  <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="profile-email">Alamat Email*</label>
+                    <input type="email" id="profile-email" required placeholder="Masukkan alamat email">
+                  </div>
+                  <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="profile-role">Hak Akses (Role)</label>
+                    <input type="text" id="profile-role" readonly disabled style="background: rgba(255,255,255,0.02); color: var(--text-muted); border-color: rgba(255,255,255,0.08);">
+                  </div>
+                  <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="profile-kelompok">Kelompok Otoritas</label>
+                    <input type="text" id="profile-kelompok" readonly disabled style="background: rgba(255,255,255,0.02); color: var(--text-muted); border-color: rgba(255,255,255,0.08);">
+                  </div>
+                </div>
+                
+                <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
+                
+                <div class="card-panel-header" style="margin-bottom: 20px; padding-bottom: 10px;">
+                  <span class="card-panel-title" style="font-size: 1rem;"><i class="fa-solid fa-lock"></i> Perbarui Keamanan (Ubah Password)</span>
+                </div>
+                <div class="form-grid" style="display:block;">
+                  <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="profile-old-password">Password Saat Ini* (Diperlukan untuk menyimpan perubahan)</label>
+                    <input type="password" id="profile-old-password" required placeholder="Masukkan password saat ini">
+                  </div>
+                  <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="profile-new-password">Password Baru (Opsional)</label>
+                    <input type="password" id="profile-new-password" placeholder="Kosongkan jika tidak ingin mengubah password">
+                  </div>
+                  <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="profile-confirm-password">Konfirmasi Password Baru</label>
+                    <input type="password" id="profile-confirm-password" placeholder="Ulangi password baru">
+                  </div>
+                </div>
+                
+                <button type="submit" class="btn-primary" id="profile-save-btn" style="width: 100%; justify-content: center; padding: 12px; margin-top: 10px;">
+                  <i class="fa-solid fa-save"></i> Simpan Perubahan Profil
+                </button>
+              </form>
+            </div>
+            
+            <!-- CARD 2: PROFILE DETAILS SUMMARY CARD -->
+            <div class="card-panel" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 30px;">
+              <div id="profile-card-avatar" style="width: 100px; height: 100px; border-radius: 50%; background: var(--primary); color: #fff; font-size: 3rem; font-weight: 800; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">
+                A
+              </div>
+              <h2 id="profile-card-username" style="margin: 0; font-size: 1.6rem; font-weight: 700; color: var(--text-primary);">Admin</h2>
+              <p id="profile-card-role" style="margin: 5px 0 15px 0; font-size: 0.9rem; color: var(--primary); font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">SUPER ADMINISTRATOR</p>
+              
+              <div style="width: 100%; text-align: left; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; margin-top: 10px;">
+                <div style="margin-bottom: 10px; font-size: 0.85rem;"><span style="color: var(--text-muted);">Email:</span> <strong id="profile-card-email" style="display:block; color: var(--text-primary); margin-top: 2px;">admin@jatiwarnainfo.or.id</strong></div>
+                <div style="font-size: 0.85rem;"><span style="color: var(--text-muted);">Kelompok Otoritas:</span> <strong id="profile-card-kelompok" style="display:block; color: var(--text-primary); margin-top: 2px;">Semua</strong></div>
+              </div>
+            </div>
+            
           </div>
         </section>
+
       </div>
     </main>
   </div>
@@ -1403,6 +1459,7 @@
               <!-- Dynamic Rows will be inserted here -->
             </div>
             <datalist id="pengajar-datalist"></datalist>
+            <datalist id="materi-datalist"></datalist>
           </div>
         </div>
         <div class="modal-footer">

@@ -458,14 +458,21 @@
 
     function supabaseSavePresensiKehadiran(idPengajian, presensiList, operatorUsername) {
       const promises = presensiList.map(p => {
-        const payload = {
-          id_pengajian: parseInt(idPengajian),
-          id_jamaah: p.id_jamaah,
-          status: p.status,
-          keterangan: p.keterangan || ""
-        };
-        return supabaseClient.from("pengajian_presensi")
-          .upsert(payload, { onConflict: "id_pengajian,id_jamaah" });
+        if (!p.status || p.status === "Alpha") {
+          return supabaseClient.from("pengajian_presensi")
+            .delete()
+            .eq("id_pengajian", parseInt(idPengajian))
+            .eq("id_jamaah", p.id_jamaah);
+        } else {
+          const payload = {
+            id_pengajian: parseInt(idPengajian),
+            id_jamaah: p.id_jamaah,
+            status: p.status,
+            keterangan: p.keterangan || ""
+          };
+          return supabaseClient.from("pengajian_presensi")
+            .upsert(payload, { onConflict: "id_pengajian,id_jamaah" });
+        }
       });
       
           return Promise.all(promises).then(results => {
@@ -1092,25 +1099,31 @@
             },
             savePresensiKehadiranGAS: function(idPengajian, presensiList, operatorUsername) {
               this._call(() => {
-                const list = JSON.parse(localStorage.getItem("aji_pengajian_presensi") || "[]");
+                let list = JSON.parse(localStorage.getItem("aji_pengajian_presensi") || "[]");
                 presensiList.forEach(p => {
                   const idx = list.findIndex(item => item.id_pengajian == idPengajian && item.id_jamaah == p.id_jamaah);
-                  const payload = {
-                    id_pengajian: parseInt(idPengajian),
-                    id_jamaah: p.id_jamaah,
-                    status: p.status,
-                    keterangan: p.keterangan || ""
-                  };
-                  if (idx !== -1) {
-                    payload.id = list[idx].id;
-                    list[idx] = payload;
+                  if (!p.status || p.status === "Alpha") {
+                    if (idx !== -1) {
+                      list.splice(idx, 1);
+                    }
                   } else {
-                    let maxId = 0;
-                    list.forEach(item => {
-                      if (item.id > maxId) maxId = item.id;
-                    });
-                    payload.id = maxId + 1;
-                    list.push(payload);
+                    const payload = {
+                      id_pengajian: parseInt(idPengajian),
+                      id_jamaah: p.id_jamaah,
+                      status: p.status,
+                      keterangan: p.keterangan || ""
+                    };
+                    if (idx !== -1) {
+                      payload.id = list[idx].id;
+                      list[idx] = payload;
+                    } else {
+                      let maxId = 0;
+                      list.forEach(item => {
+                        if (item.id > maxId) maxId = item.id;
+                      });
+                      payload.id = maxId + 1;
+                      list.push(payload);
+                    }
                   }
                 });
                 localStorage.setItem("aji_pengajian_presensi", JSON.stringify(list));
@@ -1428,7 +1441,8 @@
     }
 
 
-    // ----------------------------------------------------
+    window.getSupabaseClient = function() { return supabaseClient; };
+    window.getUseSupabase = function() { return useSupabase; };
 
 // --- END FILE: js/api.js ---
 
@@ -1440,12 +1454,8 @@
       setupDatabaseMockOrSupabase();
       setupEventListeners();
       checkSession();
-      
-      window.fillDemoLogin = (user, pass) => {
-        document.getElementById("login-username").value = user;
-        document.getElementById("login-password").value = pass;
-      };
     });
+
 
     // ----------------------------------------------------
     // USER NOTIFICATION UX SYSTEM (TOAST)
@@ -1567,28 +1577,33 @@
       // Enforce menu visibility based on role
       const menuMaster = document.getElementById("menu-master");
       const menuUsers = document.getElementById("menu-users");
+      const menuDatabaseSettings = document.getElementById("menu-database-settings");
       const btnAdd = document.getElementById("btn-add-jamaah");
       const accessNote = document.getElementById("table-access-note");
       
       if (userRoleClean === "admin") {
         menuMaster.style.display = "block";
         menuUsers.style.display = "block";
+        if (menuDatabaseSettings) menuDatabaseSettings.style.display = "block";
         btnAdd.style.display = "inline-flex";
         accessNote.textContent = "Hak Akses: Administrator (Full CRUD Aktif)";
         accessNote.style.color = "#10b981";
       } else if (userRoleClean === "operator kelompok") {
         menuMaster.style.display = "none";
         menuUsers.style.display = "none";
+        if (menuDatabaseSettings) menuDatabaseSettings.style.display = "none";
         btnAdd.style.display = "inline-flex"; // Operator can edit/add
         accessNote.textContent = `Hak Akses: Operator Kelompok ${user.kelompok} (CRUD Terbatas Aktif)`;
         accessNote.style.color = "#3b82f6";
       } else {
         menuMaster.style.display = "none";
         menuUsers.style.display = "none";
+        if (menuDatabaseSettings) menuDatabaseSettings.style.display = "none";
         btnAdd.style.display = "none";
         accessNote.textContent = "Hak Akses: User (Mode Read-only, Hubungi Admin untuk Perubahan)";
         accessNote.style.color = "#9ca3af";
       }
+
       
       populateUserProfileData();
       switchTab("section-dashboard");
@@ -1924,8 +1939,20 @@
         });
       }
 
+      // Profile Link Click in Sidebar Panel
+      const navProfileLink = document.getElementById("nav-profile-link");
+      if (navProfileLink) {
+        navProfileLink.addEventListener("click", (e) => {
+          e.preventDefault();
+          document.querySelectorAll(".sidebar-menu .menu-item, .sidebar-menu .submenu-item").forEach(i => i.classList.remove("active"));
+          switchTab("section-profile");
+          document.getElementById("app-sidebar").classList.remove("active");
+        });
+      }
+
       // Login Form Submission
       document.getElementById("login-form").addEventListener("submit", (e) => {
+
         e.preventDefault();
         const user = document.getElementById("login-username").value.trim().toLowerCase();
         const pass = document.getElementById("login-password").value;
@@ -1988,17 +2015,47 @@
       });
 
       // Navigation routing
-      const menuItems = document.querySelectorAll(".sidebar-menu .menu-item");
+      const menuItems = document.querySelectorAll(".sidebar-menu > .menu-item");
       menuItems.forEach(item => {
-        item.addEventListener("click", (e) => {
+        const toggleLink = item.querySelector(".menu-toggle");
+        if (toggleLink) {
+          toggleLink.addEventListener("click", (e) => {
+            e.preventDefault();
+            item.classList.toggle("open");
+          });
+        } else {
+          item.addEventListener("click", (e) => {
+            e.preventDefault();
+            document.querySelectorAll(".sidebar-menu .menu-item, .sidebar-menu .submenu-item").forEach(i => i.classList.remove("active"));
+            item.classList.add("active");
+            const targetSection = item.getAttribute("data-target");
+            if (targetSection) switchTab(targetSection);
+            document.getElementById("app-sidebar").classList.remove("active");
+          });
+        }
+      });
+
+      // Submenu item click routing
+      const submenuItems = document.querySelectorAll(".sidebar-menu .submenu-item");
+      submenuItems.forEach(subItem => {
+        subItem.addEventListener("click", (e) => {
           e.preventDefault();
-          menuItems.forEach(i => i.classList.remove("active"));
-          item.classList.add("active");
-          const targetSection = item.getAttribute("data-target");
-          switchTab(targetSection);
+          e.stopPropagation();
+          document.querySelectorAll(".sidebar-menu .menu-item, .sidebar-menu .submenu-item").forEach(i => i.classList.remove("active"));
+          subItem.classList.add("active");
+          
+          // Mark parent as active
+          const parentItem = subItem.closest(".menu-item");
+          if (parentItem) {
+            parentItem.classList.add("active");
+          }
+          
+          const targetSection = subItem.getAttribute("data-target");
+          if (targetSection) switchTab(targetSection);
           document.getElementById("app-sidebar").classList.remove("active");
         });
       });
+
 
       document.getElementById("sidebar-toggle").addEventListener("click", (e) => {
         e.stopPropagation();
@@ -2315,11 +2372,16 @@
           const curUser = getCurrentUser();
           if (!curUser) return;
           
+          const newUsername = document.getElementById("profile-username").value.trim();
           const newEmail = document.getElementById("profile-email").value.trim();
           const newPass = document.getElementById("profile-new-password").value;
           const confirmPass = document.getElementById("profile-confirm-password").value;
           const oldPass = document.getElementById("profile-old-password").value;
           
+          if (!newUsername) {
+            showToast("Nama Pengguna wajib diisi!", "warning");
+            return;
+          }
           if (newPass && newPass.length < 6) {
             showToast("Password baru minimal 6 karakter!", "warning");
             return;
@@ -2338,62 +2400,159 @@
           google.script.run
             .withSuccessHandler(function(authResult) {
               if (authResult.success) {
-                // Valid password, prepare updated user data
-                const userData = {
-                  username: curUser.username,
-                  email: newEmail,
-                  role: curUser.role,
-                  kelompok: curUser.kelompok
-                };
-                if (newPass) {
-                  userData.passwordHash = sha256(newPass);
-                }
+                const isUsernameChanged = newUsername.toLowerCase() !== curUser.username.toLowerCase();
                 
-                // Save updated user data
-                google.script.run
-                  .withSuccessHandler(function() {
-                    // Update active session locally
-                    curUser.email = newEmail;
-                    localStorage.setItem("aji_session", JSON.stringify(curUser));
+                const performProfileUpdate = () => {
+                  const userData = {
+                    username: newUsername,
+                    email: newEmail,
+                    role: curUser.role,
+                    kelompok: curUser.kelompok
+                  };
+                  if (newPass) {
+                    userData.passwordHash = sha256(newPass);
+                  }
+                  
+                  if (typeof getUseSupabase !== "undefined" && getUseSupabase()) {
+                    const pgUser = {
+                      username: newUsername,
+                      email: newEmail
+                    };
+                    if (newPass) {
+                      pgUser.password_hash = sha256(newPass);
+                    }
                     
-                    document.getElementById("profile-old-password").value = "";
-                    document.getElementById("profile-new-password").value = "";
-                    document.getElementById("profile-confirm-password").value = "";
-                    
-                    populateUserProfileData();
-                    saveBtn.disabled = false;
-                    saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan';
-                    showToast("Profil dan keamanan berhasil diperbarui!", "success");
-                  })
-                  .withFailureHandler(function(err) {
-                    saveBtn.disabled = false;
-                    saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan';
-                    showToast("Gagal memperbarui profil: " + err.message, "error");
-                  })
-                  .saveUserGAS(userData, curUser.username);
+                    getSupabaseClient().from("app_users")
+                      .update(pgUser)
+                      .eq("username", curUser.username)
+                      .then(({ error }) => {
+                        if (error) {
+                          saveBtn.disabled = false;
+                          saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan Profil';
+                          showToast("Gagal memperbarui profil: " + error.message, "error");
+                        } else {
+                          if (typeof supabaseLogAction === "function") {
+                            supabaseLogAction(curUser.username, "UPDATE_PROFILE", "Memperbarui profil sendiri. Username: " + curUser.username + " -> " + newUsername);
+                          }
+                          
+                          curUser.username = newUsername;
+                          curUser.email = newEmail;
+                          sessionStorage.setItem("aji_session_user", JSON.stringify(curUser));
+                          
+                          document.getElementById("profile-old-password").value = "";
+                          document.getElementById("profile-new-password").value = "";
+                          document.getElementById("profile-confirm-password").value = "";
+                          
+                          document.getElementById("nav-user-name").textContent = curUser.username;
+                          document.getElementById("nav-user-avatar").textContent = curUser.username.charAt(0).toUpperCase();
+                          populateUserProfileData();
+                          
+                          saveBtn.disabled = false;
+                          saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan Profil';
+                          showToast("Profil dan keamanan berhasil diperbarui!", "success");
+                        }
+                      });
+                  } else {
+                    const users = JSON.parse(localStorage.getItem("aji_users") || "[]");
+                    const idx = users.findIndex(u => u.username.toLowerCase() === curUser.username.toLowerCase());
+                    if (idx !== -1) {
+                      users[idx].username = newUsername;
+                      users[idx].email = newEmail;
+                      if (newPass) {
+                        users[idx].passwordHash = sha256(newPass);
+                      }
+                      localStorage.setItem("aji_users", JSON.stringify(users));
+                      
+                      if (typeof google !== "undefined" && google.script && google.script.run && google.script.run.logActionGAS) {
+                        google.script.run.logActionGAS(curUser.username, "UPDATE_PROFILE", "Memperbarui profil sendiri (Local Mock).");
+                      }
+                      
+                      curUser.username = newUsername;
+                      curUser.email = newEmail;
+                      sessionStorage.setItem("aji_session_user", JSON.stringify(curUser));
+                      
+                      document.getElementById("profile-old-password").value = "";
+                      document.getElementById("profile-new-password").value = "";
+                      document.getElementById("profile-confirm-password").value = "";
+                      
+                      document.getElementById("nav-user-name").textContent = curUser.username;
+                      document.getElementById("nav-user-avatar").textContent = curUser.username.charAt(0).toUpperCase();
+                      populateUserProfileData();
+                      
+                      saveBtn.disabled = false;
+                      saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan Profil';
+                      showToast("Profil dan keamanan berhasil diperbarui (Local Mock)!", "success");
+                    } else {
+                      saveBtn.disabled = false;
+                      saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan Profil';
+                      showToast("User tidak ditemukan di database lokal!", "error");
+                    }
+                  }
+                };
+                
+                if (isUsernameChanged) {
+                  if (typeof getUseSupabase !== "undefined" && getUseSupabase()) {
+                    getSupabaseClient().from("app_users")
+                      .select("username")
+                      .eq("username", newUsername)
+                      .then(({ data, error }) => {
+                        if (error) {
+                          saveBtn.disabled = false;
+                          saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan Profil';
+                          showToast("Gagal memvalidasi nama pengguna: " + error.message, "error");
+                        } else if (data && data.length > 0) {
+                          saveBtn.disabled = false;
+                          saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan Profil';
+                          showToast("Nama Pengguna (Username) sudah digunakan!", "warning");
+                        } else {
+                          performProfileUpdate();
+                        }
+                      });
+                  } else {
+                    const users = JSON.parse(localStorage.getItem("aji_users") || "[]");
+                    const exist = users.some(u => u.username.toLowerCase() === newUsername.toLowerCase());
+                    if (exist) {
+                      saveBtn.disabled = false;
+                      saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan Profil';
+                      showToast("Nama Pengguna (Username) sudah digunakan!", "warning");
+                    } else {
+                      performProfileUpdate();
+                    }
+                  }
+                } else {
+                  performProfileUpdate();
+                }
               } else {
                 saveBtn.disabled = false;
-                saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan';
+                saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan Profil';
                 showToast("Password saat ini salah!", "error");
               }
             })
             .withFailureHandler(function(err) {
               saveBtn.disabled = false;
-              saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan';
+              saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan Profil';
               showToast("Verifikasi password gagal: " + err.message, "error");
             })
             .authenticateUserGAS(curUser.username, oldHash);
         });
       }
+
     }
 
     // ----------------------------------------------------
     // TAB LAYOUT SWITCHER
     // ----------------------------------------------------
     function switchTab(sectionId) {
+      const currentUser = getCurrentUser();
+      const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
+      if (sectionId === "section-database-settings" && curRoleClean !== "admin") {
+        sectionId = "section-dashboard";
+      }
+
       document.querySelectorAll(".page-section").forEach(sec => sec.classList.remove("active"));
       const target = document.getElementById(sectionId);
       if (target) target.classList.add("active");
+
       
       const titleMap = {
         "section-dashboard": { title: "Dashboard Utama", icon: "fa-chart-pie" },
@@ -2792,9 +2951,41 @@
       const tbodyDapuan = document.getElementById("rep-table-dapuan-body");
       tbodyDapuan.innerHTML = "";
       
+      const allPengurus = getPengurusList() || [];
+      const pengurusWithJamaah = allPengurus.map(p => {
+        const j = jamaah.find(x => x.id === p.jamaah_id);
+        return {
+          ...p,
+          kelompok: j ? j.kelompokPengajian : null
+        };
+      }).filter(p => p.kelompok !== null);
+
+      const currentUser = getCurrentUser();
+      const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
+      const isOperator = curRoleClean.includes("operator");
+
+      let filteredPengurusList = selectedKelompok === "" 
+        ? pengurusWithJamaah 
+        : pengurusWithJamaah.filter(p => p.kelompok === selectedKelompok);
+
+      if (currentUser && isOperator) {
+        filteredPengurusList = pengurusWithJamaah.filter(p => p.kelompok === currentUser.kelompok);
+      }
+
+      const totalFilteredPengurus = filteredPengurusList.length;
+
+      // Header for Dapuan
+      const headerDapuan = document.createElement("tr");
+      headerDapuan.innerHTML = `
+        <td colspan="3" style="background: rgba(59, 130, 246, 0.08); font-weight: bold; text-align: center; font-size: 0.8rem; letter-spacing: 0.05em; text-transform: uppercase; color: #3b82f6; border-bottom: 2px solid rgba(59, 130, 246, 0.2);">
+          Rekapitulasi Berdasarkan Dapuan / Jabatan
+        </td>
+      `;
+      tbodyDapuan.appendChild(headerDapuan);
+
       localMasterDapuan.forEach(dapuan => {
-        const count = filtered.filter(j => j.dapuan === dapuan).length;
-        const ratio = totalJamaah > 0 ? ((count / totalJamaah) * 100).toFixed(1) : 0;
+        const count = filteredPengurusList.filter(p => p.dapuan === dapuan).length;
+        const ratio = totalFilteredPengurus > 0 ? ((count / totalFilteredPengurus) * 100).toFixed(1) : 0;
         const isCoreRole = ["Pengurus Daerah", "Pengurus Desa", "Pengurus Kelompok", "MT", "MS"].includes(dapuan);
         if (count > 0 || isCoreRole) {
           const tr = document.createElement("tr");
@@ -2811,6 +3002,34 @@
           tbodyDapuan.appendChild(tr);
         }
       });
+
+      // Header for Tingkat
+      const headerTingkat = document.createElement("tr");
+      headerTingkat.innerHTML = `
+        <td colspan="3" style="background: rgba(139, 92, 246, 0.08); font-weight: bold; text-align: center; font-size: 0.8rem; letter-spacing: 0.05em; text-transform: uppercase; color: #8b5cf6; border-bottom: 2px solid rgba(139, 92, 246, 0.2); border-top: 1px solid var(--border-color);">
+          Rekapitulasi Berdasarkan Tingkat Pengurus
+        </td>
+      `;
+      tbodyDapuan.appendChild(headerTingkat);
+
+      const tingkatList = ["Desa", "Kelompok", "Organisasi", "Yayasan"];
+      tingkatList.forEach(tingkat => {
+        const count = filteredPengurusList.filter(p => p.tingkat_pengurus === tingkat).length;
+        const ratio = totalFilteredPengurus > 0 ? ((count / totalFilteredPengurus) * 100).toFixed(1) : 0;
+        
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><strong>Tingkat ${tingkat}</strong></td>
+          <td>${count} Orang</td>
+          <td>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div class="progress-container" style="width:70px; margin-top:0;"><div class="progress-bar" style="width: ${ratio}%; background:#8b5cf6;"></div></div>
+              <span>${ratio}%</span>
+            </div>
+          </td>
+        `;
+        tbodyDapuan.appendChild(tr);
+      });
     }
 
     function exportReportToCSV() {
@@ -2820,7 +3039,7 @@
       const filtered = selectedKelompok === "" ? jamaah : jamaah.filter(j => j.kelompokPengajian === selectedKelompok);
       
       let csvContent = "data:text/csv;charset=utf-8,";
-      csvContent += `AJI VERSION 2.1 REPORT - REKAPITULASI DATA JAMAAH\r\n`;
+      csvContent += `AJI V.1 REPORT - REKAPITULASI DATA JAMAAH\r\n`;
       csvContent += `Kelompok Pengajian: ${groupLabel}\r\n`;
       csvContent += `Tanggal Export: ${new Date().toLocaleString()}\r\n\r\n`;
       csvContent += `ID,Nama Lengkap,Kelompok,Gender,Umur,Kelompok Peramutan,Hub. Keluarga,Pendidikan,Pekerjaan,Dapuan,Ekonomi,Sambung\r\n`;
@@ -4825,21 +5044,26 @@ window.addMateriPengajarRow = function(materi = "", pengajarId = "") {
   div.style.alignItems = "center";
   div.style.marginBottom = "8px";
   
-  // Materi Select
-  const materiSelect = document.createElement("select");
+  // Populate datalist if not already populated
+  const datalist = document.getElementById("materi-datalist");
+  if (datalist && datalist.children.length === 0) {
+    const masterMateri = getMasterMateriList() || [];
+    masterMateri.forEach(m => {
+      const opt = document.createElement("option");
+      opt.value = m;
+      datalist.appendChild(opt);
+    });
+  }
+  
+  // Materi Input (Pick from list or type manually)
+  const materiSelect = document.createElement("input");
+  materiSelect.type = "text";
   materiSelect.className = "materi-select";
+  materiSelect.setAttribute("list", "materi-datalist");
   materiSelect.required = true;
   materiSelect.style.flex = "1";
-  materiSelect.innerHTML = '<option value="" disabled selected>-- Pilih Materi --</option>';
-  
-  const masterMateri = getMasterMateriList() || [];
-  masterMateri.forEach(m => {
-    const opt = document.createElement("option");
-    opt.value = m;
-    opt.textContent = m;
-    if (m === materi) opt.selected = true;
-    materiSelect.appendChild(opt);
-  });
+  materiSelect.placeholder = "Cari/Ketik Materi...";
+  materiSelect.value = materi;
   
   // Pengajar Datalist Input
   const pengajarInput = document.createElement("input");
@@ -4989,14 +5213,51 @@ function confirmDeleteJadwal(id) {
 // ==========================================
 // 3. PRESENSI KEHADIRAN LOGIC
 // ==========================================
+window.selectPresensiSession = function(id) {
+  const select = document.getElementById("presensi-jadwal-select");
+  if (select) {
+    select.value = id;
+  }
+  
+  const cards = document.querySelectorAll(".session-card");
+  cards.forEach(card => {
+    if (card.getAttribute("data-id") == id) {
+      card.classList.add("active");
+    } else {
+      card.classList.remove("active");
+    }
+  });
+  
+  loadPresensiSheet();
+};
+
 window.loadPresensiSesiDropdown = function() {
   const select = document.getElementById("presensi-jadwal-select");
   if (!select) return;
   
   select.innerHTML = '<option value="">-- Pilih Sesi Pengajian --</option>';
+  select.value = "";
+  if (typeof loadPresensiSheet === "function") {
+    loadPresensiSheet();
+  }
+  
+  const listContainer = document.getElementById("presensi-sessions-list");
+  if (listContainer) {
+    listContainer.innerHTML = "";
+  }
   
   const schedules = getJadwalPengajianList() || [];
-  if (schedules.length === 0) return;
+  if (schedules.length === 0) {
+    if (listContainer) {
+      listContainer.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 30px; color: var(--text-secondary); border: 1px dashed var(--border-color); border-radius: 12px; background: rgba(16, 185, 129, 0.01);">
+          <i class="fa-solid fa-calendar-xmark" style="font-size: 2rem; color: var(--text-muted); margin-bottom: 10px; display: block;"></i>
+          Belum ada sesi pengajian terjadwal.
+        </div>
+      `;
+    }
+    return;
+  }
   
   const currentUser = getCurrentUser();
   const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
@@ -5018,7 +5279,16 @@ window.loadPresensiSesiDropdown = function() {
     filtered = filtered.filter(s => s.tingkat_pengajian === filterTingkat);
   }
   
-  if (filterPeriode === "1week") {
+  if (filterPeriode === "today") {
+    const d = new Date();
+    const formatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' });
+    const parts = formatter.formatToParts(d);
+    const year = parts.find(p => p.type === 'year').value;
+    const month = parts.find(p => p.type === 'month').value;
+    const day = parts.find(p => p.type === 'day').value;
+    const todayStr = `${year}-${month}-${day}`;
+    filtered = filtered.filter(s => s.tanggal === todayStr);
+  } else if (filterPeriode === "1week") {
     const today = new Date();
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(today.getDate() - 7);
@@ -5033,6 +5303,63 @@ window.loadPresensiSesiDropdown = function() {
     opt.textContent = `${dateStr} - ${s.jenis_pengajian} [${s.kelompok_pengajian}]`;
     select.appendChild(opt);
   });
+  
+  if (listContainer) {
+    if (filtered.length === 0) {
+      listContainer.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 30px; color: var(--text-secondary); border: 1px dashed var(--border-color); border-radius: 12px; background: rgba(16, 185, 129, 0.01);">
+          <i class="fa-solid fa-calendar-xmark" style="font-size: 2rem; color: var(--text-muted); margin-bottom: 10px; display: block;"></i>
+          Belum ada sesi pengajian terjadwal untuk filter ini.
+        </div>
+      `;
+    } else {
+      filtered.forEach(s => {
+        const div = document.createElement("div");
+        const tingkatClass = s.tingkat_pengajian.toLowerCase().replace(/\s+/g, '-');
+        
+        div.className = `session-card ${tingkatClass}`;
+        div.setAttribute("data-id", s.id);
+        div.onclick = function() {
+          selectPresensiSession(s.id);
+        };
+        
+        const dateStr = formatDateIndo(s.tanggal);
+        const timeStr = `${s.waktu_mulai.substring(0, 5)} - ${s.waktu_selesai.substring(0, 5)}`;
+        const labelTingkat = s.tingkat_pengajian;
+        
+        const materiHtml = (s.materi_pengajar || []).map(m => `
+          <div class="session-materi-item" style="margin-top: 4px;">
+            <i class="fa-solid fa-book-open"></i> <strong>${m.materi}</strong> <span class="session-ustadz">(Ustadz: ${m.pengajar_nama})</span>
+          </div>
+        `).join('');
+        
+        div.innerHTML = `
+          <div class="session-card-header">
+            <span class="session-badge badge-${tingkatClass}">${labelTingkat}</span>
+            <span class="session-type" style="font-size: 0.8rem; font-weight: 700; color: var(--primary);">${s.jenis_pengajian}</span>
+          </div>
+          <div class="session-card-body" style="display: flex; flex-direction: column; gap: 6px;">
+            <div class="session-info-row" style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--text-secondary);">
+              <i class="fa-regular fa-calendar"></i>
+              <span>${dateStr}</span>
+            </div>
+            <div class="session-info-row" style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--text-secondary);">
+              <i class="fa-regular fa-clock"></i>
+              <span>${timeStr}</span>
+            </div>
+            <div class="session-info-row" style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--text-secondary);">
+              <i class="fa-solid fa-users"></i>
+              <span>${s.kelompok_pengajian || 'Semua Kelompok'}</span>
+            </div>
+            <div class="session-materi-list" style="border-top: 1px dashed var(--border-color); padding-top: 6px; margin-top: 4px;">
+              ${materiHtml}
+            </div>
+          </div>
+        `;
+        listContainer.appendChild(div);
+      });
+    }
+  }
 };
 
 window.loadPresensiSheet = function() {
@@ -5115,6 +5442,14 @@ function renderPresensiTable(session) {
       return ["PAUD", "Caberawit"].includes(peramutan);
     } else if (jenis === "ibu-ibu" || jenis === "ibu - ibu") {
       return ["Dewasa", "Manula"].includes(peramutan) && gender === "Perempuan";
+    } else if (jenis === "pengurus") {
+      const masterJenisList = getMasterJenisPengajianList() || [];
+      const masterItem = masterJenisList.find(m => m.nama.trim().toLowerCase() === "pengurus");
+      if (masterItem && masterItem.peserta_pengajian) {
+        const allowedPeramutan = masterItem.peserta_pengajian.split(",").map(p => p.trim().toLowerCase());
+        return allowedPeramutan.includes(peramutan.toLowerCase());
+      }
+      return true;
     } else {
       return true;
     }
@@ -5164,12 +5499,12 @@ function fillPresensiDOM() {
   filtered.forEach((p, index) => {
     const tr = document.createElement("tr");
     
-    const statuses = ["Hadir Fisik", "Online", "Izin", "Alpha"];
+    const statuses = ["Hadir Fisik", "Online", "Izin"];
     let statusRadioHtml = `<div style="display: flex; gap: 16px; justify-content: center; align-items: center; width: 100%;">`;
     
     statuses.forEach(st => {
       const isChecked = p.status === st;
-      const color = st === "Hadir Fisik" ? "#10b981" : st === "Online" ? "#3b82f6" : st === "Izin" ? "#f59e0b" : "#ef4444";
+      const color = st === "Hadir Fisik" ? "#10b981" : st === "Online" ? "#3b82f6" : "#f59e0b";
       statusRadioHtml += `
         <label style="display: flex; align-items: center; gap: 6px; font-size: 1rem; cursor: pointer; font-weight: 600;">
           <input type="radio" name="status-${p.id_jamaah}" value="${st}" ${isChecked ? 'checked' : ''} onchange="updatePresensiStatusInMem('${p.id_jamaah}', '${st}')" style="width: 18px; height: 18px; margin: 0; cursor: pointer;">
@@ -5177,6 +5512,11 @@ function fillPresensiDOM() {
         </label>
       `;
     });
+    statusRadioHtml += `
+      <button class="btn-icon reset-btn" title="Reset Status Kehadiran" onclick="resetPresensiStatus('${p.id_jamaah}')" style="margin-left: 10px; color: var(--text-muted); background: transparent; border: none; padding: 4px; cursor: pointer; font-size: 0.9rem; transition: color 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">
+        <i class="fa-solid fa-rotate-left"></i>
+      </button>
+    `;
     statusRadioHtml += `</div>`;
     
     tr.innerHTML = `
@@ -5195,6 +5535,14 @@ function fillPresensiDOM() {
 window.updatePresensiStatusInMem = function(jamaahId, status) {
   const item = currentPresensiList.find(x => x.id_jamaah === jamaahId);
   if (item) item.status = status;
+};
+
+window.resetPresensiStatus = function(jamaahId) {
+  const item = currentPresensiList.find(x => x.id_jamaah === jamaahId);
+  if (item) {
+    item.status = "Alpha";
+    fillPresensiDOM();
+  }
 };
 
 window.updatePresensiKetInMem = function(jamaahId, val) {
