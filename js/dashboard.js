@@ -331,9 +331,41 @@
       const tbodyDapuan = document.getElementById("rep-table-dapuan-body");
       tbodyDapuan.innerHTML = "";
       
+      const allPengurus = getPengurusList() || [];
+      const pengurusWithJamaah = allPengurus.map(p => {
+        const j = jamaah.find(x => x.id === p.jamaah_id);
+        return {
+          ...p,
+          kelompok: j ? j.kelompokPengajian : null
+        };
+      }).filter(p => p.kelompok !== null);
+
+      const currentUser = getCurrentUser();
+      const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
+      const isOperator = curRoleClean.includes("operator");
+
+      let filteredPengurusList = selectedKelompok === "" 
+        ? pengurusWithJamaah 
+        : pengurusWithJamaah.filter(p => p.kelompok === selectedKelompok);
+
+      if (currentUser && isOperator) {
+        filteredPengurusList = pengurusWithJamaah.filter(p => p.kelompok === currentUser.kelompok);
+      }
+
+      const totalFilteredPengurus = filteredPengurusList.length;
+
+      // Header for Dapuan
+      const headerDapuan = document.createElement("tr");
+      headerDapuan.innerHTML = `
+        <td colspan="3" style="background: rgba(59, 130, 246, 0.08); font-weight: bold; text-align: center; font-size: 0.8rem; letter-spacing: 0.05em; text-transform: uppercase; color: #3b82f6; border-bottom: 2px solid rgba(59, 130, 246, 0.2);">
+          Rekapitulasi Berdasarkan Dapuan / Jabatan
+        </td>
+      `;
+      tbodyDapuan.appendChild(headerDapuan);
+
       localMasterDapuan.forEach(dapuan => {
-        const count = filtered.filter(j => j.dapuan === dapuan).length;
-        const ratio = totalJamaah > 0 ? ((count / totalJamaah) * 100).toFixed(1) : 0;
+        const count = filteredPengurusList.filter(p => p.dapuan === dapuan).length;
+        const ratio = totalFilteredPengurus > 0 ? ((count / totalFilteredPengurus) * 100).toFixed(1) : 0;
         const isCoreRole = ["Pengurus Daerah", "Pengurus Desa", "Pengurus Kelompok", "MT", "MS"].includes(dapuan);
         if (count > 0 || isCoreRole) {
           const tr = document.createElement("tr");
@@ -350,6 +382,34 @@
           tbodyDapuan.appendChild(tr);
         }
       });
+
+      // Header for Tingkat
+      const headerTingkat = document.createElement("tr");
+      headerTingkat.innerHTML = `
+        <td colspan="3" style="background: rgba(139, 92, 246, 0.08); font-weight: bold; text-align: center; font-size: 0.8rem; letter-spacing: 0.05em; text-transform: uppercase; color: #8b5cf6; border-bottom: 2px solid rgba(139, 92, 246, 0.2); border-top: 1px solid var(--border-color);">
+          Rekapitulasi Berdasarkan Tingkat Pengurus
+        </td>
+      `;
+      tbodyDapuan.appendChild(headerTingkat);
+
+      const tingkatList = ["Desa", "Kelompok", "Organisasi", "Yayasan"];
+      tingkatList.forEach(tingkat => {
+        const count = filteredPengurusList.filter(p => p.tingkat_pengurus === tingkat).length;
+        const ratio = totalFilteredPengurus > 0 ? ((count / totalFilteredPengurus) * 100).toFixed(1) : 0;
+        
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><strong>Tingkat ${tingkat}</strong></td>
+          <td>${count} Orang</td>
+          <td>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div class="progress-container" style="width:70px; margin-top:0;"><div class="progress-bar" style="width: ${ratio}%; background:#8b5cf6;"></div></div>
+              <span>${ratio}%</span>
+            </div>
+          </td>
+        `;
+        tbodyDapuan.appendChild(tr);
+      });
     }
 
     function exportReportToCSV() {
@@ -359,7 +419,7 @@
       const filtered = selectedKelompok === "" ? jamaah : jamaah.filter(j => j.kelompokPengajian === selectedKelompok);
       
       let csvContent = "data:text/csv;charset=utf-8,";
-      csvContent += `AJI VERSION 2.1 REPORT - REKAPITULASI DATA JAMAAH\r\n`;
+      csvContent += `AJI V.1 REPORT - REKAPITULASI DATA JAMAAH\r\n`;
       csvContent += `Kelompok Pengajian: ${groupLabel}\r\n`;
       csvContent += `Tanggal Export: ${new Date().toLocaleString()}\r\n\r\n`;
       csvContent += `ID,Nama Lengkap,Kelompok,Gender,Umur,Kelompok Peramutan,Hub. Keluarga,Pendidikan,Pekerjaan,Dapuan,Ekonomi,Sambung\r\n`;

@@ -416,14 +416,21 @@
 
     function supabaseSavePresensiKehadiran(idPengajian, presensiList, operatorUsername) {
       const promises = presensiList.map(p => {
-        const payload = {
-          id_pengajian: parseInt(idPengajian),
-          id_jamaah: p.id_jamaah,
-          status: p.status,
-          keterangan: p.keterangan || ""
-        };
-        return supabaseClient.from("pengajian_presensi")
-          .upsert(payload, { onConflict: "id_pengajian,id_jamaah" });
+        if (!p.status || p.status === "Alpha") {
+          return supabaseClient.from("pengajian_presensi")
+            .delete()
+            .eq("id_pengajian", parseInt(idPengajian))
+            .eq("id_jamaah", p.id_jamaah);
+        } else {
+          const payload = {
+            id_pengajian: parseInt(idPengajian),
+            id_jamaah: p.id_jamaah,
+            status: p.status,
+            keterangan: p.keterangan || ""
+          };
+          return supabaseClient.from("pengajian_presensi")
+            .upsert(payload, { onConflict: "id_pengajian,id_jamaah" });
+        }
       });
       
           return Promise.all(promises).then(results => {
@@ -1050,25 +1057,31 @@
             },
             savePresensiKehadiranGAS: function(idPengajian, presensiList, operatorUsername) {
               this._call(() => {
-                const list = JSON.parse(localStorage.getItem("aji_pengajian_presensi") || "[]");
+                let list = JSON.parse(localStorage.getItem("aji_pengajian_presensi") || "[]");
                 presensiList.forEach(p => {
                   const idx = list.findIndex(item => item.id_pengajian == idPengajian && item.id_jamaah == p.id_jamaah);
-                  const payload = {
-                    id_pengajian: parseInt(idPengajian),
-                    id_jamaah: p.id_jamaah,
-                    status: p.status,
-                    keterangan: p.keterangan || ""
-                  };
-                  if (idx !== -1) {
-                    payload.id = list[idx].id;
-                    list[idx] = payload;
+                  if (!p.status || p.status === "Alpha") {
+                    if (idx !== -1) {
+                      list.splice(idx, 1);
+                    }
                   } else {
-                    let maxId = 0;
-                    list.forEach(item => {
-                      if (item.id > maxId) maxId = item.id;
-                    });
-                    payload.id = maxId + 1;
-                    list.push(payload);
+                    const payload = {
+                      id_pengajian: parseInt(idPengajian),
+                      id_jamaah: p.id_jamaah,
+                      status: p.status,
+                      keterangan: p.keterangan || ""
+                    };
+                    if (idx !== -1) {
+                      payload.id = list[idx].id;
+                      list[idx] = payload;
+                    } else {
+                      let maxId = 0;
+                      list.forEach(item => {
+                        if (item.id > maxId) maxId = item.id;
+                      });
+                      payload.id = maxId + 1;
+                      list.push(payload);
+                    }
                   }
                 });
                 localStorage.setItem("aji_pengajian_presensi", JSON.stringify(list));
@@ -1386,4 +1399,5 @@
     }
 
 
-    // ----------------------------------------------------
+    window.getSupabaseClient = function() { return supabaseClient; };
+    window.getUseSupabase = function() { return useSupabase; };

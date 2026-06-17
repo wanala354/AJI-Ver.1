@@ -592,21 +592,26 @@ window.addMateriPengajarRow = function(materi = "", pengajarId = "") {
   div.style.alignItems = "center";
   div.style.marginBottom = "8px";
   
-  // Materi Select
-  const materiSelect = document.createElement("select");
+  // Populate datalist if not already populated
+  const datalist = document.getElementById("materi-datalist");
+  if (datalist && datalist.children.length === 0) {
+    const masterMateri = getMasterMateriList() || [];
+    masterMateri.forEach(m => {
+      const opt = document.createElement("option");
+      opt.value = m;
+      datalist.appendChild(opt);
+    });
+  }
+  
+  // Materi Input (Pick from list or type manually)
+  const materiSelect = document.createElement("input");
+  materiSelect.type = "text";
   materiSelect.className = "materi-select";
+  materiSelect.setAttribute("list", "materi-datalist");
   materiSelect.required = true;
   materiSelect.style.flex = "1";
-  materiSelect.innerHTML = '<option value="" disabled selected>-- Pilih Materi --</option>';
-  
-  const masterMateri = getMasterMateriList() || [];
-  masterMateri.forEach(m => {
-    const opt = document.createElement("option");
-    opt.value = m;
-    opt.textContent = m;
-    if (m === materi) opt.selected = true;
-    materiSelect.appendChild(opt);
-  });
+  materiSelect.placeholder = "Cari/Ketik Materi...";
+  materiSelect.value = materi;
   
   // Pengajar Datalist Input
   const pengajarInput = document.createElement("input");
@@ -756,14 +761,51 @@ function confirmDeleteJadwal(id) {
 // ==========================================
 // 3. PRESENSI KEHADIRAN LOGIC
 // ==========================================
+window.selectPresensiSession = function(id) {
+  const select = document.getElementById("presensi-jadwal-select");
+  if (select) {
+    select.value = id;
+  }
+  
+  const cards = document.querySelectorAll(".session-card");
+  cards.forEach(card => {
+    if (card.getAttribute("data-id") == id) {
+      card.classList.add("active");
+    } else {
+      card.classList.remove("active");
+    }
+  });
+  
+  loadPresensiSheet();
+};
+
 window.loadPresensiSesiDropdown = function() {
   const select = document.getElementById("presensi-jadwal-select");
   if (!select) return;
   
   select.innerHTML = '<option value="">-- Pilih Sesi Pengajian --</option>';
+  select.value = "";
+  if (typeof loadPresensiSheet === "function") {
+    loadPresensiSheet();
+  }
+  
+  const listContainer = document.getElementById("presensi-sessions-list");
+  if (listContainer) {
+    listContainer.innerHTML = "";
+  }
   
   const schedules = getJadwalPengajianList() || [];
-  if (schedules.length === 0) return;
+  if (schedules.length === 0) {
+    if (listContainer) {
+      listContainer.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 30px; color: var(--text-secondary); border: 1px dashed var(--border-color); border-radius: 12px; background: rgba(16, 185, 129, 0.01);">
+          <i class="fa-solid fa-calendar-xmark" style="font-size: 2rem; color: var(--text-muted); margin-bottom: 10px; display: block;"></i>
+          Belum ada sesi pengajian terjadwal.
+        </div>
+      `;
+    }
+    return;
+  }
   
   const currentUser = getCurrentUser();
   const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
@@ -785,7 +827,16 @@ window.loadPresensiSesiDropdown = function() {
     filtered = filtered.filter(s => s.tingkat_pengajian === filterTingkat);
   }
   
-  if (filterPeriode === "1week") {
+  if (filterPeriode === "today") {
+    const d = new Date();
+    const formatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' });
+    const parts = formatter.formatToParts(d);
+    const year = parts.find(p => p.type === 'year').value;
+    const month = parts.find(p => p.type === 'month').value;
+    const day = parts.find(p => p.type === 'day').value;
+    const todayStr = `${year}-${month}-${day}`;
+    filtered = filtered.filter(s => s.tanggal === todayStr);
+  } else if (filterPeriode === "1week") {
     const today = new Date();
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(today.getDate() - 7);
@@ -800,6 +851,63 @@ window.loadPresensiSesiDropdown = function() {
     opt.textContent = `${dateStr} - ${s.jenis_pengajian} [${s.kelompok_pengajian}]`;
     select.appendChild(opt);
   });
+  
+  if (listContainer) {
+    if (filtered.length === 0) {
+      listContainer.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 30px; color: var(--text-secondary); border: 1px dashed var(--border-color); border-radius: 12px; background: rgba(16, 185, 129, 0.01);">
+          <i class="fa-solid fa-calendar-xmark" style="font-size: 2rem; color: var(--text-muted); margin-bottom: 10px; display: block;"></i>
+          Belum ada sesi pengajian terjadwal untuk filter ini.
+        </div>
+      `;
+    } else {
+      filtered.forEach(s => {
+        const div = document.createElement("div");
+        const tingkatClass = s.tingkat_pengajian.toLowerCase().replace(/\s+/g, '-');
+        
+        div.className = `session-card ${tingkatClass}`;
+        div.setAttribute("data-id", s.id);
+        div.onclick = function() {
+          selectPresensiSession(s.id);
+        };
+        
+        const dateStr = formatDateIndo(s.tanggal);
+        const timeStr = `${s.waktu_mulai.substring(0, 5)} - ${s.waktu_selesai.substring(0, 5)}`;
+        const labelTingkat = s.tingkat_pengajian;
+        
+        const materiHtml = (s.materi_pengajar || []).map(m => `
+          <div class="session-materi-item" style="margin-top: 4px;">
+            <i class="fa-solid fa-book-open"></i> <strong>${m.materi}</strong> <span class="session-ustadz">(Ustadz: ${m.pengajar_nama})</span>
+          </div>
+        `).join('');
+        
+        div.innerHTML = `
+          <div class="session-card-header">
+            <span class="session-badge badge-${tingkatClass}">${labelTingkat}</span>
+            <span class="session-type" style="font-size: 0.8rem; font-weight: 700; color: var(--primary);">${s.jenis_pengajian}</span>
+          </div>
+          <div class="session-card-body" style="display: flex; flex-direction: column; gap: 6px;">
+            <div class="session-info-row" style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--text-secondary);">
+              <i class="fa-regular fa-calendar"></i>
+              <span>${dateStr}</span>
+            </div>
+            <div class="session-info-row" style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--text-secondary);">
+              <i class="fa-regular fa-clock"></i>
+              <span>${timeStr}</span>
+            </div>
+            <div class="session-info-row" style="display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--text-secondary);">
+              <i class="fa-solid fa-users"></i>
+              <span>${s.kelompok_pengajian || 'Semua Kelompok'}</span>
+            </div>
+            <div class="session-materi-list" style="border-top: 1px dashed var(--border-color); padding-top: 6px; margin-top: 4px;">
+              ${materiHtml}
+            </div>
+          </div>
+        `;
+        listContainer.appendChild(div);
+      });
+    }
+  }
 };
 
 window.loadPresensiSheet = function() {
@@ -882,6 +990,14 @@ function renderPresensiTable(session) {
       return ["PAUD", "Caberawit"].includes(peramutan);
     } else if (jenis === "ibu-ibu" || jenis === "ibu - ibu") {
       return ["Dewasa", "Manula"].includes(peramutan) && gender === "Perempuan";
+    } else if (jenis === "pengurus") {
+      const masterJenisList = getMasterJenisPengajianList() || [];
+      const masterItem = masterJenisList.find(m => m.nama.trim().toLowerCase() === "pengurus");
+      if (masterItem && masterItem.peserta_pengajian) {
+        const allowedPeramutan = masterItem.peserta_pengajian.split(",").map(p => p.trim().toLowerCase());
+        return allowedPeramutan.includes(peramutan.toLowerCase());
+      }
+      return true;
     } else {
       return true;
     }
@@ -931,12 +1047,12 @@ function fillPresensiDOM() {
   filtered.forEach((p, index) => {
     const tr = document.createElement("tr");
     
-    const statuses = ["Hadir Fisik", "Online", "Izin", "Alpha"];
+    const statuses = ["Hadir Fisik", "Online", "Izin"];
     let statusRadioHtml = `<div style="display: flex; gap: 16px; justify-content: center; align-items: center; width: 100%;">`;
     
     statuses.forEach(st => {
       const isChecked = p.status === st;
-      const color = st === "Hadir Fisik" ? "#10b981" : st === "Online" ? "#3b82f6" : st === "Izin" ? "#f59e0b" : "#ef4444";
+      const color = st === "Hadir Fisik" ? "#10b981" : st === "Online" ? "#3b82f6" : "#f59e0b";
       statusRadioHtml += `
         <label style="display: flex; align-items: center; gap: 6px; font-size: 1rem; cursor: pointer; font-weight: 600;">
           <input type="radio" name="status-${p.id_jamaah}" value="${st}" ${isChecked ? 'checked' : ''} onchange="updatePresensiStatusInMem('${p.id_jamaah}', '${st}')" style="width: 18px; height: 18px; margin: 0; cursor: pointer;">
@@ -944,6 +1060,11 @@ function fillPresensiDOM() {
         </label>
       `;
     });
+    statusRadioHtml += `
+      <button class="btn-icon reset-btn" title="Reset Status Kehadiran" onclick="resetPresensiStatus('${p.id_jamaah}')" style="margin-left: 10px; color: var(--text-muted); background: transparent; border: none; padding: 4px; cursor: pointer; font-size: 0.9rem; transition: color 0.2s;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">
+        <i class="fa-solid fa-rotate-left"></i>
+      </button>
+    `;
     statusRadioHtml += `</div>`;
     
     tr.innerHTML = `
@@ -962,6 +1083,14 @@ function fillPresensiDOM() {
 window.updatePresensiStatusInMem = function(jamaahId, status) {
   const item = currentPresensiList.find(x => x.id_jamaah === jamaahId);
   if (item) item.status = status;
+};
+
+window.resetPresensiStatus = function(jamaahId) {
+  const item = currentPresensiList.find(x => x.id_jamaah === jamaahId);
+  if (item) {
+    item.status = "Alpha";
+    fillPresensiDOM();
+  }
 };
 
 window.updatePresensiKetInMem = function(jamaahId, val) {
