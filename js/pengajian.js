@@ -356,7 +356,10 @@ window.openEditJadwalModal = function(id) {
   }
   kelompokSel.value = sched.kelompok_pengajian;
   
-
+  // Determine read-only view
+  const isReadOnly = ["user", "pengurus desa", "pengurus kelompok"].includes(curRoleClean) || 
+                     (isOperator && (sched.tingkat_pengajian === "Tingkat Desa" || sched.tingkat_pengajian === "Tingkat Daerah"));
+  setJadwalFormReadOnly(isReadOnly);
   
   // Populate the shared datalist before adding rows
   populatePengajarDatalist();
