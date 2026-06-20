@@ -5,8 +5,12 @@
       setupDatabaseMockOrSupabase();
       setupEventListeners();
       checkSession();
+      
+      window.fillDemoLogin = (user, pass) => {
+        document.getElementById("login-username").value = user;
+        document.getElementById("login-password").value = pass;
+      };
     });
-
 
     // ----------------------------------------------------
     // USER NOTIFICATION UX SYSTEM (TOAST)
@@ -196,62 +200,33 @@
       const userRoleClean = (user.role || "").trim().toLowerCase();
       if (userRoleClean === "admin") roleLabel = "SUPER ADMINISTRATOR";
       else if (userRoleClean === "operator kelompok") roleLabel = `OPERATOR KELOMPOK (${user.kelompok})`;
-      else if (userRoleClean === "operator desa") roleLabel = "OPERATOR DESA";
-      else if (userRoleClean === "pengurus desa") roleLabel = "PENGURUS DESA (VIEWER)";
-      else if (userRoleClean === "pengurus kelompok") roleLabel = `PENGURUS KELOMPOK (${user.kelompok}) (VIEWER)`;
-      
       document.getElementById("nav-user-role").textContent = roleLabel;
       
+      // Enforce menu visibility based on role
       const menuMaster = document.getElementById("menu-master");
       const menuUsers = document.getElementById("menu-users");
-      const menuDatabaseSettings = document.getElementById("menu-database-settings");
       const btnAdd = document.getElementById("btn-add-jamaah");
-      const btnAddJadwal = document.getElementById("btn-add-jadwal");
       const accessNote = document.getElementById("table-access-note");
       
       if (userRoleClean === "admin") {
         menuMaster.style.display = "block";
         menuUsers.style.display = "block";
-        if (menuDatabaseSettings) menuDatabaseSettings.style.display = "block";
-        if (btnAdd) btnAdd.style.display = "inline-flex";
-        if (btnAddJadwal) btnAddJadwal.style.display = "inline-flex";
+        btnAdd.style.display = "inline-flex";
         accessNote.textContent = "Hak Akses: Administrator (Full CRUD Aktif)";
         accessNote.style.color = "#10b981";
-      } else if (userRoleClean === "operator kelompok" || userRoleClean === "operator desa") {
+      } else if (userRoleClean === "operator kelompok") {
         menuMaster.style.display = "none";
         menuUsers.style.display = "none";
-        if (menuDatabaseSettings) menuDatabaseSettings.style.display = "none";
-        if (btnAdd) btnAdd.style.display = "inline-flex";
-        if (btnAddJadwal) btnAddJadwal.style.display = "inline-flex";
-        if (userRoleClean === "operator kelompok") {
-          accessNote.textContent = `Hak Akses: Operator Kelompok ${user.kelompok} (CRUD Terbatas Kelompok)`;
-          accessNote.style.color = "#3b82f6";
-        } else {
-          accessNote.textContent = `Hak Akses: Operator Desa (CRUD Semua Tingkat)`;
-          accessNote.style.color = "#10b981";
-        }
-      } else if (userRoleClean === "pengurus desa" || userRoleClean === "pengurus kelompok") {
-        menuMaster.style.display = "none";
-        menuUsers.style.display = "none";
-        if (menuDatabaseSettings) menuDatabaseSettings.style.display = "none";
-        if (btnAdd) btnAdd.style.display = "none";
-        if (btnAddJadwal) btnAddJadwal.style.display = "none";
-        if (userRoleClean === "pengurus desa") {
-          accessNote.textContent = "Hak Akses: Pengurus Desa (Mode Read-only Semua Tingkat)";
-        } else {
-          accessNote.textContent = `Hak Akses: Pengurus Kelompok ${user.kelompok} (Mode Read-only Kelompok)`;
-        }
-        accessNote.style.color = "#f59e0b";
+        btnAdd.style.display = "inline-flex"; // Operator can edit/add
+        accessNote.textContent = `Hak Akses: Operator Kelompok ${user.kelompok} (CRUD Terbatas Aktif)`;
+        accessNote.style.color = "#3b82f6";
       } else {
         menuMaster.style.display = "none";
         menuUsers.style.display = "none";
-        if (menuDatabaseSettings) menuDatabaseSettings.style.display = "none";
-        if (btnAdd) btnAdd.style.display = "none";
-        if (btnAddJadwal) btnAddJadwal.style.display = "none";
-        accessNote.textContent = "Hak Akses: User (Mode Read-only)";
+        btnAdd.style.display = "none";
+        accessNote.textContent = "Hak Akses: User (Mode Read-only, Hubungi Admin untuk Perubahan)";
         accessNote.style.color = "#9ca3af";
       }
-
       
       populateUserProfileData();
       switchTab("section-dashboard");
@@ -587,20 +562,8 @@
         });
       }
 
-      // Profile Link Click in Sidebar Panel
-      const navProfileLink = document.getElementById("nav-profile-link");
-      if (navProfileLink) {
-        navProfileLink.addEventListener("click", (e) => {
-          e.preventDefault();
-          document.querySelectorAll(".sidebar-menu .menu-item, .sidebar-menu .submenu-item").forEach(i => i.classList.remove("active"));
-          switchTab("section-profile");
-          document.getElementById("app-sidebar").classList.remove("active");
-        });
-      }
-
       // Login Form Submission
       document.getElementById("login-form").addEventListener("submit", (e) => {
-
         e.preventDefault();
         const user = document.getElementById("login-username").value.trim().toLowerCase();
         const pass = document.getElementById("login-password").value;
@@ -663,47 +626,17 @@
       });
 
       // Navigation routing
-      const menuItems = document.querySelectorAll(".sidebar-menu > .menu-item");
+      const menuItems = document.querySelectorAll(".sidebar-menu .menu-item");
       menuItems.forEach(item => {
-        const toggleLink = item.querySelector(".menu-toggle");
-        if (toggleLink) {
-          toggleLink.addEventListener("click", (e) => {
-            e.preventDefault();
-            item.classList.toggle("open");
-          });
-        } else {
-          item.addEventListener("click", (e) => {
-            e.preventDefault();
-            document.querySelectorAll(".sidebar-menu .menu-item, .sidebar-menu .submenu-item").forEach(i => i.classList.remove("active"));
-            item.classList.add("active");
-            const targetSection = item.getAttribute("data-target");
-            if (targetSection) switchTab(targetSection);
-            document.getElementById("app-sidebar").classList.remove("active");
-          });
-        }
-      });
-
-      // Submenu item click routing
-      const submenuItems = document.querySelectorAll(".sidebar-menu .submenu-item");
-      submenuItems.forEach(subItem => {
-        subItem.addEventListener("click", (e) => {
+        item.addEventListener("click", (e) => {
           e.preventDefault();
-          e.stopPropagation();
-          document.querySelectorAll(".sidebar-menu .menu-item, .sidebar-menu .submenu-item").forEach(i => i.classList.remove("active"));
-          subItem.classList.add("active");
-          
-          // Mark parent as active
-          const parentItem = subItem.closest(".menu-item");
-          if (parentItem) {
-            parentItem.classList.add("active");
-          }
-          
-          const targetSection = subItem.getAttribute("data-target");
-          if (targetSection) switchTab(targetSection);
+          menuItems.forEach(i => i.classList.remove("active"));
+          item.classList.add("active");
+          const targetSection = item.getAttribute("data-target");
+          switchTab(targetSection);
           document.getElementById("app-sidebar").classList.remove("active");
         });
       });
-
 
       document.getElementById("sidebar-toggle").addEventListener("click", (e) => {
         e.stopPropagation();
@@ -916,20 +849,6 @@
         const curUser = getCurrentUser();
         const value = document.getElementById("master-form-input").value.trim();
         
-        let pesertaValue = "";
-        if (activeMasterTab === "Jenis Pengajian") {
-          const selectEl = document.getElementById("master-form-peserta");
-          if (selectEl) {
-            const selected = [];
-            for (let i = 0; i < selectEl.options.length; i++) {
-              if (selectEl.options[i].selected) {
-                selected.push(selectEl.options[i].value);
-              }
-            }
-            pesertaValue = selected.join(", ");
-          }
-        }
-        
         const saveBtn = document.getElementById("master-modal-save-btn");
         saveBtn.disabled = true;
         saveBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...`;
@@ -949,7 +868,7 @@
             saveBtn.innerHTML = `<i class="fa-solid fa-save"></i> Simpan`;
             showToast("Gagal menyimpan opsi master: " + err.message, "error");
           })
-          .saveMasterItemGAS(activeMasterTab, editingMasterName, value, curUser.username, pesertaValue);
+          .saveMasterItemGAS(activeMasterTab, editingMasterName, value, curUser.username);
       });
 
       // User Modal triggers
@@ -966,7 +885,7 @@
         const username = document.getElementById("user-form-username").value.trim();
         const email = document.getElementById("user-form-email").value.trim();
         const role = document.getElementById("user-form-role").value;
-        const kelompok = (role === "Operator Kelompok" || role === "Pengurus Kelompok") ? document.getElementById("user-form-kelompok").value : "Semua";
+        const kelompok = role === "Operator Kelompok" ? document.getElementById("user-form-kelompok").value : "Semua";
         const password = document.getElementById("user-form-password").value;
         
         if (!isEdit && !password) {
@@ -977,8 +896,8 @@
           showToast("Password minimal berjumlah 6 karakter!", "warning");
           return;
         }
-        if ((role === "Operator Kelompok" || role === "Pengurus Kelompok") && !kelompok) {
-          showToast("Kelompok otoritas wajib dipilih untuk role Kelompok!", "warning");
+        if (role === "Operator Kelompok" && !kelompok) {
+          showToast("Kelompok otoritas wajib dipilih untuk Operator Kelompok!", "warning");
           return;
         }
 
@@ -1020,16 +939,11 @@
           const curUser = getCurrentUser();
           if (!curUser) return;
           
-          const newUsername = document.getElementById("profile-username").value.trim();
           const newEmail = document.getElementById("profile-email").value.trim();
           const newPass = document.getElementById("profile-new-password").value;
           const confirmPass = document.getElementById("profile-confirm-password").value;
           const oldPass = document.getElementById("profile-old-password").value;
           
-          if (!newUsername) {
-            showToast("Nama Pengguna wajib diisi!", "warning");
-            return;
-          }
           if (newPass && newPass.length < 6) {
             showToast("Password baru minimal 6 karakter!", "warning");
             return;
@@ -1048,160 +962,62 @@
           google.script.run
             .withSuccessHandler(function(authResult) {
               if (authResult.success) {
-                const isUsernameChanged = newUsername.toLowerCase() !== curUser.username.toLowerCase();
-                
-                const performProfileUpdate = () => {
-                  const userData = {
-                    username: newUsername,
-                    email: newEmail,
-                    role: curUser.role,
-                    kelompok: curUser.kelompok
-                  };
-                  if (newPass) {
-                    userData.passwordHash = sha256(newPass);
-                  }
-                  
-                  if (typeof getUseSupabase !== "undefined" && getUseSupabase()) {
-                    const pgUser = {
-                      username: newUsername,
-                      email: newEmail
-                    };
-                    if (newPass) {
-                      pgUser.password_hash = sha256(newPass);
-                    }
-                    
-                    getSupabaseClient().from("app_users")
-                      .update(pgUser)
-                      .eq("username", curUser.username)
-                      .then(({ error }) => {
-                        if (error) {
-                          saveBtn.disabled = false;
-                          saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan Profil';
-                          showToast("Gagal memperbarui profil: " + error.message, "error");
-                        } else {
-                          if (typeof supabaseLogAction === "function") {
-                            supabaseLogAction(curUser.username, "UPDATE_PROFILE", "Memperbarui profil sendiri. Username: " + curUser.username + " -> " + newUsername);
-                          }
-                          
-                          curUser.username = newUsername;
-                          curUser.email = newEmail;
-                          sessionStorage.setItem("aji_session_user", JSON.stringify(curUser));
-                          
-                          document.getElementById("profile-old-password").value = "";
-                          document.getElementById("profile-new-password").value = "";
-                          document.getElementById("profile-confirm-password").value = "";
-                          
-                          document.getElementById("nav-user-name").textContent = curUser.username;
-                          document.getElementById("nav-user-avatar").textContent = curUser.username.charAt(0).toUpperCase();
-                          populateUserProfileData();
-                          
-                          saveBtn.disabled = false;
-                          saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan Profil';
-                          showToast("Profil dan keamanan berhasil diperbarui!", "success");
-                        }
-                      });
-                  } else {
-                    const users = JSON.parse(localStorage.getItem("aji_users") || "[]");
-                    const idx = users.findIndex(u => u.username.toLowerCase() === curUser.username.toLowerCase());
-                    if (idx !== -1) {
-                      users[idx].username = newUsername;
-                      users[idx].email = newEmail;
-                      if (newPass) {
-                        users[idx].passwordHash = sha256(newPass);
-                      }
-                      localStorage.setItem("aji_users", JSON.stringify(users));
-                      
-                      if (typeof google !== "undefined" && google.script && google.script.run && google.script.run.logActionGAS) {
-                        google.script.run.logActionGAS(curUser.username, "UPDATE_PROFILE", "Memperbarui profil sendiri (Local Mock).");
-                      }
-                      
-                      curUser.username = newUsername;
-                      curUser.email = newEmail;
-                      sessionStorage.setItem("aji_session_user", JSON.stringify(curUser));
-                      
-                      document.getElementById("profile-old-password").value = "";
-                      document.getElementById("profile-new-password").value = "";
-                      document.getElementById("profile-confirm-password").value = "";
-                      
-                      document.getElementById("nav-user-name").textContent = curUser.username;
-                      document.getElementById("nav-user-avatar").textContent = curUser.username.charAt(0).toUpperCase();
-                      populateUserProfileData();
-                      
-                      saveBtn.disabled = false;
-                      saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan Profil';
-                      showToast("Profil dan keamanan berhasil diperbarui (Local Mock)!", "success");
-                    } else {
-                      saveBtn.disabled = false;
-                      saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan Profil';
-                      showToast("User tidak ditemukan di database lokal!", "error");
-                    }
-                  }
+                // Valid password, prepare updated user data
+                const userData = {
+                  username: curUser.username,
+                  email: newEmail,
+                  role: curUser.role,
+                  kelompok: curUser.kelompok
                 };
-                
-                if (isUsernameChanged) {
-                  if (typeof getUseSupabase !== "undefined" && getUseSupabase()) {
-                    getSupabaseClient().from("app_users")
-                      .select("username")
-                      .eq("username", newUsername)
-                      .then(({ data, error }) => {
-                        if (error) {
-                          saveBtn.disabled = false;
-                          saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan Profil';
-                          showToast("Gagal memvalidasi nama pengguna: " + error.message, "error");
-                        } else if (data && data.length > 0) {
-                          saveBtn.disabled = false;
-                          saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan Profil';
-                          showToast("Nama Pengguna (Username) sudah digunakan!", "warning");
-                        } else {
-                          performProfileUpdate();
-                        }
-                      });
-                  } else {
-                    const users = JSON.parse(localStorage.getItem("aji_users") || "[]");
-                    const exist = users.some(u => u.username.toLowerCase() === newUsername.toLowerCase());
-                    if (exist) {
-                      saveBtn.disabled = false;
-                      saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan Profil';
-                      showToast("Nama Pengguna (Username) sudah digunakan!", "warning");
-                    } else {
-                      performProfileUpdate();
-                    }
-                  }
-                } else {
-                  performProfileUpdate();
+                if (newPass) {
+                  userData.passwordHash = sha256(newPass);
                 }
+                
+                // Save updated user data
+                google.script.run
+                  .withSuccessHandler(function() {
+                    // Update active session locally
+                    curUser.email = newEmail;
+                    localStorage.setItem("aji_session", JSON.stringify(curUser));
+                    
+                    document.getElementById("profile-old-password").value = "";
+                    document.getElementById("profile-new-password").value = "";
+                    document.getElementById("profile-confirm-password").value = "";
+                    
+                    populateUserProfileData();
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan';
+                    showToast("Profil dan keamanan berhasil diperbarui!", "success");
+                  })
+                  .withFailureHandler(function(err) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan';
+                    showToast("Gagal memperbarui profil: " + err.message, "error");
+                  })
+                  .saveUserGAS(userData, curUser.username);
               } else {
                 saveBtn.disabled = false;
-                saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan Profil';
+                saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan';
                 showToast("Password saat ini salah!", "error");
               }
             })
             .withFailureHandler(function(err) {
               saveBtn.disabled = false;
-              saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan Profil';
+              saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan';
               showToast("Verifikasi password gagal: " + err.message, "error");
             })
             .authenticateUserGAS(curUser.username, oldHash);
         });
       }
-
     }
 
     // ----------------------------------------------------
     // TAB LAYOUT SWITCHER
     // ----------------------------------------------------
     function switchTab(sectionId) {
-      const currentUser = getCurrentUser();
-      const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
-      const isRestrictedTab = ["section-database-settings", "section-users", "section-master"].includes(sectionId);
-      if (isRestrictedTab && curRoleClean !== "admin") {
-        sectionId = "section-dashboard";
-      }
-
       document.querySelectorAll(".page-section").forEach(sec => sec.classList.remove("active"));
       const target = document.getElementById(sectionId);
       if (target) target.classList.add("active");
-
       
       const titleMap = {
         "section-dashboard": { title: "Dashboard Utama", icon: "fa-chart-pie" },

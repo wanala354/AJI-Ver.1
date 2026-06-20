@@ -7,10 +7,9 @@
     const nativeGoogle = typeof google !== "undefined" ? google : null;
 
     function initDatabaseConnection() {
-      // Automatically connect using hardcoded or env variables
-      supabaseUrl = "https://mphxkqcvcmdqafrslwti.supabase.co";
-      supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1waHhrcWN2Y21kcWFmcnNsd3RpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwNjQ3NTQsImV4cCI6MjA5NjY0MDc1NH0.o2QXxuhTFwjG1RgAjBSd6JBApjtgdCE6bjTUfnWNET8";
-      
+      // Automatically connect using localStorage or hardcoded fallback
+      supabaseUrl = localStorage.getItem("aji_supabase_url") || "https://aji-mobile-one.vercel.app";
+      supabaseKey = localStorage.getItem("aji_supabase_key") || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1waHhrcWN2Y21kcWFmcnNsd3RpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwNjQ3NTQsImV4cCI6MjA5NjY0MDc1NH0.o2QXxuhTFwjG1RgAjBSd6JBApjtgdCE6bjTUfnWNET8";
       
       if (supabaseUrl && supabaseKey) {
         try {
@@ -153,7 +152,8 @@
         let filteredPresensi = presensiList;
         
         const userObj = usersList.find(u => u.username.toLowerCase() === (operatorUsername || "").toLowerCase());
-        if (userObj && userObj.role.trim().toLowerCase() === "operator kelompok") {
+        const isKelompokRestricted = userObj && (userObj.role.trim().toLowerCase() === "operator kelompok" || userObj.role.trim().toLowerCase() === "pengurus kelompok");
+        if (isKelompokRestricted) {
           const targetKelompok = userObj.kelompok;
           filteredJamaah = jamaahList.filter(j => j.kelompokPengajian === targetKelompok);
           filteredJadwal = jadwalList.filter(j => j.kelompok_pengajian === targetKelompok);
@@ -571,9 +571,9 @@
           // Fallback to local storage mock
           if (!localStorage.getItem("aji_users")) {
             localStorage.setItem("aji_users", JSON.stringify([
-              { username: "admin", email: "admin@jatiwarnainfo.or.id", role: "Admin", passwordHash: "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918", kelompok: "Semua" },
-              { username: "op_pm", email: "op_pm@jatiwarnainfo.or.id", role: "Operator Kelompok", passwordHash: "e130282bf248d2f5a54db5ef90f6b4715f019e0cfcd6c04f981e4b85c8e3ccdc", kelompok: "Pondok Melati" },
-              { username: "op_chandra", email: "op_chandra@jatiwarnainfo.or.id", role: "Operator Kelompok", passwordHash: "e130282bf248d2f5a54db5ef90f6b4715f019e0cfcd6c04f981e4b85c8e3ccdc", kelompok: "Chandra" }
+              { username: "admin", email: "admin@jatiwarnainfo.or.id", role: "Admin", passwordHash: "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9", kelompok: "Semua" },
+              { username: "op_pm", email: "op_pm@jatiwarnainfo.or.id", role: "Operator Kelompok", passwordHash: "ec6e1c25258002eb1c67d15c7f45da7945fa4c58778fd7d88faa5e53e3b4698d", kelompok: "Pondok Melati" },
+              { username: "op_chandra", email: "op_chandra@jatiwarnainfo.or.id", role: "Operator Kelompok", passwordHash: "ec6e1c25258002eb1c67d15c7f45da7945fa4c58778fd7d88faa5e53e3b4698d", kelompok: "Chandra" }
             ]));
           }
           if (!localStorage.getItem("aji_jamaah")) {
@@ -727,7 +727,8 @@
                 
                 if (operatorUsername) {
                   const userObj = usersList.find(u => u.username.toLowerCase() === operatorUsername.toLowerCase());
-                  if (userObj && userObj.role.trim().toLowerCase() === "operator kelompok") {
+                  const isKelompokRestricted = userObj && (userObj.role.trim().toLowerCase() === "operator kelompok" || userObj.role.trim().toLowerCase() === "pengurus kelompok");
+                  if (isKelompokRestricted) {
                     const targetKelompok = userObj.kelompok;
                     filteredJamaah = jamaahList.filter(j => j.kelompokPengajian === targetKelompok);
                     filteredKK = kepalaKeluargaList.filter(kk => kk.kelompokPengajian === targetKelompok);

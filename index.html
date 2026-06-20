@@ -43,7 +43,7 @@
         <i class="fa-solid fa-mosque"></i>
         <h1>AJI V.1</h1>
       </div>
-      <div class="login-subtitle">APLIKASI JATIWARNA INFO</div>
+      <div class="login-subtitle">LDII PC Pondok Melati - Modern Green Dashboard</div>
       
       <div id="login-error-msg"></div>
       
@@ -371,11 +371,9 @@
                     <th>ID</th>
                     <th>Nama Lengkap</th>
                     <th>Kelompok</th>
-                    <th>Dapuan</th>
                     <th>Gender</th>
                     <th>Umur</th>
                     <th>Peramutan</th>
-                    <th>Hub. Keluarga</th>
                     <th>Pendidikan</th>
                     <th>Status Ekonomi</th>
                     <th>Sambung</th>
@@ -1344,7 +1342,9 @@
               <option value="" disabled selected>-- Pilih Role --</option>
               <option value="Admin">Admin</option>
               <option value="Operator Kelompok">Operator Kelompok</option>
-              <option value="User">User</option>
+              <option value="Operator Desa">Operator Desa</option>
+              <option value="Pengurus Desa">Pengurus Desa</option>
+              <option value="Pengurus Kelompok">Pengurus Kelompok</option>
             </select>
           </div>
           <div class="form-group" id="user-form-kelompok-group" style="display: none;">
@@ -1467,6 +1467,91 @@
           <button type="submit" class="btn-primary" id="pengajian-jadwal-modal-save-btn"><i class="fa-solid fa-save"></i> Simpan Jadwal</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- VIEW DETAILS MODAL -->
+  <div class="modal-overlay" id="jamaah-view-modal">
+    <div class="modal-container" style="max-width: 900px; width: 95%;">
+      <div class="modal-header">
+        <h2 id="view-modal-title"><i class="fa-solid fa-address-card"></i> Detail Informasi Jamaah</h2>
+        <button class="modal-close-btn" onclick="closeJamaahViewModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 20px; overflow-y: auto; max-height: 75vh; display: flex; flex-direction: column; gap: 20px;">
+        <!-- Profile & Family Grid -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex-wrap: wrap;">
+          <!-- Column 1: Profil Pribadi -->
+          <div class="card-panel" style="margin: 0; padding: 15px;">
+            <h3 style="margin-top: 0; font-size: 1.1rem; color: var(--primary); border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 15px;"><i class="fa-solid fa-user"></i> Biodata Pribadi</h3>
+            <table class="table-custom" style="font-size: 0.85rem; width: 100%;">
+              <tbody>
+                <tr><td style="width: 40%; font-weight: 600; color: var(--text-secondary);">ID Jamaah</td><td id="view-j-id">-</td></tr>
+                <tr><td style="font-weight: 600; color: var(--text-secondary);">Nama Lengkap</td><td id="view-j-nama" style="font-weight: 600;">-</td></tr>
+                <tr><td style="font-weight: 600; color: var(--text-secondary);">Kelompok</td><td id="view-j-kelompok">-</td></tr>
+                <tr><td style="font-weight: 600; color: var(--text-secondary);">Jenis Kelamin</td><td id="view-j-gender">-</td></tr>
+                <tr><td style="font-weight: 600; color: var(--text-secondary);">Tempat, Tgl Lahir</td><td id="view-j-birth">-</td></tr>
+                <tr><td style="font-weight: 600; color: var(--text-secondary);">Umur</td><td id="view-j-umur">-</td></tr>
+                <tr><td style="font-weight: 600; color: var(--text-secondary);">Status Nikah</td><td id="view-j-pernikahan">-</td></tr>
+                <tr><td style="font-weight: 600; color: var(--text-secondary);">Peramutan</td><td id="view-j-peramutan">-</td></tr>
+                <tr><td style="font-weight: 600; color: var(--text-secondary);">Pendidikan</td><td id="view-j-pendidikan">-</td></tr>
+                <tr><td style="font-weight: 600; color: var(--text-secondary);">Pekerjaan</td><td id="view-j-pekerjaan">-</td></tr>
+                <tr><td style="font-weight: 600; color: var(--text-secondary);">Dapuan</td><td id="view-j-dapuan">-</td></tr>
+                <tr><td style="font-weight: 600; color: var(--text-secondary);">Status Ekonomi</td><td id="view-j-ekonomi">-</td></tr>
+                <tr><td style="font-weight: 600; color: var(--text-secondary);">Kelancaran</td><td id="view-j-kelancaran">-</td></tr>
+                <tr><td style="font-weight: 600; color: var(--text-secondary);">No HP</td><td id="view-j-hp">-</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <!-- Column 2: Hubungan & Anggota Keluarga -->
+          <div class="card-panel" style="margin: 0; padding: 15px; display: flex; flex-direction: column;">
+            <h3 style="margin-top: 0; font-size: 1.1rem; color: var(--primary); border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 15px;"><i class="fa-solid fa-people-roof"></i> Hubungan & Anggota Keluarga</h3>
+            <div style="font-size: 0.85rem; margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px;">
+              <div><span style="color: var(--text-secondary);">Hub. Keluarga:</span> <strong id="view-j-hubungan">-</strong></div>
+              <div><span style="color: var(--text-secondary);">Kepala Keluarga:</span> <strong id="view-j-kk">-</strong></div>
+            </div>
+            <div class="table-responsive" style="flex-grow: 1; max-height: 300px; overflow-y: auto;">
+              <table class="table-custom" style="font-size: 0.8rem; width: 100%;">
+                <thead>
+                  <tr>
+                    <th>Nama Anggota</th>
+                    <th>Hubungan</th>
+                    <th>Umur</th>
+                  </tr>
+                </thead>
+                <tbody id="view-family-members-body">
+                  <!-- Dynamic rendering -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <!-- Section 3: Rekap Presensi -->
+        <div class="card-panel" style="margin: 0; padding: 15px;">
+          <h3 style="margin-top: 0; font-size: 1.1rem; color: var(--primary); border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 15px;"><i class="fa-solid fa-chart-line"></i> Rekap Tingkat Kehadiran (Presensi)</h3>
+          <div class="table-responsive">
+            <table class="table-custom" style="font-size: 0.85rem; width: 100%;">
+              <thead>
+                <tr>
+                  <th>Tingkat</th>
+                  <th>Jenis Pengajian</th>
+                  <th>Hadir</th>
+                  <th>Izin</th>
+                  <th>Alpha</th>
+                  <th>Total Sesi</th>
+                  <th>Persentase</th>
+                  <th>Keterangan</th>
+                </tr>
+              </thead>
+              <tbody id="view-presensi-recap-body">
+                <!-- Dynamic rendering -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding: 15px 25px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end;">
+        <button class="btn-secondary" onclick="closeJamaahViewModal()">Tutup</button>
+      </div>
     </div>
   </div>
 
