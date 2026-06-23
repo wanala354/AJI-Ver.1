@@ -1217,7 +1217,7 @@
         .withSuccessHandler(function(data) {
           localJamaahList = (data.jamaahList || []).map(j => {
             const age = calculateAge(j.tanggalLahir);
-            const peramutan = getKelompokPeramutan(age, j.statusPernikahan);
+            const peramutan = getKelompokPeramutan(age, j.statusPernikahan, j.tingkatPendidikan);
             return { ...j, umur: age, kelompokPeramutan: peramutan };
           });
           localKepalaKeluargaList = data.kepalaKeluargaList || [];

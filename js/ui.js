@@ -53,11 +53,14 @@
       return age;
     }
 
-    function getKelompokPeramutan(age, maritalStatus) {
+    function getKelompokPeramutan(age, maritalStatus, tingkatPendidikan) {
+      const edu = tingkatPendidikan ? tingkatPendidikan.trim().toUpperCase() : "";
+      if ((age >= 13 && age <= 18) || edu === "SMP" || edu === "SLTA/SMK") {
+        return "GUS";
+      }
       if (age <= 3) return "Balita";
       if (age <= 5) return "PAUD";
       if (age <= 12) return "Caberawit";
-      if (age <= 18) return "GUS";
       if (age >= 60) return "Manula";
       if (age >= 30 && age < 60) return "Dewasa";
       if (age > 18 && age < 30) {
@@ -810,7 +813,8 @@
         const age = calculateAge(birthdate);
         document.getElementById("form-umur").value = age;
         const maritalStatus = document.getElementById("form-pernikahan").value;
-        const peramutan = getKelompokPeramutan(age, maritalStatus);
+        const education = document.getElementById("form-pendidikan").value;
+        const peramutan = getKelompokPeramutan(age, maritalStatus, education);
         document.getElementById("form-peramutan").value = peramutan;
       });
       
@@ -818,7 +822,17 @@
         const birthdate = document.getElementById("form-tanggal-lahir").value;
         const age = calculateAge(birthdate);
         const maritalStatus = document.getElementById("form-pernikahan").value;
-        const peramutan = getKelompokPeramutan(age, maritalStatus);
+        const education = document.getElementById("form-pendidikan").value;
+        const peramutan = getKelompokPeramutan(age, maritalStatus, education);
+        document.getElementById("form-peramutan").value = peramutan;
+      });
+
+      document.getElementById("form-pendidikan").addEventListener("change", () => {
+        const birthdate = document.getElementById("form-tanggal-lahir").value;
+        const age = calculateAge(birthdate);
+        const maritalStatus = document.getElementById("form-pernikahan").value;
+        const education = document.getElementById("form-pendidikan").value;
+        const peramutan = getKelompokPeramutan(age, maritalStatus, education);
         document.getElementById("form-peramutan").value = peramutan;
       });
 

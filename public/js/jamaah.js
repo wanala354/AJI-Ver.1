@@ -82,7 +82,8 @@
       const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
       const isAdmin = currentUser && curRoleClean === "admin";
       const isOperator = currentUser && curRoleClean === "operator kelompok";
-      const hasWriteAccess = isAdmin || isOperator;
+      const isOperatorDesa = currentUser && curRoleClean === "operator desa";
+      const hasWriteAccess = isAdmin || isOperator || isOperatorDesa;
       
       const totalRecords = filteredJamaahList.length;
       const totalPages = Math.ceil(totalRecords / pageSize) || 1;
@@ -106,7 +107,7 @@
       document.getElementById("btn-pag-last").disabled = currentPage === totalPages;
       
       if (totalRecords === 0) {
-        tbody.innerHTML = `<tr><td colspan="12" style="text-align: center; padding: 25px; color: var(--text-secondary);"><i class="fa-solid fa-triangle-exclamation"></i> Tidak ada data jamaah.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 25px; color: var(--text-secondary);"><i class="fa-solid fa-triangle-exclamation"></i> Tidak ada data jamaah.</td></tr>`;
         document.getElementById("jamaah-shown-count").textContent = 0;
         document.getElementById("jamaah-total-count").textContent = getJamaahList().length;
         return;
@@ -136,7 +137,7 @@
         }
         
         // RLS: Operator only can edit their own kelompok members
-        const canWriteThisRow = isAdmin || (isOperator && j.kelompokPengajian === currentUser.kelompok);
+        const canWriteThisRow = isAdmin || isOperatorDesa || (isOperator && j.kelompokPengajian === currentUser.kelompok);
         
         let actionButtons = `<div class="action-btns">
           <button class="btn-icon view" data-id="${j.id}" title="Lihat Detail"><i class="fa-solid fa-eye"></i></button>`;
@@ -151,11 +152,9 @@
           <td><strong>${j.id}</strong></td>
           <td>${j.namaLengkap}</td>
           <td>${j.kelompokPengajian}</td>
-          <td style="font-size:0.85rem;">${j.dapuan}</td>
           <td>${j.jenisKelamin}</td>
           <td>${j.umur} Tahun</td>
           <td><span class="badge ${peramutanClass}">${j.kelompokPeramutan}</span></td>
-          <td>${j.statusHubunganKeluarga}</td>
           <td>${j.tingkatPendidikan}</td>
           <td><span class="badge ${ekonomiClass}">${j.statusEkonomi}</span></td>
           <td><span class="badge ${sambungClass}">${j.kelancaranSambung}</span></td>
@@ -486,13 +485,12 @@
         kkName = kkItem ? `${kkItem.namaLengkap} (${item.kepalaKeluargaId})` : `ID: ${item.kepalaKeluargaId}`;
       }
       
-      // Populate text contents
+      // 1. Populate text contents for Profile
       document.getElementById("view-j-id").textContent = item.id || "-";
       document.getElementById("view-j-nama").textContent = item.namaLengkap || "-";
       document.getElementById("view-j-kelompok").textContent = item.kelompokPengajian || "-";
       document.getElementById("view-j-gender").textContent = item.jenisKelamin || "-";
-      document.getElementById("view-j-tempat-lahir").textContent = item.tempatLahir || "-";
-      document.getElementById("view-j-tanggal-lahir").textContent = item.tanggalLahir || "-";
+      document.getElementById("view-j-birth").textContent = `${item.tempatLahir || "-"}, ${item.tanggalLahir ? formatDateIndo(item.tanggalLahir) : "-"}`;
       document.getElementById("view-j-umur").textContent = item.umur ? `${item.umur} Tahun` : "-";
       document.getElementById("view-j-pernikahan").textContent = item.statusPernikahan || "-";
       document.getElementById("view-j-peramutan").textContent = item.kelompokPeramutan || "-";
@@ -504,6 +502,153 @@
       document.getElementById("view-j-dapuan").textContent = item.dapuan || "-";
       document.getElementById("view-j-ekonomi").textContent = item.statusEkonomi || "-";
       document.getElementById("view-j-kelancaran").textContent = item.kelancaranSambung || "-";
+      
+      // 2. Populate Family Members
+      const kkId = (item.statusHubunganKeluarga === "Kepala Keluarga") ? item.id : item.kepalaKeluargaId;
+      let familyHtml = "";
+      if (kkId) {
+        const members = getJamaahList().filter(j => j.kepalaKeluargaId === kkId || j.id === kkId);
+        
+        // Sort family members: KK, Istri, Anak, then others
+        const hubOrder = { "Kepala Keluarga": 1, "Istri": 2, "Anak": 3, "Ayah": 4, "Ibu": 5 };
+        members.sort((a, b) => (hubOrder[a.statusHubunganKeluarga] || 99) - (hubOrder[b.statusHubunganKeluarga] || 99));
+        
+        members.forEach(m => {
+          const isSelf = m.id === item.id;
+          familyHtml += `
+            <tr style="${isSelf ? 'background: rgba(16, 185, 129, 0.15); font-weight: bold;' : ''}">
+              <td>${m.namaLengkap} ${isSelf ? '<span class="badge badge-green" style="font-size:0.65rem; padding: 2px 4px; margin-left: 4px;">Anda</span>' : ''}</td>
+              <td>${m.statusHubunganKeluarga}</td>
+              <td>${m.umur} Thn</td>
+            </tr>
+          `;
+        });
+      }
+      
+      if (familyHtml === "") {
+        familyHtml = `<tr><td colspan="3" style="text-align:center; padding:15px; color:var(--text-secondary);">Tidak ada relasi anggota keluarga.</td></tr>`;
+      }
+      document.getElementById("view-family-members-body").innerHTML = familyHtml;
+
+      // 3. Populate Attendance Recaps
+      const schedules = getJadwalPengajianList();
+      const presences = getPresensiKehadiranList();
+      const masterJenis = getMasterJenisPengajianList();
+      const pengurusList = getPengurusList();
+      
+      // Helper function to check relevance
+      const isSessionRelevant = (session, jamaah) => {
+        // Kelompok check
+        if (session.tingkat_pengajian === "Kelompok" && session.kelompok_pengajian !== jamaah.kelompokPengajian) {
+          return false;
+        }
+        
+        // Participant rules
+        const jenisName = session.jenis_pengajian;
+        const jenisNameClean = (jenisName || "").trim().toLowerCase();
+        const genderClean = (jamaah.jenisKelamin || "").trim().toLowerCase();
+        if (genderClean === "laki-laki" && (jenisNameClean === "ibu-ibu" || jenisNameClean === "ibu - ibu" || jenisNameClean === "kewanitaan")) {
+          return false;
+        }
+        
+        if (jenisName === "Pengurus") {
+          const isPengurus = (pengurusList || []).some(p => p.jamaah_id === jamaah.id);
+          if (!isPengurus) return false;
+        }
+        
+        const jenisObj = (masterJenis || []).find(j => j.nama === jenisName);
+        if (jenisObj && jenisObj.peserta_pengajian) {
+          const allowed = jenisObj.peserta_pengajian.split(",").map(x => x.trim().toLowerCase());
+          if (allowed.length > 0 && !allowed.includes(jamaah.kelompokPeramutan.toLowerCase())) {
+            return false;
+          }
+        }
+        
+        return true;
+      };
+
+      // Group sessions by (tingkat, jenis)
+      const groups = {};
+      const todayStr = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
+      schedules.forEach(session => {
+        if (!isSessionRelevant(session, item)) return;
+        
+        // Only include sessions that are today or in the past
+        if (session.tanggal > todayStr) return;
+        
+        // Only include sessions that have actually been marked/filled (have at least one record in database)
+        const isFilled = presences.some(p => p.id_pengajian === session.id);
+        if (!isFilled) return;
+        
+        const key = `${session.tingkat_pengajian} - ${session.jenis_pengajian}`;
+        if (!groups[key]) {
+          groups[key] = {
+            tingkat: session.tingkat_pengajian,
+            jenis: session.jenis_pengajian,
+            sessions: []
+          };
+        }
+        groups[key].sessions.push(session);
+      });
+      
+      let presensiHtml = "";
+      Object.values(groups).forEach(g => {
+        let hadirFisik = 0;
+        let online = 0;
+        let izin = 0;
+        let alpha = 0;
+        const totalSesi = g.sessions.length;
+        
+        g.sessions.forEach(session => {
+          const pRecord = presences.find(p => p.id_pengajian === session.id && p.id_jamaah === item.id);
+          if (pRecord) {
+            if (pRecord.status === "Hadir Fisik") hadirFisik++;
+            else if (pRecord.status === "Online") online++;
+            else if (pRecord.status === "Izin") izin++;
+            else alpha++;
+          } else {
+            alpha++;
+          }
+        });
+        
+        const totalHadir = hadirFisik + online;
+        const percentage = totalSesi > 0 ? Math.round((totalHadir / totalSesi) * 100) : 0;
+        
+        let badgeClass = "badge-red";
+        let statusText = "Kurang";
+        if (percentage >= 85) {
+          badgeClass = "badge-green";
+          statusText = "Sangat Baik";
+        } else if (percentage >= 70) {
+          badgeClass = "badge-blue";
+          statusText = "Baik";
+        }
+        
+        presensiHtml += `
+          <tr>
+            <td><span class="badge ${g.tingkat === 'Kelompok' ? 'badge-green' : g.tingkat === 'Desa' ? 'badge-blue' : 'badge-yellow'}">${g.tingkat}</span></td>
+            <td><strong>${g.jenis}</strong></td>
+            <td>${totalHadir} <span style="font-size:0.75rem; color:var(--text-muted);">(${hadirFisik} F / ${online} O)</span></td>
+            <td>${izin}</td>
+            <td>${alpha}</td>
+            <td><strong>${totalSesi}</strong></td>
+            <td>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <strong style="width:35px; text-align:right;">${percentage}%</strong>
+                <div style="flex-grow:1; height:6px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden; width:80px;">
+                  <div style="height:100%; width:${percentage}%; background:${percentage >= 85 ? '#10b981' : percentage >= 70 ? '#3b82f6' : '#ef4444'}; border-radius:3px;"></div>
+                </div>
+              </div>
+            </td>
+            <td><span class="badge ${badgeClass}">${statusText}</span></td>
+          </tr>
+        `;
+      });
+      
+      if (presensiHtml === "") {
+        presensiHtml = `<tr><td colspan="8" style="text-align:center; padding:15px; color:var(--text-secondary);">Tidak ada sesi jadwal pengajian yang diikuti.</td></tr>`;
+      }
+      document.getElementById("view-presensi-recap-body").innerHTML = presensiHtml;
       
       modal.classList.add("active");
     }

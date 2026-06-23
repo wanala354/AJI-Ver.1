@@ -25,6 +25,14 @@
             <th style="width: 150px; text-align:center;">Aksi</th>
           </tr>
         `;
+      } else if (activeMasterTab === "Jenis Pengajian") {
+        thead.innerHTML = `
+          <tr>
+            <th>Nama Opsi</th>
+            <th>Peserta Pengajian (Peramutan)</th>
+            <th style="width: 150px; text-align:center;">Aksi</th>
+          </tr>
+        `;
       } else {
         thead.innerHTML = `
           <tr>
@@ -82,21 +90,37 @@
       
       const list = getSelectedMasterList();
       if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="2" style="text-align: center; padding: 20px; color: var(--text-secondary);">Tidak ada opsi master.</td></tr>`;
+        const cols = activeMasterTab === "Jenis Pengajian" ? 3 : 2;
+        tbody.innerHTML = `<tr><td colspan="${cols}" style="text-align: center; padding: 20px; color: var(--text-secondary);">Tidak ada opsi master.</td></tr>`;
         return;
       }
 
       list.forEach(item => {
         const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td><strong>${item}</strong></td>
-          <td style="text-align:center;">
-            <div class="action-btns" style="justify-content:center;">
-              <button class="btn-icon edit" data-name="${item}" title="Edit"><i class="fa-solid fa-pen"></i></button>
-              <button class="btn-icon delete" data-name="${item}" title="Hapus"><i class="fa-solid fa-trash"></i></button>
-            </div>
-          </td>
-        `;
+        if (activeMasterTab === "Jenis Pengajian") {
+          const nama = typeof item === 'object' ? item.nama : item;
+          const peserta = typeof item === 'object' ? (item.peserta_pengajian || '-') : '-';
+          tr.innerHTML = `
+            <td><strong>${nama}</strong></td>
+            <td>${peserta}</td>
+            <td style="text-align:center;">
+              <div class="action-btns" style="justify-content:center;">
+                <button class="btn-icon edit" data-name="${nama}" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                <button class="btn-icon delete" data-name="${nama}" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+              </div>
+            </td>
+          `;
+        } else {
+          tr.innerHTML = `
+            <td><strong>${item}</strong></td>
+            <td style="text-align:center;">
+              <div class="action-btns" style="justify-content:center;">
+                <button class="btn-icon edit" data-name="${item}" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                <button class="btn-icon delete" data-name="${item}" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+              </div>
+            </td>
+          `;
+        }
         tbody.appendChild(tr);
       });
 
@@ -113,7 +137,36 @@
       const modal = document.getElementById("master-modal");
       const title = document.getElementById("master-modal-title");
       const input = document.getElementById("master-form-input");
+      const pesertaContainer = document.getElementById("master-form-peserta-container");
+      const pesertaSelect = document.getElementById("master-form-peserta");
       document.getElementById("master-form-old-name").value = name || "";
+      
+      if (pesertaSelect) {
+        for (let i = 0; i < pesertaSelect.options.length; i++) {
+          pesertaSelect.options[i].selected = false;
+        }
+      }
+      
+      if (activeMasterTab === "Jenis Pengajian") {
+        if (pesertaContainer) pesertaContainer.style.display = "block";
+        if (pesertaSelect) pesertaSelect.required = true;
+        
+        if (name) {
+          const list = getSelectedMasterList();
+          const item = list.find(x => (typeof x === 'object' ? x.nama : x) === name);
+          if (item && typeof item === 'object' && item.peserta_pengajian) {
+            const currentPeserta = item.peserta_pengajian.split(",").map(p => p.trim());
+            for (let i = 0; i < pesertaSelect.options.length; i++) {
+              if (currentPeserta.includes(pesertaSelect.options[i].value)) {
+                pesertaSelect.options[i].selected = true;
+              }
+            }
+          }
+        }
+      } else {
+        if (pesertaContainer) pesertaContainer.style.display = "none";
+        if (pesertaSelect) pesertaSelect.required = false;
+      }
       
       if (name) {
         title.innerHTML = `<i class="fa-solid fa-pen"></i> Edit Opsi ${activeMasterTab}`;
@@ -278,7 +331,7 @@
     function toggleUserKelompokField() {
       const role = document.getElementById("user-form-role").value;
       const group = document.getElementById("user-form-kelompok-group");
-      if (role === "Operator Kelompok") {
+      if (role === "Operator Kelompok" || role === "Pengurus Kelompok") {
         group.style.display = "block";
       } else {
         group.style.display = "none";

@@ -1,5 +1,6 @@
 // MANAJEMEN PENGAJIAN MODULE LOGIC (v3.0)
 // ----------------------------------------------------
+let attendanceTrendChart = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   // Setup subtab click listeners
@@ -179,10 +180,24 @@ window.renderCalendar = function() {
       const badge = document.createElement("div");
       badge.className = "calendar-event-badge";
       
-      const isDesa = sched.tingkat_pengajian === "Tingkat Desa";
-      badge.style.background = isDesa ? "rgba(16, 185, 129, 0.15)" : "rgba(59, 130, 246, 0.15)";
-      badge.style.borderLeft = `3px solid ${isDesa ? "#10b981" : "#3b82f6"}`;
-      badge.style.color = isDesa ? "#34d399" : "#60a5fa";
+      const tingkat = (sched.tingkat_pengajian || "").trim().toLowerCase();
+      let bgColor = "rgba(59, 130, 246, 0.15)";
+      let borderCol = "#3b82f6";
+      let textCol = "#60a5fa";
+      
+      if (tingkat === "tingkat desa") {
+        bgColor = "rgba(16, 185, 129, 0.15)";
+        borderCol = "#10b981";
+        textCol = "#34d399";
+      } else if (tingkat === "tingkat daerah") {
+        bgColor = "rgba(245, 158, 11, 0.15)";
+        borderCol = "#f59e0b";
+        textCol = "#fbbf24";
+      }
+      
+      badge.style.background = bgColor;
+      badge.style.borderLeft = `3px solid ${borderCol}`;
+      badge.style.color = textCol;
       badge.style.fontSize = "0.72rem";
       badge.style.padding = "3px 6px";
       badge.style.borderRadius = "3px";
@@ -527,7 +542,12 @@ function setRowPengajarValue(inputEl, selectedId = "") {
   if (jObj) {
     inputEl.value = `${jObj.namaLengkap} (${jObj.id})`;
   } else {
-    inputEl.value = `Ustadz ID ${selectedId} (Tidak Ditemukan)`;
+    // If it looks like a jamaah ID (e.g. starts with J-), show not found. Otherwise, show as-is since it was manually typed.
+    if (/^J-\d+$/.test(selectedId)) {
+      inputEl.value = `Ustadz ID ${selectedId} (Tidak Ditemukan)`;
+    } else {
+      inputEl.value = selectedId;
+    }
   }
 }
 
@@ -993,37 +1013,7 @@ function renderPresensiTable(session) {
   }
   
   // Apply automatic filtering based on jenis_pengajian
-  const jenis = (session.jenis_pengajian || "").trim().toLowerCase();
-  targetJamaah = targetJamaah.filter(j => {
-    const peramutan = (j.kelompokPeramutan || "").trim();
-    const gender = (j.jenisKelamin || "").trim();
-    
-    if (jenis === "sambung") {
-      return ["Dewasa", "Manula", "GUM"].includes(peramutan);
-    } else if (jenis === "5 unsur") {
-      return ["Dewasa", "Manula", "GUM"].includes(peramutan);
-    } else if (jenis === "gus") {
-      return peramutan === "GUS";
-    } else if (jenis === "gum") {
-      return peramutan === "GUM";
-    } else if (jenis === "gabungan gus dan gum") {
-      return ["GUS", "GUM"].includes(peramutan);
-    } else if (jenis === "caberawit") {
-      return ["PAUD", "Caberawit"].includes(peramutan);
-    } else if (jenis === "ibu-ibu" || jenis === "ibu - ibu") {
-      return ["Dewasa", "Manula"].includes(peramutan) && gender === "Perempuan";
-    } else if (jenis === "pengurus") {
-      const masterJenisList = getMasterJenisPengajianList() || [];
-      const masterItem = masterJenisList.find(m => m.nama.trim().toLowerCase() === "pengurus");
-      if (masterItem && masterItem.peserta_pengajian) {
-        const allowedPeramutan = masterItem.peserta_pengajian.split(",").map(p => p.trim().toLowerCase());
-        return allowedPeramutan.includes(peramutan.toLowerCase());
-      }
-      return true;
-    } else {
-      return true;
-    }
-  });
+  targetJamaah = targetJamaah.filter(j => isJamaahEligibleForJenis(j, session.jenis_pengajian));
   
   if (targetJamaah.length === 0) {
     tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--text-secondary);">Tidak ada jamaah yang memenuhi kriteria untuk jenis pengajian ini.</td></tr>';
@@ -1416,7 +1406,195 @@ window.calculateAndRenderMonitoring = function(isSesiChange = false) {
   
   // Render Individual keaktifan table
   renderIndividualMonitoringTable(filteredSchedules, presensiMap);
+
+  // Render Attendance Trend Chart
+  updateAttendanceTrendChart();
 };
+
+window.updateAttendanceTrendChart = function() {
+  const groupingEl = document.getElementById("monitor-trend-grouping");
+  const grouping = groupingEl ? groupingEl.value : "week";
+  const schedules = getJadwalPengajianList() || [];
+  const presensiDb = getPresensiKehadiranList() || [];
+  const jamaah = getJamaahList() || [];
+  const currentUser = getCurrentUser();
+  const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
+  const isOperator = curRoleClean === "operator kelompok";
+  
+  let targetSchedules = [...schedules];
+  if (isOperator) {
+    targetSchedules = targetSchedules.filter(s => s.kelompok_pengajian === currentUser.kelompok);
+  } else {
+    const filterTingkat = document.getElementById("monitor-tingkat").value;
+    if (filterTingkat) {
+      targetSchedules = targetSchedules.filter(s => s.tingkat_pengajian === filterTingkat);
+    }
+  }
+  
+  const filterJenis = document.getElementById("monitor-jenis").value;
+  if (filterJenis) {
+    targetSchedules = targetSchedules.filter(s => s.jenis_pengajian === filterJenis);
+  }
+  
+  // Sort schedules by date ascending for chronological order
+  targetSchedules.sort((a, b) => a.tanggal.localeCompare(b.tanggal));
+  
+  const targetJamaahForStats = isOperator ? jamaah.filter(j => j.kelompokPengajian === currentUser.kelompok) : jamaah;
+  
+  const presensiMap = {};
+  presensiDb.forEach(p => {
+    presensiMap[`${p.id_pengajian}_${p.id_jamaah}`] = p.status;
+  });
+  
+  // Compute attendance stats per schedule
+  const scheduleData = targetSchedules.map(s => {
+    let eligible = 0;
+    let present = 0;
+    
+    targetJamaahForStats.forEach(j => {
+      if (isJamaahEligibleForJenis(j, s.jenis_pengajian)) {
+        const inKelompok = s.tingkat_pengajian === "Tingkat Desa" ||
+                           s.tingkat_pengajian === "Tingkat Daerah" ||
+                           s.kelompok_pengajian === j.kelompokPengajian;
+        if (inKelompok) {
+          eligible++;
+          const status = presensiMap[`${s.id}_${j.id}`] || "Alpha";
+          if (status === "Hadir Fisik" || status === "Online") {
+            present++;
+          }
+        }
+      }
+    });
+    
+    return {
+      id: s.id,
+      tanggal: s.tanggal,
+      present,
+      eligible
+    };
+  }).filter(item => item.eligible > 0);
+  
+  // Grouping
+  const groups = {};
+  const monthsIndo = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];
+  
+  scheduleData.forEach(item => {
+    let groupKey = "";
+    let groupLabel = "";
+    
+    const d = new Date(item.tanggal);
+    if (grouping === "day") {
+      groupKey = item.tanggal;
+      groupLabel = formatDateIndoShort(item.tanggal);
+    } else if (grouping === "week") {
+      // Get Monday of the week
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1 - day);
+      const monday = new Date(d.setDate(diff));
+      const mondayStr = monday.toISOString().substring(0, 10);
+      groupKey = mondayStr;
+      
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      
+      groupLabel = `${monday.getDate()} ${monthsIndo[monday.getMonth()]} - ${sunday.getDate()} ${monthsIndo[sunday.getMonth()]}`;
+    } else { // month
+      const y = d.getFullYear();
+      const m = d.getMonth();
+      groupKey = `${y}-${String(m+1).padStart(2, '0')}`;
+      groupLabel = `${monthsIndo[m]} ${y}`;
+    }
+    
+    if (!groups[groupKey]) {
+      groups[groupKey] = {
+        label: groupLabel,
+        present: 0,
+        eligible: 0,
+        key: groupKey
+      };
+    }
+    
+    groups[groupKey].present += item.present;
+    groups[groupKey].eligible += item.eligible;
+  });
+  
+  const sortedGroups = Object.values(groups).sort((a, b) => a.key.localeCompare(b.key));
+  
+  const labels = sortedGroups.map(g => g.label);
+  const dataValues = sortedGroups.map(g => g.eligible > 0 ? Math.round((g.present / g.eligible) * 100) : 0);
+  
+  const canvas = document.getElementById("attendance-trend-chart");
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext("2d");
+  const isDark = document.body.classList.contains("dark-theme");
+  const textColor = isDark ? "#9ca3af" : "#4b5563";
+  const gridColor = isDark ? "rgba(16, 185, 129, 0.1)" : "#e2e8f0";
+  
+  if (attendanceTrendChart) {
+    attendanceTrendChart.destroy();
+  }
+  
+  attendanceTrendChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "Tingkat Kehadiran (%)",
+        data: dataValues,
+        backgroundColor: "rgba(16, 185, 129, 0.15)",
+        borderColor: "#10b981",
+        borderWidth: 2.5,
+        pointBackgroundColor: "#10b981",
+        pointBorderColor: isDark ? "#1f2937" : "#fff",
+        pointBorderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        fill: true,
+        tension: 0.3
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          padding: 12,
+          callbacks: {
+            label: function(context) {
+              return `Kehadiran: ${context.parsed.y}%`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          min: 0,
+          max: 100,
+          ticks: {
+            color: textColor,
+            callback: function(value) {
+              return value + "%";
+            }
+          },
+          grid: { color: gridColor }
+        },
+        x: {
+          ticks: { color: textColor },
+          grid: { display: false }
+        }
+      }
+    }
+  });
+};
+
+function formatDateIndoShort(dateStr) {
+  if (!dateStr) return "-";
+  const date = new Date(dateStr);
+  const months = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];
+  return `${date.getDate()} ${months[date.getMonth()]}`;
+}
 
 let currentMonitoringTableData = [];
 
@@ -1424,15 +1602,7 @@ let currentMonitoringTableData = [];
 function getEligiblePeramutanForJenis(jenis) {
   const jClean = (jenis || "").trim().toLowerCase().replace(/\s+/g, '');
   
-  // Special cases override
-  if (jClean === "ibu-ibu" || jClean === "ibu--ibu" || jClean === "ibuibu") {
-    return ["Dewasa", "Manula"];
-  }
-  if (jClean === "kewanitaan") {
-    return ["Dewasa", "Manula", "GUS", "GUM"];
-  }
-  
-  // Dynamic lookup
+  // Dynamic lookup first
   const list = typeof getMasterJenisPengajianList === 'function' ? getMasterJenisPengajianList() : (typeof localMasterJenisPengajian !== 'undefined' ? localMasterJenisPengajian : []);
   const match = list.find(item => {
     const name = typeof item === 'object' ? item.nama : item;
@@ -1443,7 +1613,13 @@ function getEligiblePeramutanForJenis(jenis) {
     return match.peserta_pengajian.split(",").map(p => p.trim()).filter(Boolean);
   }
   
-  // Fallback to static mapping if not found dynamically
+  // Fallbacks if not found dynamically
+  if (jClean === "ibu-ibu" || jClean === "ibu--ibu" || jClean === "ibuibu") {
+    return ["Dewasa", "Manula"];
+  }
+  if (jClean === "kewanitaan") {
+    return ["Dewasa", "Manula", "GUS", "GUM"];
+  }
   if (jClean === "sambung" || jClean === "5unsur") {
     return ["Dewasa", "Manula", "GUM"];
   } else if (jClean === "gus") {
@@ -1465,9 +1641,10 @@ function getEligiblePeramutanForJenis(jenis) {
 function isJamaahEligibleForJenis(j, jenis) {
   const jClean = (jenis || "").trim().toLowerCase().replace(/\s+/g, '');
   
-  // Gender restriction for Ibu-ibu & Kewanitaan
-  if (jClean === "ibu-ibu" || jClean === "ibu--ibu" || jClean === "ibuibu" || jClean === "kewanitaan") {
-    if ((j.jenisKelamin || "").trim() !== "Perempuan") {
+  // Gender restriction if the type name contains "ibu", "wanita", "kewanitaan", or "akhwat"
+  const isFemaleOnly = jClean.includes("ibu") || jClean.includes("wanita") || jClean.includes("kewanitaan") || jClean.includes("akhwat");
+  if (isFemaleOnly) {
+    if ((j.jenisKelamin || "").trim().toLowerCase() !== "perempuan") {
       return false;
     }
   }
@@ -1546,6 +1723,7 @@ function renderIndividualMonitoringTable(filteredSchedules, presensiMap) {
       id: j.id,
       nama: j.namaLengkap,
       peramutan: j.kelompokPeramutan,
+      gender: j.jenisKelamin,
       kelompokPengajian: j.kelompokPengajian,
       totalSesi: jTotalSesi,
       fisik,
@@ -1560,7 +1738,7 @@ function renderIndividualMonitoringTable(filteredSchedules, presensiMap) {
   
   fillMonitoringDOM();
 }
-
+ 
 function fillMonitoringDOM() {
   const tbody = document.getElementById("monitor-table-body");
   if (!tbody) return;
@@ -1568,6 +1746,8 @@ function fillMonitoringDOM() {
   
   const search = document.getElementById("monitor-search").value.trim().toLowerCase();
   const filterKelompok = document.getElementById("monitor-kelompok") ? document.getElementById("monitor-kelompok").value : "";
+  const filterPeramutan = document.getElementById("monitor-filter-peramutan") ? document.getElementById("monitor-filter-peramutan").value : "";
+  const filterGender = document.getElementById("monitor-filter-gender") ? document.getElementById("monitor-filter-gender").value : "";
   
   let filtered = currentMonitoringTableData;
   if (search) {
@@ -1575,6 +1755,12 @@ function fillMonitoringDOM() {
   }
   if (filterKelompok) {
     filtered = filtered.filter(p => p.kelompokPengajian === filterKelompok);
+  }
+  if (filterPeramutan) {
+    filtered = filtered.filter(p => p.peramutan === filterPeramutan);
+  }
+  if (filterGender) {
+    filtered = filtered.filter(p => p.gender === filterGender);
   }
   
   if (filtered.length === 0) {

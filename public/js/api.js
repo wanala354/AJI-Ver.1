@@ -1,4 +1,4 @@
-    // SUPABASE DATABASE CONNECTOR & ADAPTER (v2.1 Serverless)
+// SUPABASE DATABASE CONNECTOR & ADAPTER (v2.1 Serverless)
     // ----------------------------------------------------
     let useSupabase = false;
     let supabaseUrl = "";
@@ -10,7 +10,6 @@
       // Automatically connect using localStorage or hardcoded fallback
       supabaseUrl = localStorage.getItem("aji_supabase_url") || "https://aji-mobile-one.vercel.app";
       supabaseKey = localStorage.getItem("aji_supabase_key") || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1waHhrcWN2Y21kcWFmcnNsd3RpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwNjQ3NTQsImV4cCI6MjA5NjY0MDc1NH0.o2QXxuhTFwjG1RgAjBSd6JBApjtgdCE6bjTUfnWNET8";
-      
       
       if (supabaseUrl && supabaseKey) {
         try {
@@ -95,7 +94,7 @@
         const rawHubungan = ["Kepala Keluarga", "Istri", "Anak", "Ayah", "Ibu"];
         
         const rawMateri = (resMateri.data || []).map(r => r.nama);
-        const rawJenisPengajian = (resJenisPengajian.data || []).map(r => r.nama);
+        const rawJenisPengajian = (resJenisPengajian.data || []).map(r => ({ nama: r.nama, peserta_pengajian: r.peserta_pengajian || "" }));
         const jadwalList = (resJadwal.data || []).map(j => ({
           id: j.id,
           tingkat_pengajian: j.tingkat_pengajian,
@@ -183,7 +182,7 @@
           masterPekerjaan: rawPekerjaan.map(n => ({ nama: n })),
           masterHubungan: rawHubungan.map(n => ({ nama: n })),
           masterMateri: rawMateri.map(n => ({ nama: n })),
-          masterJenisPengajian: rawJenisPengajian.map(n => ({ nama: n })),
+          masterJenisPengajian: rawJenisPengajian,
           masterPengajar: (resMasterPengajar.data || []).map(p => ({
             id_pengajar: p.id,
             id_jamaah: p.id_jamaah
@@ -280,7 +279,7 @@
       });
     }
 
-    function supabaseSaveMasterItem(tableName, oldName, newName, operatorUsername) {
+    function supabaseSaveMasterItem(tableName, oldName, newName, operatorUsername, peserta) {
       const pgTable = tableName === "Kelompok" ? "master_kelompok" :
                       tableName === "Tingkat Pendidikan" ? "master_pendidikan" :
                       tableName === "Pekerjaan" ? "master_pekerjaan" :
@@ -292,13 +291,21 @@
       if (!pgTable) return Promise.reject(new Error("Tabel master tidak valid"));
       
       if (oldName) {
-        return supabaseClient.from(pgTable).update({ nama: newName }).eq("nama", oldName).then(({ error }) => {
+        const payload = { nama: newName };
+        if (tableName === "Jenis Pengajian") {
+          payload.peserta_pengajian = peserta;
+        }
+        return supabaseClient.from(pgTable).update(payload).eq("nama", oldName).then(({ error }) => {
           if (error) throw error;
           supabaseLogAction(operatorUsername, "UPDATE_MASTER", "Mengubah opsi di tabel " + tableName + ": '" + oldName + "' -> '" + newName + "'");
           return true;
         });
       } else {
-        return supabaseClient.from(pgTable).insert({ nama: newName }).then(({ error }) => {
+        const payload = { nama: newName };
+        if (tableName === "Jenis Pengajian") {
+          payload.peserta_pengajian = peserta;
+        }
+        return supabaseClient.from(pgTable).insert(payload).then(({ error }) => {
           if (error) throw error;
           supabaseLogAction(operatorUsername, "CREATE_MASTER", "Menambahkan opsi baru di tabel " + tableName + ": '" + newName + "'");
           return true;
@@ -409,14 +416,21 @@
 
     function supabaseSavePresensiKehadiran(idPengajian, presensiList, operatorUsername) {
       const promises = presensiList.map(p => {
-        const payload = {
-          id_pengajian: parseInt(idPengajian),
-          id_jamaah: p.id_jamaah,
-          status: p.status,
-          keterangan: p.keterangan || ""
-        };
-        return supabaseClient.from("pengajian_presensi")
-          .upsert(payload, { onConflict: "id_pengajian,id_jamaah" });
+        if (!p.status || p.status === "Alpha") {
+          return supabaseClient.from("pengajian_presensi")
+            .delete()
+            .eq("id_pengajian", parseInt(idPengajian))
+            .eq("id_jamaah", p.id_jamaah);
+        } else {
+          const payload = {
+            id_pengajian: parseInt(idPengajian),
+            id_jamaah: p.id_jamaah,
+            status: p.status,
+            keterangan: p.keterangan || ""
+          };
+          return supabaseClient.from("pengajian_presensi")
+            .upsert(payload, { onConflict: "id_pengajian,id_jamaah" });
+        }
       });
       
           return Promise.all(promises).then(results => {
@@ -507,8 +521,8 @@
             this._call(() => supabaseDeleteJamaah(id, operatorUsername));
             return this;
           },
-          saveMasterItemGAS: function(tableName, oldName, newName, operatorUsername) {
-            this._call(() => supabaseSaveMasterItem(tableName, oldName, newName, operatorUsername));
+          saveMasterItemGAS: function(tableName, oldName, newName, operatorUsername, peserta) {
+            this._call(() => supabaseSaveMasterItem(tableName, oldName, newName, operatorUsername, peserta));
             return this;
           },
           deleteMasterItemGAS: function(tableName, name, operatorUsername) {
@@ -605,7 +619,17 @@
             localStorage.setItem("aji_master_materi", JSON.stringify(["Al-Quran", "Hadis Khotbah", "Hadis Bukhori", "ASAD", "Musyawaroh 5 Unsur", "Teks", "Dalil-dalil"]));
           }
           if (!localStorage.getItem("aji_master_jenis_pengajian")) {
-            localStorage.setItem("aji_master_jenis_pengajian", JSON.stringify(["Sambung", "Ibu-ibu", "5 Unsur", "Muda-mudi", "Caberawit", "Lain-lain", "GUS", "GUM", "Gabungan GUS dan GUM"]));
+            localStorage.setItem("aji_master_jenis_pengajian", JSON.stringify([
+              { nama: "Sambung", peserta_pengajian: "Dewasa, Manula, GUM" },
+              { nama: "Ibu-ibu", peserta_pengajian: "Dewasa, Manula" },
+              { nama: "5 Unsur", peserta_pengajian: "Dewasa, Manula, GUM" },
+              { nama: "Muda-mudi", peserta_pengajian: "GUM, GUS" },
+              { nama: "Caberawit", peserta_pengajian: "PAUD, Caberawit" },
+              { nama: "Lain-lain", peserta_pengajian: "" },
+              { nama: "GUS", peserta_pengajian: "GUS" },
+              { nama: "GUM", peserta_pengajian: "GUM" },
+              { nama: "Gabungan GUS dan GUM", peserta_pengajian: "GUS, GUM" }
+            ]));
           }
           if (!localStorage.getItem("aji_master_pengajar")) {
             localStorage.setItem("aji_master_pengajar", JSON.stringify([
@@ -674,7 +698,22 @@
                 const masterPekerjaan = rawW.map(n => ({ nama: n }));
                 const masterHubungan = rawH.map(n => ({ nama: n }));
                 const masterMateri = rawM.map(n => ({ nama: n }));
-                const masterJenisPengajian = rawJP.map(n => ({ nama: n }));
+                const masterJenisPengajian = rawJP.map(item => {
+                  if (typeof item === 'string') {
+                    let p = '';
+                    const j = item.trim().toLowerCase();
+                    if (j === "sambung" || j === "5 unsur") p = "Dewasa, Manula, GUM";
+                    else if (j === "gus") p = "GUS";
+                    else if (j === "gum") p = "GUM";
+                    else if (j === "gabungan gus dan gum") p = "GUS, GUM";
+                    else if (j === "caberawit") p = "PAUD, Caberawit";
+                    else if (j === "ibu-ibu" || j === "ibu - ibu") p = "Dewasa, Manula";
+                    else if (j === "kewanitaan") p = "Dewasa, Manula, GUM";
+                    else if (j === "teks" || j === "turba desa" || j === "turba daerah") p = "Dewasa, Manula, GUM, GUS";
+                    return { nama: item, peserta_pengajian: p };
+                  }
+                  return { nama: item.nama, peserta_pengajian: item.peserta_pengajian || "" };
+                });
                 
                 const kepalaKeluargaList = _getKepalaKeluargaList(jamaahList);
                 const kartuKeluargaMappings = _getKartuKeluargaMappings(jamaahList);
@@ -820,7 +859,7 @@
               });
               return this;
             },
-            saveMasterItemGAS: function(tableName, oldName, newName, operatorUsername) {
+                        saveMasterItemGAS: function(tableName, oldName, newName, operatorUsername, peserta) {
               this._call(() => {
                 const keyMap = {
                   "Kelompok": "aji_master_kelompok",
@@ -844,38 +883,53 @@
                 
                 const list = JSON.parse(localStorage.getItem(lsKey) || "[]");
                 
-                if (oldName) {
-                  const idx = list.indexOf(oldName);
-                  if (idx !== -1) {
-                    list[idx] = newName;
-                    localStorage.setItem(lsKey, JSON.stringify(list));
-                    this.logActionGAS(operatorUsername, "UPDATE_MASTER", "Mengubah opsi di tabel " + tableName + ": '" + oldName + "' -> '" + newName + "'");
-                    
-                    const jamaahList = JSON.parse(localStorage.getItem("aji_jamaah") || "[]");
-                    const colName = colMap[tableName];
-                    let changedCount = 0;
-                    if (colName) {
-                      jamaahList.forEach(j => {
-                        if (j[colName] === oldName) {
-                          j[colName] = newName;
-                          changedCount++;
-                        }
-                      });
-                      if (changedCount > 0) {
-                        localStorage.setItem("aji_jamaah", JSON.stringify(jamaahList));
-                      }
+                if (tableName === "Jenis Pengajian") {
+                  if (oldName) {
+                    const idx = list.findIndex(x => (typeof x === 'object' ? x.nama : x) === oldName);
+                    if (idx !== -1) {
+                      list[idx] = { nama: newName, peserta_pengajian: peserta || "" };
+                      localStorage.setItem(lsKey, JSON.stringify(list));
+                      this.logActionGAS(operatorUsername, "UPDATE_MASTER", "Mengubah opsi di tabel " + tableName + ": '" + oldName + "' -> '" + newName + "'");
                     }
+                  } else {
+                    list.push({ nama: newName, peserta_pengajian: peserta || "" });
+                    localStorage.setItem(lsKey, JSON.stringify(list));
+                    this.logActionGAS(operatorUsername, "CREATE_MASTER", "Menambahkan opsi baru di tabel " + tableName + ": '" + newName + "'");
                   }
                 } else {
-                  list.push(newName);
-                  localStorage.setItem(lsKey, JSON.stringify(list));
-                  this.logActionGAS(operatorUsername, "CREATE_MASTER", "Menambahkan opsi baru di tabel " + tableName + ": '" + newName + "'");
+                  if (oldName) {
+                    const idx = list.indexOf(oldName);
+                    if (idx !== -1) {
+                      list[idx] = newName;
+                      localStorage.setItem(lsKey, JSON.stringify(list));
+                      this.logActionGAS(operatorUsername, "UPDATE_MASTER", "Mengubah opsi di tabel " + tableName + ": '" + oldName + "' -> '" + newName + "'");
+                      
+                      const jamaahList = JSON.parse(localStorage.getItem("aji_jamaah") || "[]");
+                      const colName = colMap[tableName];
+                      let changedCount = 0;
+                      if (colName) {
+                        jamaahList.forEach(j => {
+                          if (j[colName] === oldName) {
+                            j[colName] = newName;
+                            changedCount++;
+                          }
+                        });
+                        if (changedCount > 0) {
+                          localStorage.setItem("aji_jamaah", JSON.stringify(jamaahList));
+                        }
+                      }
+                    }
+                  } else {
+                    list.push(newName);
+                    localStorage.setItem(lsKey, JSON.stringify(list));
+                    this.logActionGAS(operatorUsername, "CREATE_MASTER", "Menambahkan opsi baru di tabel " + tableName + ": '" + newName + "'");
+                  }
                 }
                 return true;
               });
               return this;
             },
-            deleteMasterItemGAS: function(tableName, name, operatorUsername) {
+                        deleteMasterItemGAS: function(tableName, name, operatorUsername) {
               this._call(() => {
                 const keyMap = {
                   "Kelompok": "aji_master_kelompok",
@@ -898,7 +952,7 @@
                 if (!lsKey) throw new Error("Table master not supported: " + tableName);
                 
                 const list = JSON.parse(localStorage.getItem(lsKey) || "[]");
-                const idx = list.indexOf(name);
+                const idx = list.findIndex(x => (typeof x === 'object' ? x.nama : x) === name);
                 if (idx !== -1) {
                   list.splice(idx, 1);
                   localStorage.setItem(lsKey, JSON.stringify(list));
@@ -1004,25 +1058,31 @@
             },
             savePresensiKehadiranGAS: function(idPengajian, presensiList, operatorUsername) {
               this._call(() => {
-                const list = JSON.parse(localStorage.getItem("aji_pengajian_presensi") || "[]");
+                let list = JSON.parse(localStorage.getItem("aji_pengajian_presensi") || "[]");
                 presensiList.forEach(p => {
                   const idx = list.findIndex(item => item.id_pengajian == idPengajian && item.id_jamaah == p.id_jamaah);
-                  const payload = {
-                    id_pengajian: parseInt(idPengajian),
-                    id_jamaah: p.id_jamaah,
-                    status: p.status,
-                    keterangan: p.keterangan || ""
-                  };
-                  if (idx !== -1) {
-                    payload.id = list[idx].id;
-                    list[idx] = payload;
+                  if (!p.status || p.status === "Alpha") {
+                    if (idx !== -1) {
+                      list.splice(idx, 1);
+                    }
                   } else {
-                    let maxId = 0;
-                    list.forEach(item => {
-                      if (item.id > maxId) maxId = item.id;
-                    });
-                    payload.id = maxId + 1;
-                    list.push(payload);
+                    const payload = {
+                      id_pengajian: parseInt(idPengajian),
+                      id_jamaah: p.id_jamaah,
+                      status: p.status,
+                      keterangan: p.keterangan || ""
+                    };
+                    if (idx !== -1) {
+                      payload.id = list[idx].id;
+                      list[idx] = payload;
+                    } else {
+                      let maxId = 0;
+                      list.forEach(item => {
+                        if (item.id > maxId) maxId = item.id;
+                      });
+                      payload.id = maxId + 1;
+                      list.push(payload);
+                    }
                   }
                 });
                 localStorage.setItem("aji_pengajian_presensi", JSON.stringify(list));
@@ -1157,7 +1217,7 @@
         .withSuccessHandler(function(data) {
           localJamaahList = (data.jamaahList || []).map(j => {
             const age = calculateAge(j.tanggalLahir);
-            const peramutan = getKelompokPeramutan(age, j.statusPernikahan);
+            const peramutan = getKelompokPeramutan(age, j.statusPernikahan, j.tingkatPendidikan);
             return { ...j, umur: age, kelompokPeramutan: peramutan };
           });
           localKepalaKeluargaList = data.kepalaKeluargaList || [];
@@ -1172,7 +1232,22 @@
           localMasterPekerjaan = (data.masterPekerjaan || []).map(m => m.nama);
           localMasterHubungan = (data.masterHubungan || []).map(m => m.nama);
           localMasterMateri = (data.masterMateri || []).map(m => m.nama);
-          localMasterJenisPengajian = (data.masterJenisPengajian || []).map(m => m.nama);
+          localMasterJenisPengajian = (data.masterJenisPengajian || []).map(item => {
+            if (typeof item === 'string') {
+              let p = '';
+              const j = item.trim().toLowerCase();
+              if (j === "sambung" || j === "5 unsur") p = "Dewasa, Manula, GUM";
+              else if (j === "gus") p = "GUS";
+              else if (j === "gum") p = "GUM";
+              else if (j === "gabungan gus dan gum") p = "GUS, GUM";
+              else if (j === "caberawit") p = "PAUD, Caberawit";
+              else if (j === "ibu-ibu" || j === "ibu - ibu") p = "Dewasa, Manula";
+              else if (j === "kewanitaan") p = "Dewasa, Manula, GUM";
+              else if (j === "teks" || j === "turba desa" || j === "turba daerah") p = "Dewasa, Manula, GUM, GUS";
+              return { nama: item, peserta_pengajian: p };
+            }
+            return { nama: item.nama, peserta_pengajian: item.peserta_pengajian || "" };
+          });
           localMasterPengajar = data.masterPengajar || [];
           localJadwalPengajian = data.jadwalPengajian || [];
           localPresensiKehadiran = data.presensiKehadiran || [];
@@ -1325,4 +1400,5 @@
     }
 
 
-    // ----------------------------------------------------
+    window.getSupabaseClient = function() { return supabaseClient; };
+    window.getUseSupabase = function() { return useSupabase; };
