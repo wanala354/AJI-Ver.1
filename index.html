@@ -22,14 +22,13 @@
   
 
   <!-- Chart.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
   
   <!-- Supabase JS Client CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4"></script>
 
   <!-- Embedded Stylesheet -->
-    <link rel="stylesheet" href="./style.css">
-
+  <link rel="stylesheet" href="./style.css?v=3.1.5">
 </head>
 <body class="dark-theme">
   <div id="toast-container"></div>
@@ -46,6 +45,11 @@
       <div class="login-subtitle">Aplikasi Jatiwarna Info</div>
       
       <div id="login-error-msg"></div>
+      
+      <!-- PENDING MESSAGE -->
+      <div id="login-pending-msg" style="display:none; margin-bottom:15px; padding:12px 15px; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:8px; color:#f59e0b; font-size:0.9rem; text-align:center;">
+        <i class="fa-solid fa-hourglass-half"></i> Akun Anda sedang <strong>menunggu persetujuan</strong> dari admin atau operator kelompok Anda.
+      </div>
       
       <form id="login-form">
         <div class="form-group-login">
@@ -66,6 +70,133 @@
         
         <button type="submit" class="login-btn">Masuk ke Dashboard</button>
       </form>
+      
+      <div style="text-align:center;margin-top:20px;padding-top:15px;border-top:1px solid var(--border-color);">
+        <span style="color:var(--text-secondary);font-size:0.9rem;">Belum punya akun? </span>
+        <a href="#" id="link-to-register" style="color:var(--primary);font-weight:600;font-size:0.9rem;text-decoration:none;"><i class="fa-solid fa-user-plus"></i> Daftar sebagai Jamaah</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ----------------------------------------------------
+       REGISTER SCREEN
+       ---------------------------------------------------- -->
+  <div id="register-screen" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:radial-gradient(circle at center, #0e291f 0%, #030806 100%); display:none; justify-content:center; align-items:flex-start; z-index:9999; padding:20px; overflow-y:auto;">
+    <div class="login-card" style="max-width:520px; width:100%; margin:auto;">
+      <div class="login-logo">
+        <i class="fa-solid fa-mosque"></i>
+        <h1>AJI V.1</h1>
+      </div>
+      <div class="login-subtitle">Pendaftaran Akun Jamaah</div>
+      
+      <div id="register-msg"></div>
+      
+      <!-- STEP 1: DROPDOWN PILIH JAMAAH -->
+      <div id="register-step1">
+        <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:15px;line-height:1.5;"><i class="fa-solid fa-info-circle" style="color:var(--primary);"></i> Pilih nama Anda dari daftar jamaah. Jika nama Anda tidak ada, klik <strong>"Saya tidak ada di daftar"</strong>.</p>
+        <div class="form-group-login">
+          <label for="reg-jamaah-select">Cari Nama Jamaah</label>
+          <div class="input-icon-wrapper">
+            <i class="fa-solid fa-search"></i>
+            <input type="text" id="reg-jamaah-search" placeholder="Ketik nama untuk mencari..." autocomplete="off">
+          </div>
+          <select id="reg-jamaah-select" size="5" style="width:100%;margin-top:8px;background:rgba(0,0,0,0.25);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);padding:4px;min-height:120px;" aria-label="Pilih jamaah">
+            <option value="">-- Ketik nama untuk mencari --</option>
+          </select>
+        </div>
+        <div id="reg-selected-info" style="display:none;padding:12px;background:rgba(16,185,129,0.1);border:1px solid var(--border-color);border-radius:8px;margin:10px 0;font-size:0.9rem;">
+          <strong id="reg-selected-name" style="color:var(--primary);"></strong><br>
+          <span id="reg-selected-kelompok" style="color:var(--text-secondary);"></span>
+        </div>
+        
+        <div id="reg-credentials-area" style="display:none;">
+          <div class="form-group-login" style="margin-top:15px;">
+            <label for="reg-username">Username*</label>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-at"></i>
+              <input type="text" id="reg-username" placeholder="Buat username unik" autocomplete="off">
+            </div>
+          </div>
+          <div class="form-group-login">
+            <label for="reg-password">Password*</label>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-lock"></i>
+              <input type="password" id="reg-password" placeholder="Minimal 6 karakter" autocomplete="new-password">
+            </div>
+          </div>
+          <div class="form-group-login">
+            <label for="reg-password2">Konfirmasi Password*</label>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-lock"></i>
+              <input type="password" id="reg-password2" placeholder="Ulangi password" autocomplete="new-password">
+            </div>
+          </div>
+          <button type="button" id="btn-register-linked" class="login-btn" style="margin-top:5px;"><i class="fa-solid fa-user-plus"></i> Daftar Sekarang</button>
+        </div>
+        
+        <div style="text-align:center;margin-top:15px;padding-top:15px;border-top:1px solid var(--border-color);">
+          <a href="#" id="btn-not-in-list" style="color:var(--text-secondary);font-size:0.9rem;text-decoration:none;"><i class="fa-solid fa-question-circle"></i> Saya tidak ada di daftar &rarr;</a>
+        </div>
+      </div>
+      
+      <!-- STEP 2: FORM JAMAAH BARU -->
+      <div id="register-step2" style="display:none;">
+        <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:12px;margin-bottom:15px;font-size:0.85rem;color:#f59e0b;">
+          <i class="fa-solid fa-clock"></i> Pendaftaran baru memerlukan <strong>persetujuan admin/operator kelompok</strong> sebelum dapat login.
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="form-group-login" style="grid-column:span 2;">
+            <label for="reg-new-nama">Nama Lengkap (Sesuai KTP)*</label>
+            <div class="input-icon-wrapper"><i class="fa-solid fa-user"></i><input type="text" id="reg-new-nama" placeholder="Nama lengkap" required></div>
+          </div>
+          <div class="form-group-login" style="grid-column:span 2;">
+            <label for="reg-new-kelompok">Kelompok Pengajian*</label>
+            <select id="reg-new-kelompok" style="width:100%;padding:12px 15px;background:rgba(0,0,0,0.25);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);font-family:inherit;font-size:0.95rem;" required>
+              <option value="">-- Pilih Kelompok --</option>
+            </select>
+          </div>
+          <div class="form-group-login">
+            <label for="reg-new-jk">Jenis Kelamin*</label>
+            <select id="reg-new-jk" style="width:100%;padding:12px 15px;background:rgba(0,0,0,0.25);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);font-family:inherit;font-size:0.95rem;" required>
+              <option value="">--</option><option value="Laki-laki">Laki-laki</option><option value="Perempuan">Perempuan</option>
+            </select>
+          </div>
+          <div class="form-group-login">
+            <label for="reg-new-tgl-lahir">Tanggal Lahir</label>
+            <div class="input-icon-wrapper"><i class="fa-solid fa-calendar"></i><input type="date" id="reg-new-tgl-lahir"></div>
+          </div>
+          <div class="form-group-login">
+            <label for="reg-new-hp">Nomor HP</label>
+            <div class="input-icon-wrapper"><i class="fa-solid fa-phone"></i><input type="tel" id="reg-new-hp" placeholder="08xx..."></div>
+          </div>
+          <div class="form-group-login">
+            <label for="reg-new-pernikahan">Status Pernikahan</label>
+            <select id="reg-new-pernikahan" style="width:100%;padding:12px 15px;background:rgba(0,0,0,0.25);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);font-family:inherit;font-size:0.95rem;">
+              <option value="">--</option><option>Belum Menikah</option><option>Menikah</option><option>Janda</option><option>Duda</option>
+            </select>
+          </div>
+          <div class="form-group-login" style="grid-column:span 2;">
+            <label for="reg-new-username">Username*</label>
+            <div class="input-icon-wrapper"><i class="fa-solid fa-at"></i><input type="text" id="reg-new-username" placeholder="Buat username" required></div>
+          </div>
+          <div class="form-group-login">
+            <label for="reg-new-password">Password*</label>
+            <div class="input-icon-wrapper"><i class="fa-solid fa-lock"></i><input type="password" id="reg-new-password" placeholder="Min. 6 karakter" required></div>
+          </div>
+          <div class="form-group-login">
+            <label for="reg-new-password2">Konfirmasi Password*</label>
+            <div class="input-icon-wrapper"><i class="fa-solid fa-lock"></i><input type="password" id="reg-new-password2" placeholder="Ulangi" required></div>
+          </div>
+        </div>
+        <button type="button" id="btn-register-new" class="login-btn" style="margin-top:5px;"><i class="fa-solid fa-paper-plane"></i> Kirim Pendaftaran</button>
+        <div style="text-align:center;margin-top:10px;">
+          <a href="#" id="btn-back-to-step1" style="color:var(--text-muted);font-size:0.85rem;text-decoration:none;">← Kembali ke pencarian</a>
+        </div>
+      </div>
+      
+      <div style="text-align:center;margin-top:15px;padding-top:15px;border-top:1px solid var(--border-color);">
+        <a href="#" id="link-to-login" style="color:var(--text-muted);font-size:0.9rem;text-decoration:none;"><i class="fa-solid fa-arrow-left"></i> Sudah punya akun? Masuk</a>
+      </div>
     </div>
   </div>
 
@@ -91,8 +222,7 @@
         </div>
       </div>
 
-      
-      <ul class="sidebar-menu">
+      <ul class="sidebar-menu" id="sidebar-menu-admin">
         <li class="menu-item active" data-target="section-dashboard">
           <a href="#"><i class="fa-solid fa-chart-pie"></i> Dashboard</a>
         </li>
@@ -121,7 +251,7 @@
           <a href="#"><i class="fas fa-sitemap"></i> Data Pengurus</a>
         </li>
         <li class="menu-item" data-target="section-pengajian" id="menu-pengajian">
-          <a href="#"><i class="fa-solid fa-book-open-reader"></i> Manajemen Pengajian</a>
+          <a href="#"><i class="fa-solid fa-book-open-reader"></i> Manajemen Kegiatan</a>
         </li>
         <li class="menu-item" data-target="section-database-settings" id="menu-database-settings">
           <a href="#"><i class="fa-solid fa-database"></i> Koneksi Database</a>
@@ -129,6 +259,19 @@
 
         <li class="menu-item" data-target="section-audit">
           <a href="#"><i class="fa-solid fa-history"></i> Audit Trail Log</a>
+        </li>
+      </ul>
+      
+      <!-- SIDEBAR MENU JAMAAH (hanya muncul untuk role jamaah) -->
+      <ul class="sidebar-menu" id="sidebar-menu-jamaah" style="display:none;">
+        <li class="menu-item active" data-target="section-jamaah-dashboard">
+          <a href="#"><i class="fa-solid fa-gauge-high"></i> Dashboard Saya</a>
+        </li>
+        <li class="menu-item" data-target="section-jamaah-keluarga">
+          <a href="#"><i class="fa-solid fa-house-user"></i> Keluarga Saya</a>
+        </li>
+        <li class="menu-item" data-target="section-jamaah-jadwal">
+          <a href="#"><i class="fa-solid fa-calendar-check"></i> Jadwal Kegiatan</a>
         </li>
       </ul>
       
@@ -712,18 +855,20 @@
             </div>
             <div class="master-container">
               <div class="master-tabs" id="master-tabs-list">
-                <button class="master-tab-btn active" data-tab="Kelompok">Kelompok Pengajian</button>
+                <button class="master-tab-btn active" data-tab="Kelompok">Kelompok Kegiatan</button>
                 <button class="master-tab-btn" data-tab="Tingkat Pendidikan">Tingkat Pendidikan</button>
                 <button class="master-tab-btn" data-tab="Dapuan">Dapuan (Jabatan)</button>
                 <button class="master-tab-btn" data-tab="Pekerjaan">Pekerjaan Utama</button>
                 <button class="master-tab-btn" data-tab="Status Hubungan Keluarga">Hubungan Keluarga</button>
-                <button class="master-tab-btn" data-tab="Materi Pengajian">Materi Pengajian</button>
+                <button class="master-tab-btn" data-tab="Materi Kegiatan">Materi Kegiatan</button>
                 <button class="master-tab-btn" data-tab="Pengajar">Daftar Pengajar</button>
-                <button class="master-tab-btn" data-tab="Jenis Pengajian">Jenis Pengajian</button>
+                <button class="master-tab-btn" data-tab="Jenis Kegiatan">Jenis Kegiatan</button>
+                <button class="master-tab-btn" data-tab="Peserta Kegiatan">Peserta Kegiatan</button>
+                <button class="master-tab-btn" data-tab="Grup Kustom">Grup Kustom</button>
               </div>
               <div class="master-tab-content">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
-                  <h4 id="master-tab-title" style="color:var(--primary); font-weight:600;">Kelompok Pengajian</h4>
+                  <h4 id="master-tab-title" style="color:var(--primary); font-weight:600;">Kelompok Kegiatan</h4>
                   <button class="btn-primary" id="btn-add-master" style="padding:8px 15px; font-size:0.85rem;"><i class="fa-solid fa-plus"></i> Tambah Opsi</button>
                 </div>
                 <div class="table-responsive">
@@ -758,14 +903,14 @@
                   <option value="">Semua Tingkat</option><option value="Desa">Desa</option><option value="Kelompok">Kelompok</option><option value="Organisasi">Organisasi</option><option value="Yayasan">Yayasan</option>
                 </select>
                 <select id="filter-kelompok-pengurus" class="select-filter" onchange="renderPengurusTable()">
-                  <option value="">Semua Kelompok Pengajian</option>
+                  <option value="">Semua Kelompok Kegiatan</option>
                 </select>
               </div>
             </div>
             
             <div class="table-responsive">
               <table class="table-custom" id="pengurusTable">
-                <thead><tr><th>No</th><th>Nama Jamaah</th><th>Kelompok Pengajian</th><th>Tingkat</th><th>Dapuan / Jabatan</th><th style="text-align: center;">Aksi</th></tr></thead>
+                <thead><tr><th>No</th><th>Nama Jamaah</th><th>Kelompok Kegiatan</th><th>Tingkat</th><th>Dapuan / Jabatan</th><th style="text-align: center;">Aksi</th></tr></thead>
                 <tbody id="pengurusTableBody"></tbody>
               </table>
             </div>
@@ -798,7 +943,7 @@
           </div>
         </section>
 
-        <!-- PAGE 5.5: MANAJEMEN PENGAJIAN -->
+        <!-- PAGE 5.5: MANAJEMEN KEGIATAN -->
         <section id="section-pengajian" class="page-section">
           <div class="card-panel-tabs" style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; flex-wrap: wrap;">
             <button class="tab-btn active" data-subtab="pengajian-penjadwalan" style="padding: 10px 20px; background: transparent; border: none; border-bottom: 3px solid var(--primary); color: var(--primary); font-weight: 600; cursor: pointer; transition: all 0.3s; font-size: 0.9rem;"><i class="fa-solid fa-calendar-days" style="margin-right: 5px;"></i> Penjadwalan</button>
@@ -810,7 +955,7 @@
           <div id="subtab-pengajian-penjadwalan" class="subtab-content active-tab">
             <div class="card-panel">
               <div class="card-panel-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-                <span class="card-panel-title"><i class="fa-solid fa-calendar-days"></i> Kalender Jadwal Pengajian</span>
+                <span class="card-panel-title"><i class="fa-solid fa-calendar-days"></i> Kalender Jadwal Kegiatan</span>
                 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                   <div class="select-container" style="min-width: 120px;">
                     <select id="filter-jadwal-tahun" class="select-filter" style="width: 100%;" onchange="renderCalendar()"></select>
@@ -863,14 +1008,14 @@
               </div>
               <div class="form-grid" style="margin-bottom: 20px; display: none;">
                 <div class="form-group" style="grid-column: span 12;">
-                  <label for="presensi-jadwal-select" style="font-weight: 600;">Pilih Sesi Pengajian Terjadwal*</label>
+                  <label for="presensi-jadwal-select" style="font-weight: 600;">Pilih Sesi Kegiatan Terjadwal*</label>
                   <select id="presensi-jadwal-select" class="select-filter" style="width: 100%; max-width: 100%;" onchange="loadPresensiSheet()">
-                    <option value="">-- Pilih Sesi Pengajian --</option>
+                    <option value="">-- Pilih Sesi Kegiatan --</option>
                   </select>
                 </div>
               </div>
               <div class="form-group" style="margin-bottom: 20px;">
-                <label style="font-weight: 600; margin-bottom: 10px; display: block;">Pilih Sesi Pengajian Terjadwal*</label>
+                <label style="font-weight: 600; margin-bottom: 10px; display: block;">Pilih Sesi Kegiatan Terjadwal*</label>
                 <div id="presensi-sessions-list" class="sessions-card-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;">
                   <!-- Dynamically filled with styled cards -->
                 </div>
@@ -924,7 +1069,7 @@
                   <option value="Tingkat Desa">Tingkat Desa</option>
                 </select>
                 <select id="monitor-jenis" class="select-filter" onchange="calculateAndRenderMonitoring()">
-                  <option value="">Semua Jenis Pengajian</option>
+                  <option value="">Semua Jenis Kegiatan</option>
                 </select>
                 <select id="monitor-periode" class="select-filter" onchange="calculateAndRenderMonitoring(false)">
                   <option value="monthly">Periode Bulanan</option>
@@ -941,7 +1086,7 @@
 
             <div class="report-summary-cards" style="display: flex; gap: 20px; margin-bottom: 25px; flex-wrap: wrap;">
               <div class="report-summary-row" style="flex: 1; min-width: 200px; flex-direction: column; align-items: center; padding: 20px;">
-                <span class="label" style="color: var(--primary); font-size: 0.9rem; font-weight: 500;">Total Sesi Pengajian</span>
+                <span class="label" style="color: var(--primary); font-size: 0.9rem; font-weight: 500;">Total Sesi Kegiatan</span>
                 <span class="val" id="monitor-total-sesi" style="font-size: 2.2rem; font-weight: 800;">0</span>
               </div>
               <div class="report-summary-row" style="flex: 1; min-width: 200px; flex-direction: column; align-items: center; padding: 20px;">
@@ -1075,25 +1220,47 @@
         </section>
 
         <section id="section-users" class="page-section">
-          <div class="card-panel">
-            <div class="card-panel-header" style="margin-bottom:15px;">
-              <span class="card-panel-title"><i class="fa-solid fa-users-gear"></i> Manajemen Akun Pengguna</span>
-              <button class="btn-primary" id="btn-add-user" style="padding:8px 15px; font-size:0.85rem;"><i class="fa-solid fa-user-plus"></i> Tambah User</button>
+          <!-- TAB SWITCHER -->
+          <div style="display:flex;gap:10px;margin-bottom:20px;border-bottom:1px solid var(--border-color);padding-bottom:10px;">
+            <button class="tab-btn active" id="users-tab-active" data-usertab="active" style="padding:8px 18px;background:transparent;border:none;border-bottom:3px solid var(--primary);color:var(--primary);font-weight:600;cursor:pointer;font-size:0.9rem;font-family:inherit;"><i class="fa-solid fa-users-gear"></i> Pengguna Aktif</button>
+            <button class="tab-btn" id="users-tab-pending" data-usertab="pending" style="padding:8px 18px;background:transparent;border:none;border-bottom:3px solid transparent;color:var(--text-secondary);font-weight:500;cursor:pointer;font-size:0.9rem;font-family:inherit;"><i class="fa-solid fa-hourglass-half"></i> Pending Approval <span id="pending-count-badge" style="display:none;background:#ef4444;color:#fff;border-radius:99px;padding:1px 7px;font-size:0.75rem;margin-left:4px;">0</span></button>
+          </div>
+
+          <!-- PANEL: PENGGUNA AKTIF -->
+          <div id="users-panel-active">
+            <div class="card-panel">
+              <div class="card-panel-header" style="margin-bottom:15px;">
+                <span class="card-panel-title"><i class="fa-solid fa-users-gear"></i> Manajemen Akun Pengguna</span>
+                <button class="btn-primary" id="btn-add-user" style="padding:8px 15px; font-size:0.85rem;"><i class="fa-solid fa-user-plus"></i> Tambah User</button>
+              </div>
+              <div class="table-responsive">
+                <table class="table-custom" id="table-users">
+                  <thead>
+                    <tr>
+                      <th>Username</th>
+                      <th>Email</th>
+                      <th>Role</th>
+                      <th>Kelompok Otoritas</th>
+                      <th style="width: 150px; text-align:center;">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="table-users-body">
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div class="table-responsive">
-              <table class="table-custom" id="table-users">
-                <thead>
-                  <tr>
-                    <th>Username</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Kelompok Otoritas</th>
-                    <th style="width: 150px; text-align:center;">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody id="table-users-body">
-                </tbody>
-              </table>
+          </div>
+
+          <!-- PANEL: PENDING APPROVAL -->
+          <div id="users-panel-pending" style="display:none;">
+            <div class="card-panel">
+              <div class="card-panel-header" style="margin-bottom:15px;">
+                <span class="card-panel-title"><i class="fa-solid fa-user-clock"></i> Pendaftaran Menunggu Persetujuan</span>
+                <button class="btn-secondary" style="padding:8px 15px;font-size:0.85rem;" onclick="loadPendingUsers()"><i class="fa-solid fa-sync"></i> Refresh</button>
+              </div>
+              <div id="pending-users-container">
+                <div style="text-align:center;padding:30px;color:var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Memuat...</div>
+              </div>
             </div>
           </div>
         </section>
@@ -1170,6 +1337,97 @@
           </div>
         </section>
 
+        <!-- PORTAL JAMAAH SECTIONS -->
+
+        <!-- PORTAL: DASHBOARD SAYA -->
+        <section id="section-jamaah-dashboard" class="page-section portal-section">
+          <!-- Info Card Jamaah -->
+          <div class="card-panel" style="background:linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(5,150,105,0.05) 100%); border-color:rgba(16,185,129,0.3); margin-bottom:20px;">
+            <div style="display:flex;align-items:center;gap:15px;">
+              <div id="portal-jamaah-avatar" style="width:52px;height:52px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:800;">A</div>
+              <div>
+                <div id="portal-jamaah-name" style="font-size:1.2rem;font-weight:700;">Memuat...</div>
+                <div id="portal-jamaah-kelompok" style="font-size:0.85rem;color:var(--text-muted);"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- KPI + Gauge -->
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:20px;margin-bottom:20px;align-items:start;">
+            <!-- Gauge Circle -->
+            <div class="card-panel" style="display:flex;flex-direction:column;align-items:center;padding:20px 25px;">
+              <svg width="120" height="120" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="12"/>
+                <circle id="portal-gauge-circle" cx="60" cy="60" r="54" fill="none" stroke="#10b981" stroke-width="12" stroke-linecap="round" transform="rotate(-90 60 60)" style="transition:stroke-dashoffset 1s ease;"/>
+              </svg>
+              <div id="portal-gauge-pct" style="font-size:1.8rem;font-weight:800;color:var(--primary);margin-top:-65px;text-align:center;">0%</div>
+              <div style="margin-top:45px;font-size:0.8rem;color:var(--text-muted);text-align:center;">Tingkat Hadir</div>
+            </div>
+            <!-- KPI Cards -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:12px;">
+              <div class="card-panel" style="padding:15px;text-align:center;">
+                <div style="font-size:1.8rem;font-weight:800;color:#10b981;" id="portal-kpi-hadir">0</div>
+                <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">Hadir</div>
+              </div>
+              <div class="card-panel" style="padding:15px;text-align:center;">
+                <div style="font-size:1.8rem;font-weight:800;color:#f59e0b;" id="portal-kpi-izin">0</div>
+                <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">Izin</div>
+              </div>
+              <div class="card-panel" style="padding:15px;text-align:center;">
+                <div style="font-size:1.8rem;font-weight:800;color:#ef4444;" id="portal-kpi-alpha">0</div>
+                <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">Alpha</div>
+              </div>
+              <div class="card-panel" style="padding:15px;text-align:center;">
+                <div style="font-size:1.8rem;font-weight:800;color:var(--text-primary);" id="portal-kpi-total">0</div>
+                <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">Total Sesi</div>
+              </div>
+              <div class="card-panel" style="padding:15px;text-align:center;">
+                <div style="font-size:1.8rem;font-weight:800;color:var(--primary);" id="portal-kpi-pct">0%</div>
+                <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">Keaktifan</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabel Rekap Presensi -->
+          <div class="card-panel">
+            <div class="card-panel-header" style="margin-bottom:15px;">
+              <span class="card-panel-title"><i class="fa-solid fa-list-check"></i> Rekap Presensi Saya</span>
+            </div>
+            <div class="table-responsive">
+              <table class="table-custom" style="font-size:0.85rem;">
+                <thead><tr><th>Tanggal</th><th>Tingkat</th><th>Jenis Kegiatan</th><th>Waktu</th><th>Status</th></tr></thead>
+                <tbody id="portal-rekap-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- PORTAL: KELUARGA SAYA -->
+        <section id="section-jamaah-keluarga" class="page-section portal-section">
+          <div class="card-panel">
+            <div class="card-panel-header" style="margin-bottom:15px;">
+              <span class="card-panel-title"><i class="fa-solid fa-house-user"></i> Data Kartu Keluarga Saya</span>
+              <button class="btn-primary" id="portal-btn-add-family" style="padding:8px 15px;font-size:0.85rem;display:none;"><i class="fa-solid fa-user-plus"></i> Tambah Anggota</button>
+            </div>
+            <div class="table-responsive">
+              <table class="table-custom" id="portal-family-table">
+                <thead><tr><th>Nama</th><th>Hub. Keluarga</th><th>Usia</th><th>Peramutan</th><th>Kehadiran</th><th style="text-align:center;">Aksi</th></tr></thead>
+                <tbody id="portal-family-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- PORTAL: JADWAL KEGIATAN -->
+        <section id="section-jamaah-jadwal" class="page-section portal-section">
+          <div class="card-panel" style="margin-bottom:15px;">
+            <div class="card-panel-header">
+              <span class="card-panel-title"><i class="fa-solid fa-calendar-check"></i> Jadwal Kegiatan &amp; Presensi Saya</span>
+            </div>
+          </div>
+          <div id="portal-jadwal-container"></div>
+        </section>
+
       </div>
     </main>
   </div>
@@ -1194,7 +1452,7 @@
             </div>
 
             <div class="form-group">
-              <label>Kelompok Pengajian*</label>
+              <label>Kelompok Kegiatan*</label>
               <div class="radio-group" id="form-kelompok-group">
               </div>
             </div>
@@ -1245,7 +1503,7 @@
               <label for="form-kepala-keluarga">Kepala Keluarga (Relasi)*</label>
               <input type="text" id="form-kepala-keluarga" list="form-kepala-keluarga-list" placeholder="Ketik nama untuk mencari...">
               <datalist id="form-kepala-keluarga-list"></datalist>
-              <span class="form-hint" id="form-kk-hint">Disaring berdasarkan kelompok pengajian yang sama</span>
+              <span class="form-hint" id="form-kk-hint">Disaring berdasarkan kelompok kegiatan yang sama</span>
             </div>
 
             <div class="form-group">
@@ -1309,17 +1567,39 @@
             <input type="text" id="master-form-input" required placeholder="Masukkan nama opsi master">
           </div>
           <div class="form-group" id="master-form-peserta-container" style="display:none; margin-top: 15px;">
-            <label for="master-form-peserta">Peserta Pengajian (Kelompok Peramutan)*</label>
-            <select id="master-form-peserta" multiple style="width: 100%; height: 130px; background: rgba(255,255,255,0.08); color: var(--text-primary); border: 1px solid rgba(16,185,129,0.3); border-radius: 6px; padding: 8px;">
-              <option value="PAUD">PAUD</option>
-              <option value="Caberawit">Caberawit</option>
-              <option value="GUS">GUS</option>
-              <option value="GUM">GUM</option>
-              <option value="Dewasa">Dewasa</option>
-              <option value="Manula">Manula</option>
-            </select>
-            <small style="color: var(--text-secondary); margin-top: 4px; display: block;">Tahan Ctrl (Windows) / Cmd (Mac) untuk memilih lebih dari satu.</small>
-          </div>
+              <label style="margin-bottom: 8px; display: block; font-weight: 600;">Sasaran Kegiatan (Peserta)*</label>
+              <div id="master-form-peserta-checkboxes-container" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; max-height: 150px; overflow-y: auto; background: rgba(255,255,255,0.05); border: 1px solid rgba(16,185,129,0.25); border-radius: 6px; padding: 10px;">
+                <!-- Dynamic checkboxes from master_peserta_pengajian -->
+              </div>
+            </div>
+            <div class="form-group" id="master-form-gender-container" style="display:none; margin-top: 15px;">
+              <label for="master-form-gender">Batasan Gender (Jenis Kelamin)</label>
+              <select id="master-form-gender" style="width: 100%; padding: 8px; background: var(--bg-secondary); border: 1px solid rgba(16,185,129,0.25); border-radius: 6px; color: white;">
+                <option value="Semua">Semua (Laki-laki & Perempuan)</option>
+                <option value="Laki-laki">Hanya Laki-laki</option>
+                <option value="Perempuan">Hanya Perempuan</option>
+              </select>
+            </div>
+            <div class="form-group" id="master-form-dapuan-container" style="display:none; margin-top: 15px;">
+               <label for="master-form-dapuan">Batasan Dapuan (Jabatan) - *Opsional</label>
+               <select id="master-form-dapuan" multiple style="width: 100%; height: 100px; background: rgba(255,255,255,0.05); color: var(--text-primary); border: 1px solid rgba(16,185,129,0.25); border-radius: 6px; padding: 8px;">
+                 <!-- Populated dynamically -->
+               </select>
+               <small style="color: var(--text-secondary); margin-top: 4px; display: block;">Tahan Ctrl/Cmd untuk memilih beberapa jabatan. Kosongkan jika semua jabatan boleh ikut.</small>
+            </div>
+            <div class="form-group" id="master-form-grup-kustom-container" style="display:none; margin-top: 15px;">
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label for="master-form-grup-kustom-desc">Deskripsi Grup</label>
+                <textarea id="master-form-grup-kustom-desc" placeholder="Deskripsi grup kustom..." rows="2" style="width: 100%; background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(16,185,129,0.25); border-radius: 6px; padding: 8px;"></textarea>
+              </div>
+              <label style="margin-bottom: 8px; display: block; font-weight: 600;">Anggota Grup (Pilih Jamaah)*</label>
+              <div style="margin-bottom: 8px;">
+                <input type="text" id="master-form-grup-kustom-search" placeholder="Cari nama anggota..." style="width: 100%; padding: 6px 10px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 6px; color: white; font-size: 0.82rem;" oninput="filterGrupKustomAnggotaList()">
+              </div>
+              <div id="master-form-grup-kustom-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 150px; overflow-y: auto; background: rgba(255,255,255,0.05); border: 1px solid rgba(16,185,129,0.25); border-radius: 6px; padding: 10px;">
+                <!-- Checkboxes populated dynamically -->
+              </div>
+            </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn-secondary" id="master-modal-cancel-btn">Batal</button>
@@ -1483,6 +1763,36 @@
                 <!-- Populated dynamically -->
               </select>
             </div>
+            <div class="form-group" style="grid-column: span 12; margin-top: 10px;">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; color: var(--primary);">
+                <input type="checkbox" id="jadwal-form-is-spesifik" onchange="toggleJadwalPesertaSpesifik()">
+                <span>Batasi Peserta Spesifik (Undangan)</span>
+              </label>
+            </div>
+            <div class="form-group" id="jadwal-form-peserta-spesifik-container" style="grid-column: span 12; display: none; margin-top: 10px; border: 1px dashed rgba(16,185,129,0.3); border-radius: 8px; padding: 15px; background: rgba(255,255,255,0.02);">
+              <div style="margin-bottom: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                  <label for="jadwal-form-pilih-grup-kustom" style="font-size: 0.8rem; margin-bottom: 4px; display: block;">Pilih dari Grup Kustom</label>
+                  <select id="jadwal-form-pilih-grup-kustom" style="width: 100%; padding: 6px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 6px; color: white; font-size: 0.8rem;" onchange="applyGrupKustomToJadwal()">
+                    <option value="">-- Pilih Grup Kustom --</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size: 0.8rem; margin-bottom: 4px; display: block;">Pencarian Anggota</label>
+                  <input type="text" id="jadwal-form-peserta-search" placeholder="Cari nama jamaah..." style="width: 100%; padding: 6px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 6px; color: white; font-size: 0.8rem;" oninput="filterJadwalPesertaList()">
+                </div>
+              </div>
+              <div style="margin-bottom: 10px;">
+                <label style="font-size: 0.8rem; margin-bottom: 4px; display: block; font-weight: 600;">Shortcut Pilih Cepat (Quick-Select):</label>
+                <div id="jadwal-form-quick-select-buttons" style="display: flex; flex-wrap: wrap; gap: 6px;">
+                  <!-- Will be populated dynamically -->
+                </div>
+              </div>
+              <label style="font-size: 0.8rem; margin-bottom: 4px; display: block; font-weight: 600;">Daftar Undangan Individu:</label>
+              <div id="jadwal-form-peserta-list" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; max-height: 180px; overflow-y: auto; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px;">
+                <!-- Will be populated dynamically -->
+              </div>
+            </div>
           </div>
           
           <div style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
@@ -1590,15 +1900,57 @@
     </div>
   </div>
 
+  <!-- JAMAAH PRESENSI / CHECK-IN MODAL [NEW] -->
+  <div class="modal-overlay" id="jamaah-presensi-modal">
+    <div class="modal-container" style="max-width: 420px;">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-clipboard-user"></i> Form Presensi Kehadiran</h3>
+        <button class="modal-close-btn" type="button" onclick="closeJamaahPresensiModal()">&times;</button>
+      </div>
+      <form id="jamaah-presensi-form" onsubmit="event.preventDefault(); submitJamaahPresensi();">
+        <input type="hidden" id="presensi-form-jadwal-id">
+        <div class="modal-body">
+          <div class="form-group">
+            <label style="font-weight: 600; display: block; margin-bottom: 10px;">Status Kehadiran*</label>
+            <div style="display: flex; flex-direction: column; gap: 8px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px;">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="radio" name="presensi-status" value="Hadir Fisik" checked onchange="togglePresensiKeterangan()">
+                <span>Hadir Fisik (Di Lokasi)</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="radio" name="presensi-status" value="Online" onchange="togglePresensiKeterangan()">
+                <span>Hadir Online (Virtual)</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="radio" name="presensi-status" value="Izin" onchange="togglePresensiKeterangan()">
+                <span>Izin (Berhalangan)</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-group" id="presensi-keterangan-container" style="display: none; margin-top: 15px;">
+            <label for="presensi-form-keterangan" style="font-weight: 600; display: block; margin-bottom: 6px;">Keterangan / Alasan*</label>
+            <textarea id="presensi-form-keterangan" rows="3" placeholder="Masukkan alasan atau keterangan hadir online / izin..." style="width:100%; border-radius:6px; background:rgba(255,255,255,0.05); border:1px solid rgba(16,185,129,0.3); color:white; padding:8px 12px; font-size:0.88rem; outline:none; resize:none;"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeJamaahPresensiModal()">Batal</button>
+          <button type="submit" class="btn-primary"><i class="fa-solid fa-save"></i> Kirim Presensi</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- EMBEDDED CODE LOGIC -->
-    <script src="./js/state.js?v=3.0.2"></script>
-    <script src="./js/api.js?v=3.0.2"></script>
-    <script src="./js/ui.js?v=3.0.2"></script>
-    <script src="./js/dashboard.js?v=3.0.2"></script>
-    <script src="./js/jamaah.js?v=3.0.2"></script>
-    <script src="./js/master.js?v=3.0.2"></script>
-    <script src="./js/utils.js?v=3.0.2"></script>
-    <script src="./js/pengurus.js?v=3.0.2"></script>
-    <script src="./js/pengajian.js?v=3.0.2"></script>
+    <script src="./js/state.js?v=3.1.5"></script>
+    <script src="./js/api.js?v=3.1.5"></script>
+    <script src="./js/ui.js?v=3.1.5"></script>
+    <script src="./js/dashboard.js?v=3.1.5"></script>
+    <script src="./js/jamaah.js?v=3.1.5"></script>
+    <script src="./js/master.js?v=3.1.5"></script>
+    <script src="./js/utils.js?v=3.1.5"></script>
+    <script src="./js/pengurus.js?v=3.1.5"></script>
+    <script src="./js/pengajian.js?v=3.1.5"></script>
+    <script src="./js/jamaah_portal.js?v=3.1.5"></script>
 </body>
 </html>
+

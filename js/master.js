@@ -6,13 +6,16 @@
       if (activeMasterTab === "Dapuan") return localMasterDapuan;
       if (activeMasterTab === "Pekerjaan") return localMasterPekerjaan;
       if (activeMasterTab === "Status Hubungan Keluarga") return localMasterHubungan;
-      if (activeMasterTab === "Materi Pengajian") return localMasterMateri;
-      if (activeMasterTab === "Jenis Pengajian") return localMasterJenisPengajian;
+      if (activeMasterTab === "Materi Kegiatan") return localMasterMateri;
+      if (activeMasterTab === "Jenis Kegiatan") return localMasterJenisPengajian;
+      if (activeMasterTab === "Peserta Kegiatan") return localMasterPesertaPengajian;
+      if (activeMasterTab === "Grup Kustom") return localMasterGrupKustom;
       return [];
     }
 
     function renderMasterTable() {
       const tbody = document.getElementById("table-master-body");
+      if (!tbody) return;
       tbody.innerHTML = "";
       
       const thead = document.querySelector("#table-master thead");
@@ -25,11 +28,30 @@
             <th style="width: 150px; text-align:center;">Aksi</th>
           </tr>
         `;
-      } else if (activeMasterTab === "Jenis Pengajian") {
+      } else if (activeMasterTab === "Jenis Kegiatan") {
         thead.innerHTML = `
           <tr>
             <th>Nama Opsi</th>
-            <th>Peserta Pengajian (Peramutan)</th>
+            <th>Sasaran Peserta</th>
+            <th>Batasan Gender</th>
+            <th>Batasan Jabatan (Dapuan)</th>
+            <th style="width: 150px; text-align:center;">Aksi</th>
+          </tr>
+        `;
+      } else if (activeMasterTab === "Peserta Kegiatan") {
+        thead.innerHTML = `
+          <tr>
+            <th>ID Peserta</th>
+            <th>Nama Sasaran</th>
+            <th style="width: 150px; text-align:center;">Aksi</th>
+          </tr>
+        `;
+      } else if (activeMasterTab === "Grup Kustom") {
+        thead.innerHTML = `
+          <tr>
+            <th>Nama Grup</th>
+            <th>Deskripsi</th>
+            <th>Jumlah Anggota</th>
             <th style="width: 150px; text-align:center;">Aksi</th>
           </tr>
         `;
@@ -48,7 +70,6 @@
         const curUser = getCurrentUser();
         const isAdmin = curUser && curUser.role.trim().toLowerCase() === "admin";
         
-        // Filter list based on operator kelompok (only show teachers belonging to their kelompok)
         let displayList = list;
         if (!isAdmin && curUser && curUser.role.trim().toLowerCase() === "operator kelompok") {
           const targetKelompok = curUser.kelompok;
@@ -90,19 +111,54 @@
       
       const list = getSelectedMasterList();
       if (list.length === 0) {
-        const cols = activeMasterTab === "Jenis Pengajian" ? 3 : 2;
+        let cols = 2;
+        if (activeMasterTab === "Jenis Kegiatan") cols = 5;
+        else if (activeMasterTab === "Peserta Kegiatan") cols = 3;
+        else if (activeMasterTab === "Grup Kustom") cols = 4;
         tbody.innerHTML = `<tr><td colspan="${cols}" style="text-align: center; padding: 20px; color: var(--text-secondary);">Tidak ada opsi master.</td></tr>`;
         return;
       }
 
       list.forEach(item => {
         const tr = document.createElement("tr");
-        if (activeMasterTab === "Jenis Pengajian") {
+        if (activeMasterTab === "Jenis Kegiatan") {
           const nama = typeof item === 'object' ? item.nama : item;
           const peserta = typeof item === 'object' ? (item.peserta_pengajian || '-') : '-';
+          const gender = typeof item === 'object' ? (item.batasan_gender || 'Semua') : 'Semua';
+          const dapuan = typeof item === 'object' ? (item.target_dapuan || 'Semua') : 'Semua';
           tr.innerHTML = `
             <td><strong>${nama}</strong></td>
             <td>${peserta}</td>
+            <td>${gender}</td>
+            <td>${dapuan}</td>
+            <td style="text-align:center;">
+              <div class="action-btns" style="justify-content:center;">
+                <button class="btn-icon edit" data-name="${nama}" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                <button class="btn-icon delete" data-name="${nama}" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+              </div>
+            </td>
+          `;
+        } else if (activeMasterTab === "Peserta Kegiatan") {
+          const id = item.id_peserta;
+          const nama = item.nama;
+          tr.innerHTML = `
+            <td><strong>${id}</strong></td>
+            <td>${nama}</td>
+            <td style="text-align:center;">
+              <div class="action-btns" style="justify-content:center;">
+                <button class="btn-icon edit" data-name="${id}" data-display-name="${nama}" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                <button class="btn-icon delete" data-name="${id}" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+              </div>
+            </td>
+          `;
+        } else if (activeMasterTab === "Grup Kustom") {
+          const nama = item.nama;
+          const desc = item.deskripsi || '-';
+          const count = item.daftar_id_anggota ? item.daftar_id_anggota.split(',').filter(Boolean).length : 0;
+          tr.innerHTML = `
+            <td><strong>${nama}</strong></td>
+            <td>${desc}</td>
+            <td><span class="status-badge status-active">${count} Anggota</span></td>
             <td style="text-align:center;">
               <div class="action-btns" style="justify-content:center;">
                 <button class="btn-icon edit" data-name="${nama}" title="Edit"><i class="fa-solid fa-pen"></i></button>
@@ -111,12 +167,13 @@
             </td>
           `;
         } else {
+          const val = typeof item === 'object' ? item.nama : item;
           tr.innerHTML = `
-            <td><strong>${item}</strong></td>
+            <td><strong>${val}</strong></td>
             <td style="text-align:center;">
               <div class="action-btns" style="justify-content:center;">
-                <button class="btn-icon edit" data-name="${item}" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                <button class="btn-icon delete" data-name="${item}" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                <button class="btn-icon edit" data-name="${val}" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                <button class="btn-icon delete" data-name="${val}" title="Hapus"><i class="fa-solid fa-trash"></i></button>
               </div>
             </td>
           `;
@@ -125,52 +182,131 @@
       });
 
       tbody.querySelectorAll(".btn-icon.edit").forEach(btn => {
-        btn.addEventListener("click", () => openMasterModal(btn.getAttribute("data-name")));
+        btn.addEventListener("click", () => {
+          if (activeMasterTab === "Peserta Kegiatan") {
+            openMasterModal(btn.getAttribute("data-name"), btn.getAttribute("data-display-name"));
+          } else {
+            openMasterModal(btn.getAttribute("data-name"));
+          }
+        });
       });
       tbody.querySelectorAll(".btn-icon.delete").forEach(btn => {
         btn.addEventListener("click", () => deleteMasterItem(btn.getAttribute("data-name")));
       });
     }
 
-    function openMasterModal(name = null) {
+    function openMasterModal(name = null, displayName = null) {
       editingMasterName = name;
       const modal = document.getElementById("master-modal");
       const title = document.getElementById("master-modal-title");
       const input = document.getElementById("master-form-input");
+      
       const pesertaContainer = document.getElementById("master-form-peserta-container");
-      const pesertaSelect = document.getElementById("master-form-peserta");
+      const pContainer = document.getElementById("master-form-peserta-checkboxes-container");
+      const genderContainer = document.getElementById("master-form-gender-container");
+      const dapuanContainer = document.getElementById("master-form-dapuan-container");
+      const grupKustomContainer = document.getElementById("master-form-grup-kustom-container");
+      
       document.getElementById("master-form-old-name").value = name || "";
       
-      if (pesertaSelect) {
-        for (let i = 0; i < pesertaSelect.options.length; i++) {
-          pesertaSelect.options[i].selected = false;
-        }
-      }
+      // Reset form fields
+      document.getElementById("master-form-gender").value = "Semua";
+      document.getElementById("master-form-dapuan").innerHTML = "";
+      document.getElementById("master-form-grup-kustom-desc").value = "";
+      document.getElementById("master-form-grup-kustom-search").value = "";
+      document.getElementById("master-form-grup-kustom-list").innerHTML = "";
       
-      if (activeMasterTab === "Jenis Pengajian") {
-        if (pesertaContainer) pesertaContainer.style.display = "block";
-        if (pesertaSelect) pesertaSelect.required = true;
+      // Hide all conditional containers first
+      pesertaContainer.style.display = "none";
+      genderContainer.style.display = "none";
+      dapuanContainer.style.display = "none";
+      grupKustomContainer.style.display = "none";
+      
+      if (activeMasterTab === "Jenis Kegiatan") {
+        pesertaContainer.style.display = "block";
+        genderContainer.style.display = "block";
+        dapuanContainer.style.display = "block";
+        
+        // Populate checkboxes
+        pContainer.innerHTML = "";
+        const pesertaList = getMasterPesertaPengajianList() || [];
+        pesertaList.forEach(p => {
+          const div = document.createElement("div");
+          div.style.display = "flex";
+          div.style.alignItems = "center";
+          div.style.gap = "5px";
+          div.innerHTML = `
+            <input type="checkbox" name="master-form-peserta-chk" value="${p.nama}" id="chk-peserta-${p.id_peserta}">
+            <label for="chk-peserta-${p.id_peserta}" style="font-size: 0.85rem; cursor: pointer;">${p.nama}</label>
+          `;
+          pContainer.appendChild(div);
+        });
+        
+        // Populate dapuan select
+        const dapuanSelect = document.getElementById("master-form-dapuan");
+        (localMasterDapuan || []).forEach(d => {
+          dapuanSelect.innerHTML += `<option value="${d}">${d}</option>`;
+        });
         
         if (name) {
           const list = getSelectedMasterList();
-          const item = list.find(x => (typeof x === 'object' ? x.nama : x) === name);
-          if (item && typeof item === 'object' && item.peserta_pengajian) {
-            const currentPeserta = item.peserta_pengajian.split(",").map(p => p.trim());
-            for (let i = 0; i < pesertaSelect.options.length; i++) {
-              if (currentPeserta.includes(pesertaSelect.options[i].value)) {
-                pesertaSelect.options[i].selected = true;
+          const item = list.find(x => x.nama === name);
+          if (item) {
+            if (item.peserta_pengajian) {
+              const currentPeserta = item.peserta_pengajian.split(",").map(p => p.trim());
+              document.querySelectorAll('input[name="master-form-peserta-chk"]').forEach(chk => {
+                if (currentPeserta.includes(chk.value)) {
+                  chk.checked = true;
+                }
+              });
+            }
+            document.getElementById("master-form-gender").value = item.batasan_gender || "Semua";
+            const currentDapuan = item.target_dapuan ? item.target_dapuan.split(",").map(d => d.trim()) : [];
+            for (let i = 0; i < dapuanSelect.options.length; i++) {
+              if (currentDapuan.includes(dapuanSelect.options[i].value)) {
+                dapuanSelect.options[i].selected = true;
               }
             }
           }
         }
-      } else {
-        if (pesertaContainer) pesertaContainer.style.display = "none";
-        if (pesertaSelect) pesertaSelect.required = false;
+      } else if (activeMasterTab === "Grup Kustom") {
+        grupKustomContainer.style.display = "block";
+        
+        // Populate members list
+        const listContainer = document.getElementById("master-form-grup-kustom-list");
+        const jamaahList = getJamaahList() || [];
+        jamaahList.forEach(j => {
+          const div = document.createElement("div");
+          div.className = "grup-kustom-member-item";
+          div.style.display = "flex";
+          div.style.alignItems = "center";
+          div.style.gap = "8px";
+          div.setAttribute("data-nama", j.namaLengkap.toLowerCase());
+          div.innerHTML = `
+            <input type="checkbox" name="master-form-grup-member-chk" value="${j.id}" id="chk-grup-mem-${j.id}">
+            <label for="chk-grup-mem-${j.id}" style="font-size:0.85rem; cursor:pointer;">${j.namaLengkap} <span style="color:var(--text-muted);font-size:0.75rem;">(${j.kelompokPengajian})</span></label>
+          `;
+          listContainer.appendChild(div);
+        });
+        
+        if (name) {
+          const list = getSelectedMasterList();
+          const item = list.find(x => x.nama === name);
+          if (item) {
+            document.getElementById("master-form-grup-kustom-desc").value = item.deskripsi || "";
+            const currentMembers = item.daftar_id_anggota ? item.daftar_id_anggota.split(",").map(id => id.trim()) : [];
+            document.querySelectorAll('input[name="master-form-grup-member-chk"]').forEach(chk => {
+              if (currentMembers.includes(chk.value)) {
+                chk.checked = true;
+              }
+            });
+          }
+        }
       }
       
       if (name) {
         title.innerHTML = `<i class="fa-solid fa-pen"></i> Edit Opsi ${activeMasterTab}`;
-        input.value = name;
+        input.value = displayName || name;
       } else {
         title.innerHTML = `<i class="fa-solid fa-plus"></i> Tambah Opsi ${activeMasterTab}`;
         input.value = "";
@@ -183,9 +319,23 @@
       editingMasterName = null;
     }
 
+    function filterGrupKustomAnggotaList() {
+      const q = document.getElementById("master-form-grup-kustom-search").value.toLowerCase();
+      const items = document.querySelectorAll("#master-form-grup-kustom-list .grup-kustom-member-item");
+      items.forEach(item => {
+        const name = item.getAttribute("data-nama") || "";
+        if (name.includes(q)) {
+          item.style.display = "flex";
+        } else {
+          item.style.display = "none";
+        }
+      });
+    }
+    window.filterGrupKustomAnggotaList = filterGrupKustomAnggotaList;
+
     function deleteMasterItem(name) {
       const curUser = getCurrentUser();
-      if (confirm(`Apakah Anda yakin ingin menghapus opsi "${name}" dari tabel master ${activeMasterTab}? Semua data jamaah yang terkait akan ikut dibersihkan.`)) {
+      if (confirm(`Apakah Anda yakin ingin menghapus opsi "${name}" dari tabel master ${activeMasterTab}? Semua data yang terkait akan ikut dibersihkan.`)) {
         google.script.run
           .withSuccessHandler(function() {
             fetchDatabaseFromServer(function() {

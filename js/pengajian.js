@@ -111,8 +111,18 @@ window.renderCalendar = function() {
   }
   
   // Current month days
-  const schedules = getJadwalPengajianList() || [];
-  
+  let schedules = getJadwalPengajianList() || [];
+  const currentUser = getCurrentUser();
+  const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
+  if (curRoleClean === "operator kelompok") {
+    schedules = schedules.filter(s => {
+      const tk = String(s.tingkat_pengajian || "").toLowerCase();
+      return s.kelompok_pengajian === currentUser.kelompok ||
+             tk.includes("desa") ||
+             tk.includes("daerah");
+    });
+  }
+
   for (let day = 1; day <= numDays; day++) {
     const cell = document.createElement("div");
     cell.className = "calendar-cell";
@@ -211,7 +221,9 @@ window.renderCalendar = function() {
       // Render text: "20:00 - Sambung"
       const timeStr = (sched.waktu_mulai || "").substring(0, 5);
       badge.textContent = `${timeStr} - ${sched.jenis_pengajian}`;
-      badge.title = `${sched.tingkat_pengajian}\nMateri: ${sched.materi_pengajar.map(m => m.materi).join(', ')}`;
+      const materiList = (sched.materi_pengajar || []).map(m => m.materi).join(', ');
+      const pengajarList = (sched.materi_pengajar || []).map(m => m.pengajar_nama).join(', ');
+      badge.title = `Tingkat: ${sched.tingkat_pengajian || '-'}\nKelompok Pembuat: ${sched.kelompok_pengajian || '-'}\nMateri: ${materiList || '-'}\nPengajar: ${pengajarList || '-'}`;
       
       badge.onclick = (e) => {
         e.stopPropagation();
@@ -317,6 +329,10 @@ window.openAddJadwalModal = function(date = null) {
   
   addMateriPengajarRow();
   
+  if (typeof populateJadwalPesertaSpesifikFields === 'function') {
+    populateJadwalPesertaSpesifikFields(null);
+  }
+  
   const modal = document.getElementById("pengajian-jadwal-modal");
   modal.classList.add("active");
 };
@@ -411,6 +427,10 @@ window.openEditJadwalModal = function(id) {
     delBtn.remove();
   } else if (delBtn) {
     delBtn.onclick = () => confirmDeleteJadwal(sched.id);
+  }
+  
+  if (typeof populateJadwalPesertaSpesifikFields === 'function') {
+    populateJadwalPesertaSpesifikFields(sched.peserta_spesifik || null);
   }
   
   const modal = document.getElementById("pengajian-jadwal-modal");
@@ -741,6 +761,13 @@ window.saveJadwalPengajianForm = function() {
     return;
   }
   
+  let peserta_spesifik = "";
+  const isSpesifikChk = document.getElementById("jadwal-form-is-spesifik");
+  if (isSpesifikChk && isSpesifikChk.checked) {
+    const checkedCheckboxes = Array.from(document.querySelectorAll('input[name="jadwal-form-peserta-chk"]:checked'));
+    peserta_spesifik = checkedCheckboxes.map(chk => chk.value).join(", ");
+  }
+
   const jadwalData = {
     id: id || null,
     tingkat_pengajian,
@@ -749,7 +776,8 @@ window.saveJadwalPengajianForm = function() {
     waktu_mulai: waktu_mulai + ":00",
     waktu_selesai: waktu_selesai + ":00",
     materi_pengajar,
-    kelompok_pengajian
+    kelompok_pengajian,
+    peserta_spesifik
   };
   
   const saveBtn = document.getElementById("pengajian-jadwal-modal-save-btn");
@@ -1012,16 +1040,27 @@ function renderPresensiTable(session) {
     saveBtn.style.display = presensiSheetReadOnly ? "none" : "inline-flex";
   }
   
-  // Apply automatic filtering based on jenis_pengajian
-  targetJamaah = targetJamaah.filter(j => isJamaahEligibleForJenis(j, session.jenis_pengajian));
+  // Apply automatic filtering based on jenis_pengajian and peserta_spesifik (undangan)
+  if (session.peserta_spesifik) {
+    const allowedIds = session.peserta_spesifik.split(",").map(id => id.trim()).filter(Boolean);
+    if (allowedIds.length > 0) {
+      targetJamaah = targetJamaah.filter(j => allowedIds.includes(j.id));
+    }
+  } else {
+    targetJamaah = targetJamaah.filter(j => isJamaahEligibleForJenis(j, session.jenis_pengajian));
+  }
   
   if (targetJamaah.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--text-secondary);">Tidak ada jamaah yang memenuhi kriteria untuk jenis pengajian ini.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--text-secondary);">Tidak ada jamaah yang memenuhi kriteria untuk jenis kegiatan ini.</td></tr>';
     return;
   }
   
   const presensiDb = getPresensiKehadiranList() || [];
   const sessionPresensi = presensiDb.filter(p => p.id_pengajian == session.id);
+  
+  const todayStr = new Date().toISOString().split('T')[0];
+  const isFuture = session.tanggal > todayStr;
+  const defaultStatus = isFuture ? "BELUM WAKTUNYA" : "Alpha";
   
   currentPresensiList = targetJamaah.map(j => {
     const exist = sessionPresensi.find(p => p.id_jamaah === j.id);
@@ -1030,7 +1069,7 @@ function renderPresensiTable(session) {
       nama: j.namaLengkap,
       gender: j.jenisKelamin,
       peramutan: j.kelompokPeramutan,
-      status: exist ? exist.status : "Alpha",
+      status: exist ? exist.status : defaultStatus,
       keterangan: exist ? exist.keterangan || "" : ""
     };
   });
@@ -1241,6 +1280,14 @@ window.calculateAndRenderMonitoring = function(isSesiChange = false) {
   
   // Filter schedules by tingkat, jenis, period
   let periodSchedules = schedules;
+  if (isOperator) {
+    periodSchedules = periodSchedules.filter(s => {
+      const tk = String(s.tingkat_pengajian || "").toLowerCase();
+      return s.kelompok_pengajian === currentUser.kelompok ||
+             tk.includes("desa") ||
+             tk.includes("daerah");
+    });
+  }
   if (filterTingkat) {
     periodSchedules = periodSchedules.filter(s => s.tingkat_pengajian === filterTingkat);
   }
@@ -1609,8 +1656,11 @@ function getEligiblePeramutanForJenis(jenis) {
     return (name || "").trim().toLowerCase().replace(/\s+/g, '') === jClean;
   });
   
-  if (match && typeof match === 'object' && match.peserta_pengajian) {
-    return match.peserta_pengajian.split(",").map(p => p.trim()).filter(Boolean);
+  if (match && typeof match === 'object') {
+    if (match.peserta_pengajian) {
+      return match.peserta_pengajian.split(",").map(p => p.trim()).filter(Boolean);
+    }
+    return [];
   }
   
   // Fallbacks if not found dynamically
@@ -1641,16 +1691,57 @@ function getEligiblePeramutanForJenis(jenis) {
 function isJamaahEligibleForJenis(j, jenis) {
   const jClean = (jenis || "").trim().toLowerCase().replace(/\s+/g, '');
   
-  // Gender restriction if the type name contains "ibu", "wanita", "kewanitaan", or "akhwat"
-  const isFemaleOnly = jClean.includes("ibu") || jClean.includes("wanita") || jClean.includes("kewanitaan") || jClean.includes("akhwat");
-  if (isFemaleOnly) {
-    if ((j.jenisKelamin || "").trim().toLowerCase() !== "perempuan") {
+  const list = typeof getMasterJenisPengajianList === 'function' ? getMasterJenisPengajianList() : (typeof localMasterJenisPengajian !== 'undefined' ? localMasterJenisPengajian : []);
+  const match = list.find(item => {
+    const name = typeof item === 'object' ? item.nama : item;
+    return (name || "").trim().toLowerCase().replace(/\s+/g, '') === jClean;
+  });
+  
+  if (match && typeof match === 'object') {
+    // 1. Gender restriction
+    const genderLimit = (match.batasan_gender || "Semua").trim().toLowerCase();
+    const jamaahGender = (j.jenisKelamin || "").trim().toLowerCase();
+    if (genderLimit === "laki-laki" && jamaahGender !== "laki-laki") {
       return false;
+    }
+    if (genderLimit === "perempuan" && jamaahGender !== "perempuan") {
+      return false;
+    }
+    
+    // 2. Dapuan restriction
+    const targetDapuanStr = (match.target_dapuan || "").trim();
+    if (targetDapuanStr) {
+      const allowedDapuans = targetDapuanStr.split(",").map(d => d.trim().toLowerCase()).filter(Boolean);
+      if (allowedDapuans.length > 0) {
+        const jamaahDapuans = [j.dapuan];
+        if (typeof getPengurusList === 'function') {
+          const pList = getPengurusList() || [];
+          pList.forEach(p => {
+            if (p.jamaah_id === j.id && p.dapuan) {
+              jamaahDapuans.push(p.dapuan);
+            }
+          });
+        }
+        const lowerJamaahDapuans = jamaahDapuans.filter(Boolean).map(d => d.trim().toLowerCase());
+        const hasMatchingDapuan = allowedDapuans.some(ad => lowerJamaahDapuans.includes(ad));
+        if (!hasMatchingDapuan) {
+          return false;
+        }
+      }
+    }
+  } else {
+    // Fallback gender check
+    const isFemaleOnly = jClean.includes("ibu") || jClean.includes("wanita") || jClean.includes("kewanitaan") || jClean.includes("akhwat");
+    if (isFemaleOnly) {
+      if ((j.jenisKelamin || "").trim().toLowerCase() !== "perempuan") {
+        return false;
+      }
     }
   }
   
+  // 3. Demographic restriction
   const allowedPeramutan = getEligiblePeramutanForJenis(jenis);
-  if (allowedPeramutan === null) return true; // no restriction
+  if (allowedPeramutan === null || allowedPeramutan.length === 0) return true; // no restriction
   
   const peramutan = (j.kelompokPeramutan || "").trim().toLowerCase();
   return allowedPeramutan.some(p => p.toLowerCase() === peramutan);
@@ -1796,4 +1887,149 @@ function fillMonitoringDOM() {
 
 window.filterMonitoringTable = function() {
   fillMonitoringDOM();
+};
+
+// Target Selection & Custom Group helpers for Scheduling Form
+window.toggleJadwalPesertaSpesifik = function() {
+  const isSpesifik = document.getElementById("jadwal-form-is-spesifik").checked;
+  const container = document.getElementById("jadwal-form-peserta-spesifik-container");
+  if (isSpesifik) {
+    container.style.display = "block";
+  } else {
+    container.style.display = "none";
+    document.querySelectorAll('input[name="jadwal-form-peserta-chk"]').forEach(chk => {
+      chk.checked = false;
+    });
+  }
+};
+
+window.filterJadwalPesertaList = function() {
+  const q = document.getElementById("jadwal-form-peserta-search").value.toLowerCase();
+  const items = document.querySelectorAll("#jadwal-form-peserta-list .jadwal-peserta-item");
+  items.forEach(item => {
+    const name = item.getAttribute("data-nama") || "";
+    if (name.includes(q)) {
+      item.style.display = "flex";
+    } else {
+      item.style.display = "none";
+    }
+  });
+};
+
+window.applyGrupKustomToJadwal = function() {
+  const select = document.getElementById("jadwal-form-pilih-grup-kustom");
+  const groupName = select.value;
+  if (!groupName) return;
+  
+  const groups = getMasterGrupKustomList() || [];
+  const group = groups.find(g => g.nama === groupName);
+  if (group && group.daftar_id_anggota) {
+    const memberIds = group.daftar_id_anggota.split(",").map(id => id.trim()).filter(Boolean);
+    const checkboxes = document.querySelectorAll('input[name="jadwal-form-peserta-chk"]');
+    checkboxes.forEach(chk => {
+      if (memberIds.includes(chk.value)) {
+        chk.checked = true;
+      }
+    });
+  }
+  select.value = "";
+};
+
+function matchJamaahToCategory(j, category) {
+  const cat = category.toLowerCase().trim();
+  if (j.kelompokPeramutan.toLowerCase() === cat) return true;
+  if (cat === "ibu-ibu" || cat === "kewanitaan") {
+    return j.jenisKelamin === "Perempuan" && (j.kelompokPeramutan === "Dewasa" || j.kelompokPeramutan === "Manula");
+  }
+  if (cat.includes("pengurus")) {
+    const isRokyah = (j.dapuan || "").toLowerCase().includes("rokyah");
+    const hasPengurusRecord = typeof getPengurusList === 'function' && (getPengurusList() || []).some(p => p.jamaah_id === j.id);
+    return !isRokyah || hasPengurusRecord;
+  }
+  return false;
+}
+
+window.quickSelectJadwalPeserta = function(category) {
+  const jamaahList = getJamaahList() || [];
+  const targetIds = jamaahList.filter(j => matchJamaahToCategory(j, category)).map(j => j.id);
+  
+  const checkboxes = Array.from(document.querySelectorAll('input[name="jadwal-form-peserta-chk"]'));
+  const targetCheckboxes = checkboxes.filter(chk => targetIds.includes(chk.value));
+  const allChecked = targetCheckboxes.every(chk => chk.checked);
+  
+  targetCheckboxes.forEach(chk => {
+    chk.checked = !allChecked;
+  });
+};
+
+window.populateJadwalPesertaSpesifikFields = function(existingSpesifik = null) {
+  const groupSelect = document.getElementById("jadwal-form-pilih-grup-kustom");
+  if (groupSelect) {
+    groupSelect.innerHTML = '<option value="">-- Pilih Grup Kustom --</option>';
+    const groups = getMasterGrupKustomList() || [];
+    groups.forEach(g => {
+      const opt = document.createElement("option");
+      opt.value = g.nama;
+      opt.textContent = g.nama;
+      groupSelect.appendChild(opt);
+    });
+  }
+  
+  const quickSelectContainer = document.getElementById("jadwal-form-quick-select-buttons");
+  if (quickSelectContainer) {
+    quickSelectContainer.innerHTML = "";
+    const categories = getMasterPesertaPengajianList() || [];
+    categories.forEach(cat => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn-secondary";
+      btn.style.fontSize = "0.75rem";
+      btn.style.padding = "4px 8px";
+      btn.style.background = "rgba(16,185,129,0.1)";
+      btn.style.border = "1px solid rgba(16,185,129,0.3)";
+      btn.style.color = "var(--primary)";
+      btn.style.borderRadius = "4px";
+      btn.style.cursor = "pointer";
+      btn.textContent = cat.nama;
+      btn.onclick = () => quickSelectJadwalPeserta(cat.nama);
+      quickSelectContainer.appendChild(btn);
+    });
+  }
+  
+  const listContainer = document.getElementById("jadwal-form-peserta-list");
+  if (listContainer) {
+    listContainer.innerHTML = "";
+    const jamaahList = getJamaahList() || [];
+    const sortedList = [...jamaahList].sort((a, b) => a.namaLengkap.localeCompare(b.namaLengkap));
+    sortedList.forEach(j => {
+      const div = document.createElement("div");
+      div.className = "jadwal-peserta-item";
+      div.style.display = "flex";
+      div.style.alignItems = "center";
+      div.style.gap = "6px";
+      div.setAttribute("data-nama", j.namaLengkap.toLowerCase());
+      div.innerHTML = `
+        <input type="checkbox" name="jadwal-form-peserta-chk" value="${j.id}" id="chk-jadwal-peserta-${j.id}">
+        <label for="chk-jadwal-peserta-${j.id}" style="font-size: 0.8rem; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${j.namaLengkap} (${j.kelompokPengajian})">${j.namaLengkap}</label>
+      `;
+      listContainer.appendChild(div);
+    });
+  }
+  
+  const checkboxIsSpesifik = document.getElementById("jadwal-form-is-spesifik");
+  const container = document.getElementById("jadwal-form-peserta-spesifik-container");
+  
+  if (existingSpesifik) {
+    if (checkboxIsSpesifik) checkboxIsSpesifik.checked = true;
+    if (container) container.style.display = "block";
+    const selectedIds = existingSpesifik.split(",").map(id => id.trim()).filter(Boolean);
+    document.querySelectorAll('input[name="jadwal-form-peserta-chk"]').forEach(chk => {
+      if (selectedIds.includes(chk.value)) {
+        chk.checked = true;
+      }
+    });
+  } else {
+    if (checkboxIsSpesifik) checkboxIsSpesifik.checked = false;
+    if (container) container.style.display = "none";
+  }
 };
