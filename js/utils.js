@@ -129,3 +129,110 @@
           filter.disabled = false;
         }
       }
+
+window.getEligiblePeramutanForJenis = function(jenis) {
+  const jClean = (jenis || "").trim().toLowerCase().replace(/\s+/g, '');
+  
+  const list = typeof getMasterJenisPengajianList === 'function' ? getMasterJenisPengajianList() : (typeof localMasterJenisPengajian !== 'undefined' ? localMasterJenisPengajian : []);
+  const match = list.find(item => {
+    const name = typeof item === 'object' ? item.nama : item;
+    return (name || "").trim().toLowerCase().replace(/\s+/g, '') === jClean;
+  });
+  
+  if (match && typeof match === 'object') {
+    if (match.peserta_pengajian) {
+      return match.peserta_pengajian.split(",").map(p => p.trim()).filter(Boolean);
+    }
+    return [];
+  }
+  
+  if (jClean === "ibu-ibu" || jClean === "ibu--ibu" || jClean === "ibuibu") {
+    return ["Dewasa", "Manula"];
+  }
+  if (jClean === "kewanitaan") {
+    return ["Dewasa", "Manula", "GUS", "GUM"];
+  }
+  if (jClean === "sambung" || jClean === "5unsur") {
+    return ["Dewasa", "Manula", "GUM"];
+  } else if (jClean === "gus") {
+    return ["GUS"];
+  } else if (jClean === "gum") {
+    return ["GUM"];
+  } else if (jClean === "gabungangusdangum") {
+    return ["GUS", "GUM"];
+  } else if (jClean === "caberawit") {
+    return ["PAUD", "Caberawit"];
+  } else if (jClean === "teks" || jClean === "turbadesa" || jClean === "turbadaerah") {
+    return ["Dewasa", "Manula", "GUM", "GUS"];
+  }
+  
+  return null;
+};
+
+window.getScheduleParticipantText = function(sched) {
+  if (!sched) return "";
+  if (sched.peserta_spesifik) {
+    const ids = sched.peserta_spesifik.split(",").map(x => x.trim()).filter(Boolean);
+    if (ids.length > 0) {
+      const allJ = typeof getJamaahList === 'function' ? getJamaahList() : [];
+      const names = ids.map(id => {
+        const jObj = allJ.find(x => x.id === id);
+        return jObj ? jObj.namaLengkap : id;
+      });
+      return `Undangan: ${names.join(", ")}`;
+    }
+  }
+  
+  const jClean = (sched.jenis_pengajian || "").trim().toLowerCase().replace(/\s+/g, '');
+  const list = typeof getMasterJenisPengajianList === 'function' ? getMasterJenisPengajianList() : (typeof localMasterJenisPengajian !== 'undefined' ? localMasterJenisPengajian : []);
+  const match = list.find(item => {
+    const name = typeof item === 'object' ? item.nama : item;
+    return (name || "").trim().toLowerCase().replace(/\s+/g, '') === jClean;
+  });
+  
+  let parts = [];
+  if (match && typeof match === 'object') {
+    if (match.peserta_pengajian) {
+      parts.push(match.peserta_pengajian);
+    }
+    if (match.batasan_gender && match.batasan_gender !== "Semua") {
+      parts.push(match.batasan_gender);
+    }
+    if (match.target_dapuan) {
+      parts.push(`Dapuan: ${match.target_dapuan}`);
+    }
+  } else {
+    const peramutans = window.getEligiblePeramutanForJenis(sched.jenis_pengajian);
+    if (peramutans && peramutans.length > 0) {
+      parts.push(peramutans.join(", "));
+    }
+  }
+  
+  if (parts.length > 0) {
+    return parts.join(" (") + (parts.length > 1 ? ")" : "");
+  }
+  return "Semua Jamaah";
+};
+
+window.isJamaahEligibleForSchedule = function(j, s) {
+  if (!j || !s) return false;
+  
+  const tk = String(s.tingkat_pengajian || '').toLowerCase();
+  const isKelompok = tk.includes('kelompok') || (!tk.includes('desa') && !tk.includes('daerah'));
+  if (isKelompok && s.kelompok_pengajian !== j.kelompokPengajian) {
+    return false;
+  }
+  
+  if (s.peserta_spesifik) {
+    const allowedIds = s.peserta_spesifik.split(",").map(id => id.trim()).filter(Boolean);
+    if (allowedIds.length > 0) {
+      return allowedIds.includes(j.id);
+    }
+  }
+  
+  if (typeof isJamaahEligibleForJenis === 'function') {
+    return isJamaahEligibleForJenis(j, s.jenis_pengajian);
+  }
+  return true;
+};
+

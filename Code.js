@@ -52,9 +52,10 @@ function initializeDatabaseIfMissing() {
     // Version 3.0 Pengajian Sheets
     "Materi Pengajian": ["nama"],
     "Master Pengajar": ["id_pengajar", "id_jamaah"],
-    "Pengajian Jadwal": ["id", "tingkat_pengajian", "jenis_pengajian", "tanggal", "waktu_mulai", "waktu_selesai", "materi_pengajar", "kelompok_pengajian"],
+    "Pengajian Jadwal": ["id", "tingkat_pengajian", "jenis_pengajian", "tanggal", "waktu_mulai", "waktu_selesai", "materi_pengajar", "kelompok_pengajian", "lokasi"],
     "Pengajian Presensi": ["id", "id_pengajian", "id_jamaah", "status", "keterangan"],
-    "Jenis Pengajian": ["nama", "peserta_pengajian"]
+    "Jenis Pengajian": ["nama", "peserta_pengajian"],
+    "Tempat Kegiatan": ["nama"]
   };
   
   for (const sheetName in schema) {
@@ -69,6 +70,14 @@ function initializeDatabaseIfMissing() {
       const range = sheet.getRange(1, 1, 1, schema[sheetName].length);
       range.setFontWeight("bold");
       range.setBackground("#e2f0d9"); // Soft forest green accent
+    } else {
+      // Schema migrations
+      if (sheetName === "Pengajian Jadwal") {
+        const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+        if (headers.indexOf("lokasi") === -1) {
+          sheet.getRange(1, headers.length + 1).setValue("lokasi");
+        }
+      }
     }
     
     // Schema verification and seeding for Users (works for both existing and brand new sheets)
@@ -106,6 +115,9 @@ function initializeDatabaseIfMissing() {
     
     // Seed default master options on new sheet creation
     if (isNew) {
+      if (sheetName === "Tempat Kegiatan") {
+        ["Masjid Al-Fatah", "Aula Serbaguna", "Masjid Baitul Makmur", "Daring (Online)"].forEach(opt => sheet.appendRow([opt]));
+      }
       if (sheetName === "Kelompok") {
         ["Pondok Melati", "Pondok Melati Selatan", "Jatiranggon", "Chandra"].forEach(opt => sheet.appendRow([opt]));
       }
@@ -239,7 +251,8 @@ function getAllDataGAS(operatorUsername) {
     masterPengajar: getSheetData("Master Pengajar", ss),
     jadwalPengajian: getSheetData("Pengajian Jadwal", ss),
     presensiKehadiran: getSheetData("Pengajian Presensi", ss),
-    masterJenisPengajian: getSheetData("Jenis Pengajian", ss)
+    masterJenisPengajian: getSheetData("Jenis Pengajian", ss),
+    masterTempatKegiatan: getSheetData("Tempat Kegiatan", ss)
   };
   
   // Enforce Row-Level Security (RLS) if operatorUsername is provided and is a group operator
@@ -696,17 +709,31 @@ function savePresensiKehadiranGAS(idPengajian, presensiList, operatorUsername) {
     if (!isNaN(idVal) && idVal > maxIdNum) maxIdNum = idVal;
   }
   
+  const rowsToDelete = [];
   presensiList.forEach(p => {
     const rowIdx = existingMap[p.id_jamaah];
-    if (rowIdx) {
-      // Update
-      sheet.getRange(rowIdx, 4).setValue(p.status); // Column D: status
-      sheet.getRange(rowIdx, 5).setValue(p.keterangan || ""); // Column E: keterangan
+    const isReset = !p.status || p.status === "Alpha" || p.status === "";
+    if (isReset) {
+      if (rowIdx) {
+        rowsToDelete.push(rowIdx);
+      }
     } else {
-      // Insert
-      maxIdNum++;
-      sheet.appendRow([maxIdNum, searchIdPengajian, p.id_jamaah, p.status, p.keterangan || ""]);
+      if (rowIdx) {
+        // Update
+        sheet.getRange(rowIdx, 4).setValue(p.status); // Column D: status
+        sheet.getRange(rowIdx, 5).setValue(p.keterangan || ""); // Column E: keterangan
+      } else {
+        // Insert
+        maxIdNum++;
+        sheet.appendRow([maxIdNum, searchIdPengajian, p.id_jamaah, p.status, p.keterangan || ""]);
+      }
     }
+  });
+  
+  // Delete rows in descending order to avoid index shifts
+  rowsToDelete.sort((a, b) => b - a);
+  rowsToDelete.forEach(rowIdx => {
+    sheet.deleteRow(rowIdx);
   });
   
   logActionGAS(operatorUsername, "SAVE_PRESENSI", "Menyimpan data presensi kehadiran untuk sesi pengajian ID " + idPengajian);

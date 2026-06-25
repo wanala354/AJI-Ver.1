@@ -696,3 +696,6 @@
       const modal = document.getElementById("jamaah-view-modal");
       if (modal) modal.classList.remove("active");
     }
+    
+    window.openJamaahViewModal = openJamaahViewModal;
+    window.closeJamaahViewModal = closeJamaahViewModal;

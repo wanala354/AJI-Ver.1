@@ -44,7 +44,9 @@ window.initPengajianModule = function() {
       if (y === currentYear) opt.selected = true;
       yearSelect.appendChild(opt);
     }
-    
+  }
+  
+  if (monthSelect) {
     const currentMonth = new Date().getMonth();
     monthSelect.value = currentMonth;
   }
@@ -220,10 +222,11 @@ window.renderCalendar = function() {
       
       // Render text: "20:00 - Sambung"
       const timeStr = (sched.waktu_mulai || "").substring(0, 5);
+      const pesertaTxt = getScheduleParticipantText(sched);
       badge.textContent = `${timeStr} - ${sched.jenis_pengajian}`;
       const materiList = (sched.materi_pengajar || []).map(m => m.materi).join(', ');
       const pengajarList = (sched.materi_pengajar || []).map(m => m.pengajar_nama).join(', ');
-      badge.title = `Tingkat: ${sched.tingkat_pengajian || '-'}\nKelompok Pembuat: ${sched.kelompok_pengajian || '-'}\nMateri: ${materiList || '-'}\nPengajar: ${pengajarList || '-'}`;
+      badge.title = `Tingkat: ${sched.tingkat_pengajian || '-'}\nKelompok Pembuat: ${sched.kelompok_pengajian || '-'}\nPeserta: ${pesertaTxt}\nMateri: ${materiList || '-'}\nPengajar: ${pengajarList || '-'}`;
       
       badge.onclick = (e) => {
         e.stopPropagation();
@@ -321,6 +324,11 @@ window.openAddJadwalModal = function(date = null) {
   // Populate Kelompok
   populateJadwalKelompokDropdown();
   
+  // Populate Lokasi Datalist
+  populateLokasiDatalist();
+  const lokasiInput = document.getElementById("jadwal-form-lokasi");
+  if (lokasiInput) lokasiInput.value = "";
+  
   // Reset Materi-Pengajar Container and add 1 default empty row
   document.getElementById("jadwal-materi-pengajar-container").innerHTML = "";
   
@@ -370,6 +378,11 @@ window.openEditJadwalModal = function(id) {
   
   // Populate Kelompok dropdown
   populateJadwalKelompokDropdown();
+  
+  // Populate Lokasi Datalist
+  populateLokasiDatalist();
+  const lokasiInput = document.getElementById("jadwal-form-lokasi");
+  if (lokasiInput) lokasiInput.value = sched.lokasi || "";
   
   const kelompokSel = document.getElementById("jadwal-form-kelompok");
   let hasOption = false;
@@ -445,6 +458,19 @@ window.closeJadwalModal = function() {
   if (delBtn) delBtn.remove();
 };
 
+function populateLokasiDatalist() {
+  const datalist = document.getElementById("lokasi-datalist");
+  if (!datalist) return;
+  datalist.innerHTML = "";
+  
+  const list = (typeof localMasterTempatKegiatan !== 'undefined' && localMasterTempatKegiatan) ? localMasterTempatKegiatan : [];
+  list.forEach(loc => {
+    const opt = document.createElement("option");
+    opt.value = loc;
+    datalist.appendChild(opt);
+  });
+}
+
 function populateJadwalKelompokDropdown() {
   const select = document.getElementById("jadwal-form-kelompok");
   if (!select) return;
@@ -497,6 +523,8 @@ function setJadwalFormReadOnly(isReadOnly) {
   document.getElementById("jadwal-form-tanggal").disabled = isReadOnly;
   document.getElementById("jadwal-form-waktu-mulai").disabled = isReadOnly;
   document.getElementById("jadwal-form-waktu-selesai").disabled = isReadOnly;
+  const lokasiInput = document.getElementById("jadwal-form-lokasi");
+  if (lokasiInput) lokasiInput.disabled = isReadOnly;
   
   const tingkat = document.getElementById("jadwal-form-tingkat").value;
   document.getElementById("jadwal-form-kelompok").disabled = isReadOnly || isOperator || ["Tingkat Desa", "Tingkat Daerah"].includes(tingkat);
@@ -768,6 +796,8 @@ window.saveJadwalPengajianForm = function() {
     peserta_spesifik = checkedCheckboxes.map(chk => chk.value).join(", ");
   }
 
+  const lokasi = document.getElementById("jadwal-form-lokasi").value.trim();
+
   const jadwalData = {
     id: id || null,
     tingkat_pengajian,
@@ -777,7 +807,8 @@ window.saveJadwalPengajianForm = function() {
     waktu_selesai: waktu_selesai + ":00",
     materi_pengajar,
     kelompok_pengajian,
-    peserta_spesifik
+    peserta_spesifik,
+    lokasi
   };
   
   const saveBtn = document.getElementById("pengajian-jadwal-modal-save-btn");
@@ -1140,7 +1171,7 @@ window.updatePresensiStatusInMem = function(jamaahId, status) {
 window.resetPresensiStatus = function(jamaahId) {
   const item = currentPresensiList.find(x => x.id_jamaah === jamaahId);
   if (item) {
-    item.status = "Alpha";
+    item.status = "";
     fillPresensiDOM();
   }
 };
@@ -1394,28 +1425,22 @@ window.calculateAndRenderMonitoring = function(isSesiChange = false) {
   let presentFemaleMarked = 0;
 
   filteredSchedules.forEach(s => {
-    const jenis = s.jenis_pengajian || "";
     targetJamaahForStats.forEach(j => {
-      if (isJamaahEligibleForJenis(j, jenis)) {
-        const inKelompok = s.tingkat_pengajian === "Tingkat Desa" ||
-                           s.tingkat_pengajian === "Tingkat Daerah" ||
-                           s.kelompok_pengajian === j.kelompokPengajian;
-        if (inKelompok) {
-          grandTotal++;
-          const status = presensiMap[`${s.id}_${j.id}`] || "Alpha";
+      if (isJamaahEligibleForSchedule(j, s)) {
+        grandTotal++;
+        const status = presensiMap[`${s.id}_${j.id}`] || "Alpha";
 
-          if (status === "Hadir Fisik") countFisik++;
-          else if (status === "Online") countOnline++;
-          else if (status === "Izin") countIzin++;
-          else if (status === "Alpha") countAlpha++;
+        if (status === "Hadir Fisik") countFisik++;
+        else if (status === "Online") countOnline++;
+        else if (status === "Izin") countIzin++;
+        else if (status === "Alpha") countAlpha++;
 
-          if (j.jenisKelamin === "Laki-laki") {
-            totalMaleMarked++;
-            if (status === "Hadir Fisik" || status === "Online") presentMaleMarked++;
-          } else if (j.jenisKelamin === "Perempuan") {
-            totalFemaleMarked++;
-            if (status === "Hadir Fisik" || status === "Online") presentFemaleMarked++;
-          }
+        if (j.jenisKelamin === "Laki-laki") {
+          totalMaleMarked++;
+          if (status === "Hadir Fisik" || status === "Online") presentMaleMarked++;
+        } else if (j.jenisKelamin === "Perempuan") {
+          totalFemaleMarked++;
+          if (status === "Hadir Fisik" || status === "Online") presentFemaleMarked++;
         }
       }
     });
@@ -1499,16 +1524,11 @@ window.updateAttendanceTrendChart = function() {
     let present = 0;
     
     targetJamaahForStats.forEach(j => {
-      if (isJamaahEligibleForJenis(j, s.jenis_pengajian)) {
-        const inKelompok = s.tingkat_pengajian === "Tingkat Desa" ||
-                           s.tingkat_pengajian === "Tingkat Daerah" ||
-                           s.kelompok_pengajian === j.kelompokPengajian;
-        if (inKelompok) {
-          eligible++;
-          const status = presensiMap[`${s.id}_${j.id}`] || "Alpha";
-          if (status === "Hadir Fisik" || status === "Online") {
-            present++;
-          }
+      if (isJamaahEligibleForSchedule(j, s)) {
+        eligible++;
+        const status = presensiMap[`${s.id}_${j.id}`] || "Alpha";
+        if (status === "Hadir Fisik" || status === "Online") {
+          present++;
         }
       }
     });
@@ -1769,14 +1789,9 @@ function renderIndividualMonitoringTable(filteredSchedules, presensiMap) {
   } else {
     const relevantJamaahIds = new Set();
     filteredSchedules.forEach(s => {
-      const jenis = s.jenis_pengajian || "";
       targetJamaah.forEach(j => {
-        if (isJamaahEligibleForJenis(j, jenis)) {
-          // Eligible for this session's kelompok too
-          const inKelompok = s.tingkat_pengajian === "Tingkat Desa" ||
-                             s.tingkat_pengajian === "Tingkat Daerah" ||
-                             s.kelompok_pengajian === j.kelompokPengajian;
-          if (inKelompok) relevantJamaahIds.add(j.id);
+        if (isJamaahEligibleForSchedule(j, s)) {
+          relevantJamaahIds.add(j.id);
         }
       });
     });
@@ -1785,12 +1800,7 @@ function renderIndividualMonitoringTable(filteredSchedules, presensiMap) {
   
   currentMonitoringTableData = displayJamaah.map(j => {
     // Total sessions this jamaah was eligible to attend
-    const relevantSessions = filteredSchedules.filter(s => {
-      const inKelompok = s.tingkat_pengajian === "Tingkat Desa" ||
-                         s.tingkat_pengajian === "Tingkat Daerah" ||
-                         s.kelompok_pengajian === j.kelompokPengajian;
-      return inKelompok && isJamaahEligibleForJenis(j, s.jenis_pengajian);
-    });
+    const relevantSessions = filteredSchedules.filter(s => isJamaahEligibleForSchedule(j, s));
     
     const jTotalSesi = relevantSessions.length;
     

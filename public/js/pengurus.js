@@ -28,35 +28,68 @@
           finalData = finalData.filter(p => p.kel === currentUser.kelompok);
         }
         
-        if (finalData.length === 0) {
+        const grouped = {};
+        finalData.forEach(p => {
+          if (!p.jamaah_id) return;
+          if (!grouped[p.jamaah_id]) {
+            grouped[p.jamaah_id] = {
+              jamaah_id: p.jamaah_id,
+              nama: p.nama,
+              kel: p.kel,
+              roles: []
+            };
+          }
+          grouped[p.jamaah_id].roles.push({
+            id: p.id,
+            tingkat_pengurus: p.tingkat_pengurus,
+            dapuan: p.dapuan
+          });
+        });
+        
+        const sortedGroups = Object.values(grouped).sort((a, b) => a.nama.localeCompare(b.nama));
+        
+        if (sortedGroups.length === 0) {
           tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">Tidak ada data pengurus ditemukan</td></tr>';
           return;
         }
         
-        finalData.forEach((p, idx) => {
-          let actionButtons = '';
+        sortedGroups.forEach((group, idx) => {
+          let tingkatHtml = '';
+          let dapuanHtml = '';
+          let aksiHtml = '';
+          
           const hasWriteAccess = currentUser && (curRoleClean === 'admin' || isOperator);
-          if (hasWriteAccess) {
-            actionButtons = `
-              <div class="action-btns" style="justify-content: center;">
-                <button class="btn-icon edit" title="Edit Pengurus" onclick="showEditPengurusModal('${p.id}')"><i class="fa-solid fa-pen"></i></button>
-                <button class="btn-icon delete" title="Hapus Pengurus" onclick="deletePengurus('${p.id}')"><i class="fa-solid fa-trash"></i></button>
-              </div>`;
-          } else {
-            actionButtons = `<span style="color: var(--text-secondary); font-size:0.85rem;">-</span>`;
-          }
-
+          
+          group.roles.forEach(role => {
+            tingkatHtml += `<div style="min-height: 32px; display: flex; align-items: center; margin-bottom: 4px;"><span class="status-badge status-active">${role.tingkat_pengurus}</span></div>`;
+            dapuanHtml += `<div style="min-height: 32px; display: flex; align-items: center; margin-bottom: 4px;">${role.dapuan}</div>`;
+            
+            let actionButtons = '';
+            if (hasWriteAccess) {
+              actionButtons = `
+                <div class="action-btns" style="justify-content: center; gap: 4px;">
+                  <button class="btn-icon edit" style="padding: 2px 6px; font-size: 0.75rem;" title="Edit Jabatan" onclick="showEditPengurusModal('${role.id}')"><i class="fa-solid fa-pen"></i></button>
+                  <button class="btn-icon delete" style="padding: 2px 6px; font-size: 0.75rem;" title="Hapus Jabatan" onclick="deletePengurus('${role.id}')"><i class="fa-solid fa-trash"></i></button>
+                </div>`;
+            } else {
+              actionButtons = `<span style="color: var(--text-secondary); font-size:0.85rem;">-</span>`;
+            }
+            
+            aksiHtml += `<div style="min-height: 32px; display: flex; align-items: center; justify-content: center; margin-bottom: 4px;">${actionButtons}</div>`;
+          });
+          
           tbody.innerHTML += `<tr>
             <td>${idx + 1}</td>
-            <td>${p.nama}</td>
-            <td>${p.kel}</td>
-            <td><span class="status-badge status-active">${p.tingkat_pengurus}</span></td>
-            <td>${p.dapuan}</td>
+            <td><strong>${group.nama}</strong><span style="display:block; font-size:0.72rem; color:var(--text-secondary);">${group.jamaah_id}</span></td>
+            <td>${group.kel}</td>
+            <td>${tingkatHtml}</td>
+            <td>${dapuanHtml}</td>
             <td style="text-align: center;">
-              ${actionButtons}
+              ${aksiHtml}
             </td>
           </tr>`;
         });
+        
         renderPengurusReport();
       }
 

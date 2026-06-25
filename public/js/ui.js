@@ -55,7 +55,7 @@
 
     function getKelompokPeramutan(age, maritalStatus, tingkatPendidikan) {
       const edu = tingkatPendidikan ? tingkatPendidikan.trim().toUpperCase() : "";
-      if ((age >= 13 && age <= 18) || edu === "SMP" || edu === "SLTA/SMK") {
+      if (age >= 13 && age <= 18) {
         return "GUS";
       }
       if (age <= 3) return "Balita";
@@ -190,13 +190,41 @@
 
     function showMainApp(user) {
       document.getElementById("login-screen").style.display = "none";
+      document.getElementById("register-screen").style.display = "none";
       document.getElementById("app-container").style.display = "flex";
       
       document.getElementById("nav-user-name").textContent = user.username;
       document.getElementById("nav-user-avatar").textContent = user.username.charAt(0).toUpperCase();
       
-      let roleLabel = "USER (LIHAT SAJA)";
       const userRoleClean = (user.role || "").trim().toLowerCase();
+
+      // =====================================
+      // PORTAL JAMAAH — Layout khusus
+      // =====================================
+      if (userRoleClean === "jamaah") {
+        document.getElementById("nav-user-role").textContent = "JAMAAH PORTAL";
+        // Sembunyikan semua admin menu, tampilkan portal menu
+        document.getElementById("sidebar-menu-admin").style.display = "none";
+        document.getElementById("sidebar-menu-jamaah").style.display = "block";
+        // Set jamaah_id di state
+        localCurrentJamaahId = user.jamaah_id || null;
+        // Sembunyikan semua page-section admin, tampilkan portal sections
+        document.querySelectorAll(".page-section:not(.portal-section)").forEach(s => s.classList.remove("active"));
+        document.querySelectorAll(".portal-section").forEach(s => s.classList.remove("active"));
+        const dash = document.getElementById("section-jamaah-dashboard");
+        if (dash) dash.classList.add("active");
+        // Init portal
+        if (typeof initJamaahPortal === "function") initJamaahPortal();
+        return;
+      }
+
+      // =====================================
+      // LAYOUT ADMIN / OPERATOR / PENGURUS
+      // =====================================
+      document.getElementById("sidebar-menu-admin").style.display = "block";
+      document.getElementById("sidebar-menu-jamaah").style.display = "none";
+      
+      let roleLabel = "USER (LIHAT SAJA)";
       if (userRoleClean === "admin") roleLabel = "SUPER ADMINISTRATOR";
       else if (userRoleClean === "operator kelompok") roleLabel = `OPERATOR KELOMPOK (${user.kelompok})`;
       else if (userRoleClean === "operator desa") roleLabel = "OPERATOR DESA";
@@ -222,7 +250,7 @@
         accessNote.style.color = "#10b981";
       } else if (userRoleClean === "operator kelompok" || userRoleClean === "operator desa") {
         menuMaster.style.display = "none";
-        menuUsers.style.display = "none";
+        menuUsers.style.display = "block"; // operator tetap bisa lihat pending
         if (menuDatabaseSettings) menuDatabaseSettings.style.display = "none";
         if (btnAdd) btnAdd.style.display = "inline-flex";
         if (btnAddJadwal) btnAddJadwal.style.display = "inline-flex";
@@ -255,7 +283,6 @@
         accessNote.style.color = "#9ca3af";
       }
 
-      
       populateUserProfileData();
       switchTab("section-dashboard");
     }
@@ -300,7 +327,206 @@
       if (cKelompok) cKelompok.textContent = user.kelompok || "Semua";
     }
 
+    // ============================================================
+    // PORTAL JAMAAH: HELPER FUNCTIONS (Registration & Approval)
+    // ============================================================
+    function populateJamaahSearchDropdown(query) {
+      const sel = document.getElementById("reg-jamaah-select");
+      const dropdown = document.getElementById("reg-jamaah-dropdown");
+      if (!sel || !dropdown) return;
+      const q = (query || "").toLowerCase().trim();
+      const filtered = (localJamaahList || []).filter(j => !q || (j.namaLengkap || "").toLowerCase().includes(q));
+      
+      // Update hidden select for compatibility
+      sel.innerHTML = '<option value="">-- Pilih nama Anda --</option>';
+      filtered.slice(0, 50).forEach(j => {
+        const o = document.createElement("option");
+        o.value = j.id;
+        o.textContent = j.namaLengkap + " (" + j.kelompokPengajian + ")";
+        sel.appendChild(o);
+      });
+      if (!filtered.length) {
+        sel.innerHTML = '<option value="">Tidak ada hasil ditemukan</option>';
+      }
+
+      // Populate custom dropdown list
+      dropdown.innerHTML = "";
+      if (filtered.length === 0) {
+        dropdown.innerHTML = '<div style="padding:15px; color:var(--text-secondary); text-align:center; font-size:0.9rem;"><i class="fa-solid fa-user-slash" style="margin-right:5px;"></i>Tidak ada hasil ditemukan</div>';
+        dropdown.style.display = "block";
+        return;
+      }
+      
+      filtered.slice(0, 50).forEach(j => {
+        const item = document.createElement("div");
+        item.className = "reg-dropdown-item";
+        item.style.padding = "12px 15px";
+        item.style.borderBottom = "1px solid var(--border-color)";
+        item.style.cursor = "pointer";
+        item.style.transition = "background-color 0.2s";
+        item.style.display = "flex";
+        item.style.flexDirection = "column";
+        item.style.gap = "2px";
+        
+        const nameDiv = document.createElement("div");
+        nameDiv.style.fontWeight = "700";
+        nameDiv.style.fontSize = "0.95rem";
+        nameDiv.style.color = "var(--text-primary)";
+        nameDiv.style.textTransform = "uppercase";
+        nameDiv.textContent = j.namaLengkap;
+        
+        const subDiv = document.createElement("div");
+        subDiv.style.fontSize = "0.78rem";
+        subDiv.style.color = "var(--text-secondary)";
+        const dapuanVal = j.dapuan || "Jamaah";
+        subDiv.textContent = `${dapuanVal} · Kelompok ${j.kelompokPengajian}`;
+        
+        item.appendChild(nameDiv);
+        item.appendChild(subDiv);
+        
+        item.addEventListener("mouseenter", () => {
+          item.style.backgroundColor = "var(--primary-soft)";
+        });
+        item.addEventListener("mouseleave", () => {
+          item.style.backgroundColor = "transparent";
+        });
+        
+        item.addEventListener("click", (e) => {
+          e.stopPropagation();
+          document.getElementById("reg-jamaah-search").value = j.namaLengkap;
+          sel.value = j.id;
+          
+          // Memicu event change
+          const changeEvent = new Event('change');
+          sel.dispatchEvent(changeEvent);
+          
+          dropdown.style.display = "none";
+        });
+        
+        dropdown.appendChild(item);
+      });
+      
+      dropdown.style.display = "block";
+    }
+
+    function doRegisterLinked() {
+      const jamaahId = document.getElementById("reg-jamaah-select").value;
+      const username = document.getElementById("reg-username").value.trim();
+      const pass1 = document.getElementById("reg-password").value;
+      const pass2 = document.getElementById("reg-password2").value;
+      if (!jamaahId) { showRegMsg("warning", "Pilih nama Anda dari dropdown."); return; }
+      if (!username) { showRegMsg("warning", "Username tidak boleh kosong."); return; }
+      if (pass1.length < 6) { showRegMsg("warning", "Password minimal 6 karakter."); return; }
+      if (pass1 !== pass2) { showRegMsg("warning", "Konfirmasi password tidak cocok."); return; }
+      const jamaah = localJamaahList.find(j => j.id === jamaahId);
+      const btn = document.getElementById("btn-register-linked");
+      const orig = btn.innerHTML;
+      btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mendaftar...';
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.disabled = false; btn.innerHTML = orig;
+          if (res.success) {
+            const newUser = { username: username.toLowerCase(), email: username + "@jamaah.aji", role: "jamaah", kelompok: jamaah ? jamaah.kelompokPengajian : "", jamaah_id: jamaahId, status: "active" };
+            sessionStorage.setItem("aji_session_user", JSON.stringify(newUser));
+            document.getElementById("register-screen").style.display = "none";
+            fetchDatabaseFromServer(function() { showMainApp(newUser); showToast("Registrasi berhasil! Selamat datang, " + username + ".", "success"); });
+          } else if (res.reason === "username_taken") {
+            showRegMsg("error", 'Username "' + username + '" sudah digunakan.');
+          } else { showRegMsg("error", "Registrasi gagal. Coba lagi."); }
+        })
+        .withFailureHandler(function(err) { btn.disabled = false; btn.innerHTML = orig; showRegMsg("error", "Error: " + (err.message || err)); })
+        .registerJamaahLinkedGAS({ username: username.toLowerCase(), passwordHash: sha256(pass1), jamaah_id: jamaahId, namaLengkap: jamaah ? jamaah.namaLengkap : "", kelompok: jamaah ? jamaah.kelompokPengajian : "" });
+    }
+
+    function doRegisterNew() {
+      const nama = document.getElementById("reg-new-nama").value.trim();
+      const kelompok = document.getElementById("reg-new-kelompok").value;
+      const jk = document.getElementById("reg-new-jk").value;
+      const tglLahir = document.getElementById("reg-new-tgl-lahir").value;
+      const hp = document.getElementById("reg-new-hp").value.trim();
+      const pernikahan = document.getElementById("reg-new-pernikahan").value;
+      const username = document.getElementById("reg-new-username").value.trim();
+      const pass1 = document.getElementById("reg-new-password").value;
+      const pass2 = document.getElementById("reg-new-password2").value;
+      if (!nama) { showRegMsg("warning", "Nama lengkap wajib diisi."); return; }
+      if (!kelompok) { showRegMsg("warning", "Kelompok pengajian wajib dipilih."); return; }
+      if (!username) { showRegMsg("warning", "Username tidak boleh kosong."); return; }
+      if (pass1.length < 6) { showRegMsg("warning", "Password minimal 6 karakter."); return; }
+      if (pass1 !== pass2) { showRegMsg("warning", "Konfirmasi password tidak cocok."); return; }
+      const btn = document.getElementById("btn-register-new");
+      const orig = btn.innerHTML;
+      btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...';
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.disabled = false; btn.innerHTML = orig;
+          if (res.success && res.pending) {
+            showRegMsg("success", "Pendaftaran berhasil dikirim! Akun Anda menunggu persetujuan dari admin/operator kelompok " + kelompok + ".");
+            btn.style.display = "none";
+          } else if (res.reason === "username_taken") {
+            showRegMsg("error", 'Username "' + username + '" sudah digunakan.');
+          } else { showRegMsg("error", "Gagal mendaftar. Coba lagi."); }
+        })
+        .withFailureHandler(function(err) { btn.disabled = false; btn.innerHTML = orig; showRegMsg("error", "Error: " + (err.message || err)); })
+        .registerJamaahNewGAS({ namaLengkap: nama, kelompok, jenisKelamin: jk, tanggalLahir: tglLahir, nomorHp: hp, statusPernikahan: pernikahan, statusHubunganKeluarga: "Kepala Keluarga", username: username.toLowerCase(), passwordHash: sha256(pass1) });
+    }
+
+    function showRegMsg(type, msg) {
+      const el = document.getElementById("register-msg");
+      if (!el) return;
+      const colors = { success: "#10b981", error: "#ef4444", warning: "#f59e0b" };
+      const icons = { success: "fa-circle-check", error: "fa-circle-xmark", warning: "fa-triangle-exclamation" };
+      const rgba = type === "success" ? "16,185,129" : type === "error" ? "239,68,68" : "245,158,11";
+      el.innerHTML = '<div style="padding:12px;border-radius:8px;margin-bottom:12px;font-size:0.9rem;background:rgba(' + rgba + ',0.1);border:1px solid ' + colors[type] + ';color:' + colors[type] + ';"><i class="fa-solid ' + icons[type] + '"></i> ' + msg + "</div>";
+    }
+
+    window.loadPendingUsers = function() {
+      const user = getCurrentUser();
+      const container = document.getElementById("pending-users-container");
+      if (!container) return;
+      container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Memuat...</div>';
+      const opKelompok = (user && (user.role || "").toLowerCase() === "operator kelompok") ? user.kelompok : "Semua";
+      google.script.run
+        .withSuccessHandler(function(list) {
+          if (!list || !list.length) {
+            container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);"><i class="fa-solid fa-check-circle" style="font-size:2rem;color:#10b981;display:block;margin-bottom:10px;"></i>Tidak ada pendaftaran yang menunggu persetujuan.</div>';
+            const badge = document.getElementById("pending-count-badge");
+            if (badge) badge.style.display = "none";
+            return;
+          }
+          const badge = document.getElementById("pending-count-badge");
+          if (badge) { badge.textContent = list.length; badge.style.display = "inline"; }
+          container.innerHTML = '<div class="table-responsive"><table class="table-custom"><thead><tr><th>Username</th><th>Nama Jamaah</th><th>Kelompok</th><th>Tgl Daftar</th><th style="text-align:center;">Aksi</th></tr></thead><tbody>' +
+            list.map(u => {
+              const jamaah = localJamaahList.find(j => j.id === u.jamaah_id);
+              const namaJamaah = jamaah ? jamaah.namaLengkap : (u.jamaah_id || "-");
+              const tgl = u.created_at ? new Date(u.created_at).toLocaleDateString("id-ID") : "-";
+              return "<tr><td><strong>" + u.username + "</strong></td><td>" + namaJamaah + "</td><td>" + (u.kelompok || "-") + "</td><td>" + tgl + "</td><td style=\"text-align:center;\"><button class=\"btn-primary\" style=\"padding:5px 12px;font-size:0.8rem;margin-right:5px;\" onclick=\"approveUser('" + u.username + "')\"><i class=\"fa-solid fa-check\"></i> Setujui</button><button style=\"padding:5px 12px;font-size:0.8rem;background:#ef4444;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:600;\" onclick=\"rejectUser('" + u.username + "')\"><i class=\"fa-solid fa-times\"></i> Tolak</button></td></tr>";
+            }).join("") + "</tbody></table></div>";
+        })
+        .withFailureHandler(function(err) { container.innerHTML = '<div style="color:#ef4444;padding:15px;">Gagal memuat: ' + (err.message || err) + "</div>"; })
+        .getPendingUsersGAS(opKelompok);
+    };
+
+    window.approveUser = function(username) {
+      if (!confirm('Setujui pendaftaran akun "' + username + '"?')) return;
+      const user = getCurrentUser();
+      google.script.run
+        .withSuccessHandler(function() { showToast("Akun " + username + " berhasil disetujui!", "success"); loadPendingUsers(); })
+        .withFailureHandler(function(err) { showToast("Gagal: " + (err.message || err), "error"); })
+        .approveUserGAS(username, user ? user.username : "admin");
+    };
+
+    window.rejectUser = function(username) {
+      if (!confirm('Tolak dan hapus pendaftaran "' + username + '"?')) return;
+      const user = getCurrentUser();
+      google.script.run
+        .withSuccessHandler(function() { showToast("Pendaftaran " + username + " ditolak.", "info"); loadPendingUsers(); })
+        .withFailureHandler(function(err) { showToast("Gagal: " + (err.message || err), "error"); })
+        .rejectUserGAS(username, user ? user.username : "admin");
+    };
+
     function runMigrationImport() {
+
       const btn = document.getElementById("btn-run-import");
       const logDiv = document.getElementById("import-log");
       
@@ -603,58 +829,174 @@
 
       // Login Form Submission
       document.getElementById("login-form").addEventListener("submit", (e) => {
-
         e.preventDefault();
         const user = document.getElementById("login-username").value.trim().toLowerCase();
         const pass = document.getElementById("login-password").value;
         const errorMsg = document.getElementById("login-error-msg");
-        const loginBtn = document.querySelector(".login-btn");
+        const pendingMsg = document.getElementById("login-pending-msg");
+        const loginBtn = document.querySelector("#login-form ~ div, .login-btn") || document.querySelector(".login-btn");
+        const loginBtnEl = document.querySelector("#login-form .login-btn");
         
-        loginBtn.disabled = true;
-        loginBtn.textContent = "Mengautentikasi...";
-        errorMsg.style.display = "none";
+        if (loginBtnEl) { loginBtnEl.disabled = true; loginBtnEl.textContent = "Mengautentikasi..."; }
+        if (errorMsg) errorMsg.style.display = "none";
+        if (pendingMsg) pendingMsg.style.display = "none";
         
-        // Temporary admin bypass to allow migration access
+        // Temporary admin bypass
         if (user === "admin_bypass" && pass === "bypass123") {
-          loginBtn.disabled = false;
-          loginBtn.textContent = "Masuk ke Dashboard";
-          const bypassUser = {
-            username: "admin_bypass",
-            email: "admin_bypass@jatiwarnainfo.or.id",
-            role: "Admin",
-            kelompok: "Semua"
-          };
+          if (loginBtnEl) { loginBtnEl.disabled = false; loginBtnEl.textContent = "Masuk ke Dashboard"; }
+          const bypassUser = { username: "admin_bypass", email: "admin_bypass@jatiwarnainfo.or.id", role: "Admin", kelompok: "Semua" };
           sessionStorage.setItem("aji_session_user", JSON.stringify(bypassUser));
-          fetchDatabaseFromServer(function() {
-            showMainApp(bypassUser);
-            showToast("Login bypass Admin berhasil!", "success");
-          });
+          fetchDatabaseFromServer(function() { showMainApp(bypassUser); showToast("Login bypass Admin berhasil!", "success"); });
           return;
         }
         
         const hash = sha256(pass);
         google.script.run
           .withSuccessHandler(function(result) {
-            loginBtn.disabled = false;
-            loginBtn.textContent = "Masuk ke Dashboard";
+            if (loginBtnEl) { loginBtnEl.disabled = false; loginBtnEl.textContent = "Masuk ke Dashboard"; }
             if (result.success) {
               sessionStorage.setItem("aji_session_user", JSON.stringify(result.user));
               fetchDatabaseFromServer(function() {
                 showMainApp(result.user);
-                showToast(`Selamat datang kembali, ${result.user.username}!`, "success");
+                showToast(`Selamat datang, ${result.user.username}!`, "success");
               });
+            } else if (result.pending) {
+              // Akun masih pending approval
+              if (pendingMsg) pendingMsg.style.display = "block";
             } else {
-              errorMsg.textContent = "Username atau Password salah!";
-              errorMsg.style.display = "block";
+              if (errorMsg) { errorMsg.textContent = "Username atau Password salah!"; errorMsg.style.display = "block"; }
             }
           })
           .withFailureHandler(function(err) {
-            loginBtn.disabled = false;
-            loginBtn.textContent = "Masuk ke Dashboard";
-            errorMsg.textContent = "Terjadi kesalahan sistem: " + err.message;
-            errorMsg.style.display = "block";
+            if (loginBtnEl) { loginBtnEl.disabled = false; loginBtnEl.textContent = "Masuk ke Dashboard"; }
+            if (errorMsg) { errorMsg.textContent = "Terjadi kesalahan sistem: " + err.message; errorMsg.style.display = "block"; }
           })
           .authenticateUserGAS(user, hash);
+      });
+
+      // Link: buka halaman registrasi
+      const linkToRegister = document.getElementById("link-to-register");
+      if (linkToRegister) {
+        linkToRegister.addEventListener("click", (e) => {
+          e.preventDefault();
+          const origText = linkToRegister.innerHTML;
+          linkToRegister.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memuat Data...';
+          linkToRegister.style.pointerEvents = "none";
+
+          fetchDatabaseFromServer(function() {
+            linkToRegister.innerHTML = origText;
+            linkToRegister.style.pointerEvents = "auto";
+            
+            document.getElementById("login-screen").style.display = "none";
+            const regScreen = document.getElementById("register-screen");
+            regScreen.style.display = "flex";
+            
+            // Isi dropdown kelompok
+            const selKelompok = document.getElementById("reg-new-kelompok");
+            if (selKelompok) {
+              selKelompok.innerHTML = '<option value="">-- Pilih Kelompok --</option>';
+              (localMasterKelompok || []).forEach(k => {
+                const o = document.createElement("option");
+                o.value = k.nama || k; o.textContent = k.nama || k;
+                selKelompok.appendChild(o);
+              });
+            }
+            // Isi search dropdown jamaah
+            populateJamaahSearchDropdown("");
+          });
+        });
+      }
+
+      // Link: kembali ke login dari register
+      const linkToLogin = document.getElementById("link-to-login");
+      if (linkToLogin) {
+        linkToLogin.addEventListener("click", (e) => {
+          e.preventDefault();
+          document.getElementById("register-screen").style.display = "none";
+          document.getElementById("login-screen").style.display = "flex";
+        });
+      }
+
+      // Registrasi: search dropdown jamaah
+      const regSearch = document.getElementById("reg-jamaah-search");
+      if (regSearch) {
+        regSearch.addEventListener("input", () => populateJamaahSearchDropdown(regSearch.value));
+        regSearch.addEventListener("focus", () => populateJamaahSearchDropdown(regSearch.value));
+      }
+
+      // Close dropdown click outside
+      document.addEventListener("click", (e) => {
+        const dropdown = document.getElementById("reg-jamaah-dropdown");
+        const searchInput = document.getElementById("reg-jamaah-search");
+        if (dropdown && searchInput && e.target !== searchInput && !dropdown.contains(e.target)) {
+          dropdown.style.display = "none";
+        }
+      });
+      // Registrasi: pilih dari dropdown
+      const regSelect = document.getElementById("reg-jamaah-select");
+      if (regSelect) {
+        regSelect.addEventListener("change", () => {
+          const selectedId = regSelect.value;
+          const infoArea = document.getElementById("reg-selected-info");
+          const credArea = document.getElementById("reg-credentials-area");
+          if (selectedId) {
+            const jamaah = localJamaahList.find(j => j.id === selectedId);
+            if (jamaah) {
+              document.getElementById("reg-selected-name").textContent = jamaah.namaLengkap;
+              document.getElementById("reg-selected-kelompok").textContent = "Kelompok: " + jamaah.kelompokPengajian;
+              infoArea.style.display = "block";
+              credArea.style.display = "block";
+            }
+          } else {
+            infoArea.style.display = "none";
+            credArea.style.display = "none";
+          }
+        });
+      }
+
+      // Registrasi: tidak ada di daftar → step 2
+      const btnNotInList = document.getElementById("btn-not-in-list");
+      if (btnNotInList) {
+        btnNotInList.addEventListener("click", (e) => {
+          e.preventDefault();
+          document.getElementById("register-step1").style.display = "none";
+          document.getElementById("register-step2").style.display = "block";
+        });
+      }
+      const btnBackStep1 = document.getElementById("btn-back-to-step1");
+      if (btnBackStep1) {
+        btnBackStep1.addEventListener("click", (e) => {
+          e.preventDefault();
+          document.getElementById("register-step2").style.display = "none";
+          document.getElementById("register-step1").style.display = "block";
+        });
+      }
+
+      // Registrasi linked (dari dropdown)
+      const btnRegLinked = document.getElementById("btn-register-linked");
+      if (btnRegLinked) {
+        btnRegLinked.addEventListener("click", () => doRegisterLinked());
+      }
+      // Registrasi baru (form lengkap)
+      const btnRegNew = document.getElementById("btn-register-new");
+      if (btnRegNew) {
+        btnRegNew.addEventListener("click", () => doRegisterNew());
+      }
+
+      // Section Users: tab switcher
+      document.querySelectorAll("[data-usertab]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const tab = btn.getAttribute("data-usertab");
+          document.querySelectorAll("[data-usertab]").forEach(b => {
+            b.style.borderBottom = "3px solid transparent";
+            b.style.color = "var(--text-secondary)";
+          });
+          btn.style.borderBottom = "3px solid var(--primary)";
+          btn.style.color = "var(--primary)";
+          document.getElementById("users-panel-active").style.display = tab === "active" ? "block" : "none";
+          document.getElementById("users-panel-pending").style.display = tab === "pending" ? "block" : "none";
+          if (tab === "pending") loadPendingUsers();
+        });
       });
 
       // Logout button click
@@ -843,7 +1185,7 @@
         e.preventDefault();
         const currentUser = getCurrentUser();
         const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
-        if (!currentUser || curRoleClean === "user") {
+        if (!currentUser) {
           showToast("Error: Anda tidak memiliki akses menulis!", "error");
           return;
         }
@@ -852,6 +1194,9 @@
         let selectedKelompok = "";
         if (curRoleClean === "operator kelompok") {
           selectedKelompok = currentUser.kelompok;
+        } else if (curRoleClean === "jamaah") {
+          const myJ = getJamaahList().find(j => j.id === localCurrentJamaahId);
+          selectedKelompok = myJ ? myJ.kelompokPengajian : "";
         } else {
           const selectedKelompokRadio = document.querySelector('input[name="form-kelompok"]:checked');
           if (!selectedKelompokRadio) {
@@ -931,17 +1276,30 @@
         const value = document.getElementById("master-form-input").value.trim();
         
         let pesertaValue = "";
-        if (activeMasterTab === "Jenis Pengajian") {
-          const selectEl = document.getElementById("master-form-peserta");
-          if (selectEl) {
-            const selected = [];
-            for (let i = 0; i < selectEl.options.length; i++) {
-              if (selectEl.options[i].selected) {
-                selected.push(selectEl.options[i].value);
-              }
+        let genderValue = "";
+        let dapuanValue = "";
+        
+        if (activeMasterTab === "Jenis Kegiatan") {
+          const checkedPeserta = Array.from(document.querySelectorAll('input[name="master-form-peserta-chk"]:checked'))
+            .map(chk => chk.value);
+          pesertaValue = checkedPeserta.join(", ");
+          
+          genderValue = document.getElementById("master-form-gender").value;
+          
+          const dapuanSelect = document.getElementById("master-form-dapuan");
+          const selectedDapuan = [];
+          for (let i = 0; i < dapuanSelect.options.length; i++) {
+            if (dapuanSelect.options[i].selected) {
+              selectedDapuan.push(dapuanSelect.options[i].value);
             }
-            pesertaValue = selected.join(", ");
           }
+          dapuanValue = selectedDapuan.join(", ");
+        } else if (activeMasterTab === "Grup Kustom") {
+          pesertaValue = document.getElementById("master-form-grup-kustom-desc").value.trim();
+          
+          const checkedMembers = Array.from(document.querySelectorAll('input[name="master-form-grup-member-chk"]:checked'))
+            .map(chk => chk.value);
+          genderValue = checkedMembers.join(", ");
         }
         
         const saveBtn = document.getElementById("master-modal-save-btn");
@@ -963,7 +1321,7 @@
             saveBtn.innerHTML = `<i class="fa-solid fa-save"></i> Simpan`;
             showToast("Gagal menyimpan opsi master: " + err.message, "error");
           })
-          .saveMasterItemGAS(activeMasterTab, editingMasterName, value, curUser.username, pesertaValue);
+          .saveMasterItemGAS(activeMasterTab, editingMasterName, value, curUser.username, pesertaValue, genderValue, dapuanValue);
       });
 
       // User Modal triggers
@@ -1228,7 +1586,10 @@
         "section-pengajian": { title: "Manajemen Pengajian", icon: "fa-book-open-reader" },
         "section-profile": { title: "Profil Saya & Keamanan", icon: "fa-user-circle" },
         "section-database-settings": { title: "Koneksi Database Supabase", icon: "fa-database" },
-        "section-audit": { title: "Riwayat Aktivitas & Audit Logs", icon: "fa-history" }
+        "section-audit": { title: "Riwayat Aktivitas & Audit Logs", icon: "fa-history" },
+        "section-jamaah-dashboard": { title: "Dashboard Saya", icon: "fa-gauge-high" },
+        "section-jamaah-keluarga": { title: "Keluarga Saya", icon: "fa-house-user" },
+        "section-jamaah-jadwal": { title: "Jadwal Pengajian", icon: "fa-calendar-check" }
       };
       
       document.getElementById("page-nav-title").innerHTML = `<i class="fa-solid ${titleMap[sectionId].icon}"></i> ${titleMap[sectionId].title}`;
@@ -1267,6 +1628,13 @@
         }
       } else if (sectionId === "section-audit") {
         renderAuditLogs();
+      } else if (sectionId === "section-jamaah-dashboard") {
+        if (typeof loadJamaahDashboard === 'function') loadJamaahDashboard();
+      } else if (sectionId === "section-jamaah-keluarga") {
+        if (typeof loadJamaahKeluarga === 'function') loadJamaahKeluarga();
+      } else if (sectionId === "section-jamaah-jadwal") {
+        if (typeof initPortalCalendarFilters === 'function') initPortalCalendarFilters();
+        if (typeof switchPortalJadwalTab === 'function') switchPortalJadwalTab('kalender');
       }
     }
 

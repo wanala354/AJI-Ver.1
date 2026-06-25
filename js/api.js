@@ -84,8 +84,9 @@
         supabaseClient.from("master_pengajar").select("*"),
         supabaseClient.from("master_jenis_pengajian").select("*").then(res => res, err => ({ data: [], error: err })),
         supabaseClient.from("master_peserta_pengajian").select("*").then(res => res, err => ({ data: [], error: err })),
-        supabaseClient.from("master_grup_kustom").select("*").then(res => res, err => ({ data: [], error: err }))
-      ]).then(([resJamaah, resUsers, resKelompok, resPendidikan, resPekerjaan, resDapuan, resLogs, resMateri, resJadwal, resPresensi, resMasterPengajar, resJenisPengajian, resPesertaPengajian, resGrupKustom]) => {
+        supabaseClient.from("master_grup_kustom").select("*").then(res => res, err => ({ data: [], error: err })),
+        supabaseClient.from("master_tempat_kegiatan").select("*").then(res => res, err => ({ data: [], error: err }))
+      ]).then(([resJamaah, resUsers, resKelompok, resPendidikan, resPekerjaan, resDapuan, resLogs, resMateri, resJadwal, resPresensi, resMasterPengajar, resJenisPengajian, resPesertaPengajian, resGrupKustom, resTempatKegiatan]) => {
         if (resJamaah.error) throw resJamaah.error;
         if (resUsers.error) throw resUsers.error;
         
@@ -111,6 +112,7 @@
           deskripsi: r.deskripsi || "",
           daftar_id_anggota: r.daftar_id_anggota || ""
         }));
+        const rawTempatKegiatan = (resTempatKegiatan.data || []).map(r => r.nama);
         
         const jadwalList = (resJadwal.data || []).map(j => ({
           id: j.id,
@@ -121,7 +123,8 @@
           waktu_selesai: j.waktu_selesai,
           materi_pengajar: typeof j.materi_pengajar === 'string' ? JSON.parse(j.materi_pengajar) : (j.materi_pengajar || []),
           kelompok_pengajian: j.kelompok_pengajian,
-          peserta_spesifik: j.peserta_spesifik || ""
+          peserta_spesifik: j.peserta_spesifik || "",
+          lokasi: j.lokasi || ""
         }));
         const presensiList = (resPresensi.data || []).map(p => ({
           id: p.id,
@@ -203,6 +206,7 @@
           masterJenisPengajian: rawJenisPengajian,
           masterPesertaPengajian: rawPesertaPengajian,
           masterGrupKustom: rawGrupKustom,
+          masterTempatKegiatan: rawTempatKegiatan.map(n => ({ nama: n })),
           masterPengajar: (resMasterPengajar.data || []).map(p => ({
             id_pengajar: p.id,
             id_jamaah: p.id_jamaah
@@ -477,7 +481,8 @@
                       tableName === "Materi Pengajian" ? "master_materi_pengajian" :
                       tableName === "Jenis Pengajian" ? "master_jenis_pengajian" :
                       tableName === "Grup Kustom" ? "master_grup_kustom" :
-                      tableName === "Peserta Pengajian" ? "master_peserta_pengajian" : "";
+                      tableName === "Peserta Pengajian" ? "master_peserta_pengajian" :
+                      tableName === "Tempat Kegiatan" ? "master_tempat_kegiatan" : "";
       
       if (!pgTable) return Promise.reject(new Error("Tabel master tidak valid"));
       
@@ -535,7 +540,8 @@
                       tableName === "Materi Pengajian" ? "master_materi_pengajian" :
                       tableName === "Jenis Pengajian" ? "master_jenis_pengajian" :
                       tableName === "Grup Kustom" ? "master_grup_kustom" :
-                      tableName === "Peserta Pengajian" ? "master_peserta_pengajian" : "";
+                      tableName === "Peserta Pengajian" ? "master_peserta_pengajian" :
+                      tableName === "Tempat Kegiatan" ? "master_tempat_kegiatan" : "";
       
       if (!pgTable) return Promise.reject(new Error("Tabel master tidak valid"));
       
@@ -863,6 +869,9 @@
           if (!localStorage.getItem("aji_master_materi")) {
             localStorage.setItem("aji_master_materi", JSON.stringify(["Al-Quran", "Hadis Khotbah", "Hadis Bukhori", "ASAD", "Musyawaroh 5 Unsur", "Teks", "Dalil-dalil"]));
           }
+          if (!localStorage.getItem("aji_master_tempat_kegiatan")) {
+            localStorage.setItem("aji_master_tempat_kegiatan", JSON.stringify(["Masjid Al-Fatah", "Aula Serbaguna", "Masjid Baitul Makmur", "Daring (Online)"]));
+          }
           if (!localStorage.getItem("aji_master_jenis_pengajian")) {
             localStorage.setItem("aji_master_jenis_pengajian", JSON.stringify([
               { nama: "Sambung", peserta_pengajian: "Dewasa, Manula, GUM", batasan_gender: "Semua", target_dapuan: "" },
@@ -956,6 +965,7 @@
                 const rawJP = JSON.parse(localStorage.getItem("aji_master_jenis_pengajian") || "[]");
                 const rawPeserta = JSON.parse(localStorage.getItem("aji_master_peserta_pengajian") || "[]");
                 const rawGrupKustom = JSON.parse(localStorage.getItem("aji_master_grup_kustom") || "[]");
+                const rawTK = JSON.parse(localStorage.getItem("aji_master_tempat_kegiatan") || "[]");
                 const rawJ = JSON.parse(localStorage.getItem("aji_pengajian_jadwal") || "[]");
                 const rawPr = JSON.parse(localStorage.getItem("aji_pengajian_presensi") || "[]");
                 const rawPeng = JSON.parse(localStorage.getItem("aji_master_pengajar") || "[]");
@@ -964,6 +974,7 @@
                 const masterKelompok = rawK.map(n => ({ nama: n }));
                 const masterPendidikan = rawP.map(n => ({ nama: n }));
                 const masterDapuan = rawD.map(n => ({ nama: n }));
+                const masterTempatKegiatan = rawTK.map(n => ({ nama: n }));
                 const masterPekerjaan = rawW.map(n => ({ nama: n }));
                 const masterHubungan = rawH.map(n => ({ nama: n }));
                 const masterMateri = rawM.map(n => ({ nama: n }));
@@ -995,7 +1006,7 @@
                 let filteredJamaah = jamaahList;
                 let filteredKK = kepalaKeluargaList;
                 let filteredMappings = kartuKeluargaMappings;
-                let filteredJadwal = rawJ.map(x => ({ ...x, peserta_spesifik: x.peserta_spesifik || "" }));
+                let filteredJadwal = rawJ.map(x => ({ ...x, peserta_spesifik: x.peserta_spesifik || "", lokasi: x.lokasi || "" }));
                 let filteredPresensi = rawPr;
                 let filteredLogs = auditLogs;
                 
@@ -1009,7 +1020,7 @@
                     const subKKIds = new Set(filteredKK.map(kk => kk.id));
                     filteredMappings = kartuKeluargaMappings.filter(m => subKKIds.has(m.kepalaKeluargaId));
                     
-                    filteredJadwal = rawJ.filter(j => j.kelompok_pengajian === targetKelompok).map(x => ({ ...x, peserta_spesifik: x.peserta_spesifik || "" }));
+                    filteredJadwal = rawJ.filter(j => j.kelompok_pengajian === targetKelompok).map(x => ({ ...x, peserta_spesifik: x.peserta_spesifik || "", lokasi: x.lokasi || "" }));
                     const jIds = new Set(filteredJadwal.map(j => j.id));
                     filteredPresensi = rawPr.filter(p => jIds.has(p.id_pengajian));
                     
@@ -1034,6 +1045,7 @@
                   masterHubungan,
                   masterMateri,
                   masterJenisPengajian,
+                  masterTempatKegiatan,
                   masterPesertaPengajian: rawPeserta,
                   masterGrupKustom: rawGrupKustom,
                   masterPengajar: rawPeng,
@@ -1154,7 +1166,8 @@
                   "Materi Pengajian": "aji_master_materi",
                   "Jenis Pengajian": "aji_master_jenis_pengajian",
                   "Grup Kustom": "aji_master_grup_kustom",
-                  "Peserta Pengajian": "aji_master_peserta_pengajian"
+                  "Peserta Pengajian": "aji_master_peserta_pengajian",
+                  "Tempat Kegiatan": "aji_master_tempat_kegiatan"
                 };
                 const colMap = {
                   "Kelompok": "kelompokPengajian",
@@ -1261,7 +1274,8 @@
                   "Materi Pengajian": "aji_master_materi",
                   "Jenis Pengajian": "aji_master_jenis_pengajian",
                   "Grup Kustom": "aji_master_grup_kustom",
-                  "Peserta Pengajian": "aji_master_peserta_pengajian"
+                  "Peserta Pengajian": "aji_master_peserta_pengajian",
+                  "Tempat Kegiatan": "aji_master_tempat_kegiatan"
                 };
                 const colMap = {
                   "Kelompok": "kelompokPengajian",
@@ -1709,6 +1723,7 @@
           localMasterPesertaPengajian = data.masterPesertaPengajian || [];
           localMasterGrupKustom = data.masterGrupKustom || [];
           localMasterPengajar = data.masterPengajar || [];
+          localMasterTempatKegiatan = (data.masterTempatKegiatan || []).map(m => m.nama);
           localJadwalPengajian = data.jadwalPengajian || [];
           localPresensiKehadiran = data.presensiKehadiran || [];
           

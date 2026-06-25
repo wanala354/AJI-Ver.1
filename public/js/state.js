@@ -6,6 +6,10 @@
     let localKartuKeluargaMappings = [];
     let localAuditLogs = [];
     let localUsersList = [];
+
+    // Portal Jamaah State
+    let localCurrentJamaahId = null;   // ID jamaah dari user yang sedang login (role=jamaah)
+    let localPendingUsers = [];        // Daftar akun yang menunggu persetujuan admin
     
     // Constants for static master lists (v2.1)
     const MASTER_PERNIKAHAN = ["Belum Menikah", "Menikah", "Janda", "Duda"];
@@ -21,6 +25,9 @@
     let localMasterMateri = [];
     let localMasterPengajar = [];
     let localMasterJenisPengajian = [];
+    let localMasterPesertaPengajian = [];
+    let localMasterGrupKustom = [];
+    let localMasterTempatKegiatan = [];
     let localJadwalPengajian = [];
     let localPresensiKehadiran = [];
 

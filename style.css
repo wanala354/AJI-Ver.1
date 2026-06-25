@@ -49,6 +49,74 @@
       --shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.05);
     }
 
+    /* Force Light Text & High Contrast in Sidebar & Top Navbar (Light Mode) */
+    body.light-theme .sidebar,
+    body.light-theme .top-navbar {
+      color: #f3f4f6 !important;
+      --text-primary: #f3f4f6;
+      --text-secondary: #e5e7eb;
+      --text-muted: #9ca3af;
+      --border-color: rgba(255, 255, 255, 0.15);
+    }
+    body.light-theme .sidebar-header .brand-title,
+    body.light-theme .user-name,
+    body.light-theme .nav-title {
+      color: #ffffff !important;
+    }
+    body.light-theme .menu-item a,
+    body.light-theme .sidebar-menu .submenu-item a,
+    body.light-theme .nav-toggle-btn {
+      color: #e5e7eb !important;
+    }
+    body.light-theme .menu-item.active a,
+    body.light-theme .menu-item:hover a,
+    body.light-theme .sidebar-menu .submenu-item.active a,
+    body.light-theme .sidebar-menu .submenu-item a:hover {
+      color: #ffffff !important;
+      background: var(--primary-soft) !important;
+    }
+    body.light-theme .menu-item.active i,
+    body.light-theme .menu-item:hover i {
+      color: var(--primary) !important;
+    }
+
+    /* Table Header Light Theme Overrides */
+    body.light-theme .table-custom th {
+      background-color: #f1f5f9;
+      color: var(--primary-dark);
+      border-bottom: 2px solid #cbd5e1;
+    }
+
+    /* Textarea in light mode modal check-in styling */
+    body.light-theme #presensi-form-keterangan {
+      background: #f8fafc !important;
+      color: #1f2937 !important;
+      border: 1px solid #cbd5e1 !important;
+    }
+
+    /* Badge Contrast Overrides in Light Theme */
+    body.light-theme .badge-green {
+      background: #e6fbf2 !important;
+      color: #047857 !important;
+      border-color: #a7f3d0 !important;
+    }
+    body.light-theme .badge-blue {
+      background: #eff6ff !important;
+      color: #1d4ed8 !important;
+      border-color: #bfdbfe !important;
+    }
+    body.light-theme .badge-yellow,
+    body.light-theme .badge-warning {
+      background: #fffbeb !important;
+      color: #b45309 !important;
+      border-color: #fde68a !important;
+    }
+    body.light-theme .badge-red {
+      background: #fef2f2 !important;
+      color: #b91c1c !important;
+      border-color: #fca5a5 !important;
+    }
+
     /* ----------------------------------------------------
        BASE ELEMENTS & UTILITIES
        ---------------------------------------------------- */
@@ -2324,4 +2392,23 @@ body.dark-theme .session-card.active {
   border-radius: 8px;
   overflow: hidden;
   margin-top: 15px;
+}
+
+/* Custom autocomplete dropdown for registration */
+.custom-autocomplete-dropdown {
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary-soft) var(--bg-sidebar);
+}
+.custom-autocomplete-dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-autocomplete-dropdown::-webkit-scrollbar-track {
+  background: var(--bg-sidebar);
+}
+.custom-autocomplete-dropdown::-webkit-scrollbar-thumb {
+  background: var(--primary-soft);
+  border-radius: 3px;
+}
+.custom-autocomplete-dropdown::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
 }

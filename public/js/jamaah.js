@@ -252,6 +252,21 @@
         }
         updateFormKKState();
       }
+
+      const roleClean = (currentUser.role || "").trim().toLowerCase();
+      const dapuanInput = document.getElementById("form-dapuan");
+      const ekonomiInput = document.getElementById("form-ekonomi");
+      const kelancaranInput = document.getElementById("form-kelancaran");
+      if (roleClean === "user" || roleClean === "jamaah") {
+        if (dapuanInput) { dapuanInput.closest(".form-group").style.display = "none"; dapuanInput.removeAttribute("required"); }
+        if (ekonomiInput) { ekonomiInput.closest(".form-group").style.display = "none"; ekonomiInput.removeAttribute("required"); }
+        if (kelancaranInput) { kelancaranInput.closest(".form-group").style.display = "none"; kelancaranInput.removeAttribute("required"); }
+      } else {
+        if (dapuanInput) { dapuanInput.closest(".form-group").style.display = ""; dapuanInput.setAttribute("required", "required"); }
+        if (ekonomiInput) { ekonomiInput.closest(".form-group").style.display = ""; ekonomiInput.setAttribute("required", "required"); }
+        if (kelancaranInput) { kelancaranInput.closest(".form-group").style.display = ""; kelancaranInput.setAttribute("required", "required"); }
+      }
+
       modal.classList.add("active");
     }
 
@@ -293,6 +308,14 @@
         p.style.color = "var(--primary)";
         p.innerHTML = `<i class="fa-solid fa-lock"></i> Kelompok Otoritas Anda: ${curUser.kelompok}`;
         radioGroup.appendChild(p);
+      } else if (curUser && curRoleClean === "jamaah") {
+        const myJ = getJamaahList().find(j => j.id === localCurrentJamaahId);
+        const myKelompok = myJ ? myJ.kelompokPengajian : "-";
+        const p = document.createElement("p");
+        p.style.fontWeight = "bold";
+        p.style.color = "var(--primary)";
+        p.innerHTML = `<i class="fa-solid fa-lock"></i> Kelompok Anda: ${myKelompok}`;
+        radioGroup.appendChild(p);
       } else {
         localMasterKelompok.forEach((k, idx) => {
           const label = document.createElement("label");
@@ -326,6 +349,9 @@
       const kkSelect = document.getElementById("form-kepala-keluarga");
       const kkHint = document.getElementById("form-kk-hint");
       
+      const curUser = getCurrentUser();
+      const curRoleClean = curUser ? (curUser.role || "").trim().toLowerCase() : "";
+
       if (relationship === "Kepala Keluarga") {
         kkSelect.value = "";
         kkSelect.disabled = true;
@@ -333,6 +359,19 @@
       } else {
         kkSelect.disabled = false;
         kkHint.textContent = "Disaring berdasarkan kelompok pengajian yang sama.";
+      }
+
+      if (curRoleClean === "jamaah") {
+        const myJ = getJamaahList().find(j => j.id === localCurrentJamaahId);
+        if (myJ && relationship !== "Kepala Keluarga") {
+          const myKkId = myJ.statusHubunganKeluarga === "Kepala Keluarga" ? myJ.id : myJ.kepalaKeluargaId;
+          const kkItem = getJamaahList().find(j => j.id === myKkId);
+          if (kkItem) {
+            kkSelect.value = `${kkItem.namaLengkap} (${kkItem.id})`;
+          }
+          kkSelect.disabled = true;
+          kkHint.textContent = "Kepala keluarga terkunci pada data keluarga Anda.";
+        }
       }
     }
 
@@ -657,3 +696,6 @@
       const modal = document.getElementById("jamaah-view-modal");
       if (modal) modal.classList.remove("active");
     }
+    
+    window.openJamaahViewModal = openJamaahViewModal;
+    window.closeJamaahViewModal = closeJamaahViewModal;

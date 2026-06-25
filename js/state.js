@@ -27,6 +27,7 @@
     let localMasterJenisPengajian = [];
     let localMasterPesertaPengajian = [];
     let localMasterGrupKustom = [];
+    let localMasterTempatKegiatan = [];
     let localJadwalPengajian = [];
     let localPresensiKehadiran = [];
 

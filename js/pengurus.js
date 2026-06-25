@@ -69,7 +69,7 @@
               actionButtons = `
                 <div class="action-btns" style="justify-content: center; gap: 4px;">
                   <button class="btn-icon edit" style="padding: 2px 6px; font-size: 0.75rem;" title="Edit Jabatan" onclick="showEditPengurusModal('${role.id}')"><i class="fa-solid fa-pen"></i></button>
-                  <button class="btn-icon delete" style="padding: 2px 6px; font-size: 0.75rem; background: #ef4444;" title="Hapus Jabatan" onclick="deletePengurus('${role.id}')"><i class="fa-solid fa-trash"></i></button>
+                  <button class="btn-icon delete" style="padding: 2px 6px; font-size: 0.75rem;" title="Hapus Jabatan" onclick="deletePengurus('${role.id}')"><i class="fa-solid fa-trash"></i></button>
                 </div>`;
             } else {
               actionButtons = `<span style="color: var(--text-secondary); font-size:0.85rem;">-</span>`;

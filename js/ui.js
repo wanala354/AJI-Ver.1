@@ -332,9 +332,12 @@
     // ============================================================
     function populateJamaahSearchDropdown(query) {
       const sel = document.getElementById("reg-jamaah-select");
-      if (!sel) return;
+      const dropdown = document.getElementById("reg-jamaah-dropdown");
+      if (!sel || !dropdown) return;
       const q = (query || "").toLowerCase().trim();
       const filtered = (localJamaahList || []).filter(j => !q || (j.namaLengkap || "").toLowerCase().includes(q));
+      
+      // Update hidden select for compatibility
       sel.innerHTML = '<option value="">-- Pilih nama Anda --</option>';
       filtered.slice(0, 50).forEach(j => {
         const o = document.createElement("option");
@@ -345,6 +348,65 @@
       if (!filtered.length) {
         sel.innerHTML = '<option value="">Tidak ada hasil ditemukan</option>';
       }
+
+      // Populate custom dropdown list
+      dropdown.innerHTML = "";
+      if (filtered.length === 0) {
+        dropdown.innerHTML = '<div style="padding:15px; color:var(--text-secondary); text-align:center; font-size:0.9rem;"><i class="fa-solid fa-user-slash" style="margin-right:5px;"></i>Tidak ada hasil ditemukan</div>';
+        dropdown.style.display = "block";
+        return;
+      }
+      
+      filtered.slice(0, 50).forEach(j => {
+        const item = document.createElement("div");
+        item.className = "reg-dropdown-item";
+        item.style.padding = "12px 15px";
+        item.style.borderBottom = "1px solid var(--border-color)";
+        item.style.cursor = "pointer";
+        item.style.transition = "background-color 0.2s";
+        item.style.display = "flex";
+        item.style.flexDirection = "column";
+        item.style.gap = "2px";
+        
+        const nameDiv = document.createElement("div");
+        nameDiv.style.fontWeight = "700";
+        nameDiv.style.fontSize = "0.95rem";
+        nameDiv.style.color = "var(--text-primary)";
+        nameDiv.style.textTransform = "uppercase";
+        nameDiv.textContent = j.namaLengkap;
+        
+        const subDiv = document.createElement("div");
+        subDiv.style.fontSize = "0.78rem";
+        subDiv.style.color = "var(--text-secondary)";
+        const dapuanVal = j.dapuan || "Jamaah";
+        subDiv.textContent = `${dapuanVal} · Kelompok ${j.kelompokPengajian}`;
+        
+        item.appendChild(nameDiv);
+        item.appendChild(subDiv);
+        
+        item.addEventListener("mouseenter", () => {
+          item.style.backgroundColor = "var(--primary-soft)";
+        });
+        item.addEventListener("mouseleave", () => {
+          item.style.backgroundColor = "transparent";
+        });
+        
+        item.addEventListener("click", (e) => {
+          e.stopPropagation();
+          document.getElementById("reg-jamaah-search").value = j.namaLengkap;
+          sel.value = j.id;
+          
+          // Memicu event change
+          const changeEvent = new Event('change');
+          sel.dispatchEvent(changeEvent);
+          
+          dropdown.style.display = "none";
+        });
+        
+        dropdown.appendChild(item);
+      });
+      
+      dropdown.style.display = "block";
     }
 
     function doRegisterLinked() {
@@ -859,7 +921,17 @@
       const regSearch = document.getElementById("reg-jamaah-search");
       if (regSearch) {
         regSearch.addEventListener("input", () => populateJamaahSearchDropdown(regSearch.value));
+        regSearch.addEventListener("focus", () => populateJamaahSearchDropdown(regSearch.value));
       }
+
+      // Close dropdown click outside
+      document.addEventListener("click", (e) => {
+        const dropdown = document.getElementById("reg-jamaah-dropdown");
+        const searchInput = document.getElementById("reg-jamaah-search");
+        if (dropdown && searchInput && e.target !== searchInput && !dropdown.contains(e.target)) {
+          dropdown.style.display = "none";
+        }
+      });
       // Registrasi: pilih dari dropdown
       const regSelect = document.getElementById("reg-jamaah-select");
       if (regSelect) {
@@ -1561,7 +1633,8 @@
       } else if (sectionId === "section-jamaah-keluarga") {
         if (typeof loadJamaahKeluarga === 'function') loadJamaahKeluarga();
       } else if (sectionId === "section-jamaah-jadwal") {
-        if (typeof loadJamaahJadwal === 'function') loadJamaahJadwal();
+        if (typeof initPortalCalendarFilters === 'function') initPortalCalendarFilters();
+        if (typeof switchPortalJadwalTab === 'function') switchPortalJadwalTab('kalender');
       }
     }
 

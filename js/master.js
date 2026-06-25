@@ -10,6 +10,7 @@
       if (activeMasterTab === "Jenis Kegiatan") return localMasterJenisPengajian;
       if (activeMasterTab === "Peserta Kegiatan") return localMasterPesertaPengajian;
       if (activeMasterTab === "Grup Kustom") return localMasterGrupKustom;
+      if (activeMasterTab === "Tempat Kegiatan") return localMasterTempatKegiatan;
       return [];
     }
 
@@ -130,7 +131,7 @@
             <td><strong>${nama}</strong></td>
             <td>${peserta}</td>
             <td>${gender}</td>
-            <td>${dapuan}</td>
+            <td style="white-space: normal; word-break: break-word; min-width: 150px;">${dapuan}</td>
             <td style="text-align:center;">
               <div class="action-btns" style="justify-content:center;">
                 <button class="btn-icon edit" data-name="${nama}" title="Edit"><i class="fa-solid fa-pen"></i></button>
