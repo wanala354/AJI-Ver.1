@@ -577,32 +577,31 @@
       
       // Helper function to check relevance
       const isSessionRelevant = (session, jamaah) => {
-        // Kelompok check
+        if (typeof isJamaahEligibleForSchedule === 'function') {
+          return isJamaahEligibleForSchedule(jamaah, session);
+        }
+        
+        // Fallback
         if (session.tingkat_pengajian === "Kelompok" && session.kelompok_pengajian !== jamaah.kelompokPengajian) {
           return false;
         }
-        
-        // Participant rules
         const jenisName = session.jenis_pengajian;
         const jenisNameClean = (jenisName || "").trim().toLowerCase();
         const genderClean = (jamaah.jenisKelamin || "").trim().toLowerCase();
         if (genderClean === "laki-laki" && (jenisNameClean === "ibu-ibu" || jenisNameClean === "ibu - ibu" || jenisNameClean === "kewanitaan")) {
           return false;
         }
-        
         if (jenisName === "Pengurus") {
           const isPengurus = (pengurusList || []).some(p => p.jamaah_id === jamaah.id);
           if (!isPengurus) return false;
         }
-        
         const jenisObj = (masterJenis || []).find(j => j.nama === jenisName);
         if (jenisObj && jenisObj.peserta_pengajian) {
           const allowed = jenisObj.peserta_pengajian.split(",").map(x => x.trim().toLowerCase());
-          if (allowed.length > 0 && !allowed.includes(jamaah.kelompokPeramutan.toLowerCase())) {
+          if (allowed.length > 0 && !allowed.includes((jamaah.kelompokPeramutan || "").toLowerCase())) {
             return false;
           }
         }
-        
         return true;
       };
 

@@ -51,41 +51,7 @@ window.loadJamaahDashboard = function() {
   const allJadwal = getJadwalPengajianList();
   const allPresensi = getPresensiKehadiranList();
 
-  const jadwalRelevant = allJadwal.filter(j => {
-    if (!j) return false;
-    
-    // Kelompok check
-    const tk = String(j.tingkat_pengajian || '').toLowerCase();
-    const isKelompok = tk.includes('kelompok') || (!tk.includes('desa') && !tk.includes('daerah'));
-    if (isKelompok && j.kelompok_pengajian !== kelompok) {
-      return false;
-    }
-    
-    // Participant specific rule
-    if (j.peserta_spesifik) {
-      const allowedIds = j.peserta_spesifik.split(",").map(id => id.trim()).filter(Boolean);
-      if (allowedIds.length > 0) {
-        return allowedIds.includes(jamaahId);
-      }
-    }
-    
-    // Gender restriction
-    const jnsL = String(j.jenis_pengajian || '').toLowerCase();
-    if (jnsL.includes('ibu-ibu') || jnsL.includes('kewanitaan') || jnsL.includes('perempuan')) {
-      if (String(jamaah.jenisKelamin || '').toLowerCase() !== 'perempuan') return false;
-    }
-    if (jnsL.includes('bapak-bapak') || jnsL.includes('laki-laki') || jnsL.includes('pria')) {
-      if (String(jamaah.jenisKelamin || '').toLowerCase() !== 'laki-laki') return false;
-    }
-
-    const jpList = (typeof localMasterJenisPengajian !== 'undefined' && localMasterJenisPengajian) ? localMasterJenisPengajian : [];
-    const jpObj = jpList.find(x => typeof x === 'object' && x !== null ? x.nama === j.jenis_pengajian : x === j.jenis_pengajian);
-    let targetPeserta = [];
-    if (jpObj && typeof jpObj === 'object' && jpObj.peserta_pengajian) {
-      targetPeserta = String(jpObj.peserta_pengajian).split(',').map(x => x.trim().toLowerCase());
-    }
-    return targetPeserta.length === 0 || targetPeserta.includes(peramutan.toLowerCase());
-  });
+  const jadwalRelevant = allJadwal.filter(j => isJamaahEligibleForSchedule(jamaah, j));
   
   const todayStr = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
   const now = new Date();
@@ -200,20 +166,10 @@ window.loadJamaahKeluarga = function() {
     const per = _getPeramutan(m);
     const isKK = m.statusHubunganKeluarga === 'Kepala Keluarga';
     
+    const todayStr = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
     const jadwalM = allJdwl.filter(j => {
-      if (!j) return false;
-      if (j.kelompok_pengajian !== m.kelompokPengajian || new Date(j.tanggal) > new Date()) return false;
-      
-      const jnsL = String(j.jenis_pengajian || '').toLowerCase();
-      if (jnsL.includes('ibu-ibu') || jnsL.includes('kewanitaan')) {
-        if (String(m.jenisKelamin || '').toLowerCase() !== 'perempuan') return false;
-      }
-
-      const jpList = (typeof localMasterJenisPengajian !== 'undefined' && localMasterJenisPengajian) ? localMasterJenisPengajian : [];
-      const jpObj = jpList.find(x => typeof x === 'object' && x !== null ? x.nama === j.jenis_pengajian : x === j.jenis_pengajian);
-      let targetPeserta = [];
-      if (jpObj && typeof jpObj === 'object' && jpObj.peserta_pengajian) targetPeserta = String(jpObj.peserta_pengajian).split(',').map(x => x.trim().toLowerCase());
-      return targetPeserta.length === 0 || targetPeserta.includes(per.toLowerCase());
+      if (!j || j.tanggal > todayStr) return false;
+      return isJamaahEligibleForSchedule(m, j);
     });
     
     const hadirC = allPr.filter(p => p && p.id_jamaah === m.id && jadwalM.find(j => j && j.id == p.id_pengajian) && (p.status === 'Hadir Fisik' || p.status === 'Online')).length;
