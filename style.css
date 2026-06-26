@@ -697,6 +697,8 @@
     .kpi-card.dhuafa::after { background: var(--warning); }
     .kpi-card.caberawit::after { background: var(--info); }
     .kpi-card.gus::after { background: #8b5cf6; }
+    .kpi-card.teks-presensi::after { background: #ec4899; }
+    .kpi-card.pengurus-kpi::after { background: #8b5cf6; }
 
     /* CHART GRIDS */
     .chart-grid {

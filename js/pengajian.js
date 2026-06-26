@@ -50,6 +50,46 @@ window.initPengajianModule = function() {
     const currentMonth = new Date().getMonth();
     monthSelect.value = currentMonth;
   }
+
+  // Populate Year, Month and Kelompok Filters for Kehadiran Teks
+  const teksYearSelect = document.getElementById("teks-filter-tahun");
+  const teksMonthSelect = document.getElementById("teks-filter-bulan");
+  const teksKelompokSelect = document.getElementById("teks-filter-kelompok");
+
+  if (teksYearSelect && teksYearSelect.options.length === 0) {
+    const currentYear = new Date().getFullYear();
+    for (let y = currentYear - 1; y <= currentYear + 2; y++) {
+      const opt = document.createElement("option");
+      opt.value = y;
+      opt.textContent = y;
+      if (y === currentYear) opt.selected = true;
+      teksYearSelect.appendChild(opt);
+    }
+  }
+
+  if (teksMonthSelect) {
+    const currentMonthStr = String(new Date().getMonth() + 1).padStart(2, '0');
+    teksMonthSelect.value = currentMonthStr;
+  }
+
+  if (teksKelompokSelect && teksKelompokSelect.options.length <= 1) {
+    teksKelompokSelect.innerHTML = '<option value="">Semua Kelompok</option>';
+    if (typeof localMasterKelompok !== 'undefined') {
+      localMasterKelompok.forEach(k => {
+        const opt = document.createElement("option");
+        opt.value = k;
+        opt.textContent = k;
+        teksKelompokSelect.appendChild(opt);
+      });
+    }
+    const currentUser = getCurrentUser();
+    const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
+    const isKelompokRestricted = currentUser && (curRoleClean === "operator kelompok" || curRoleClean === "pengurus kelompok");
+    if (isKelompokRestricted) {
+      teksKelompokSelect.value = currentUser.kelompok;
+      teksKelompokSelect.disabled = true;
+    }
+  }
   
   // Render subtab active
   const activeBtn = document.querySelector("#section-pengajian .card-panel-tabs .tab-btn.active");
@@ -66,6 +106,8 @@ function refreshSubtabData(subtabName) {
     loadPresensiSesiDropdown();
   } else if (subtabName === "pengajian-monitoring") {
     calculateAndRenderMonitoring();
+  } else if (subtabName === "pengajian-kehadiran-teks") {
+    loadKehadiranTeksTable();
   }
 }
 
@@ -2042,4 +2084,116 @@ window.populateJadwalPesertaSpesifikFields = function(existingSpesifik = null) {
     if (checkboxIsSpesifik) checkboxIsSpesifik.checked = false;
     if (container) container.style.display = "none";
   }
+};
+
+window.loadKehadiranTeksTable = function() {
+  const tbody = document.getElementById("teks-kehadiran-table-body");
+  if (!tbody) return;
+  
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Memuat data...</td></tr>';
+  
+  const selectedYear = document.getElementById("teks-filter-tahun").value;
+  const selectedMonthStr = document.getElementById("teks-filter-bulan").value;
+  const selectedKelompok = document.getElementById("teks-filter-kelompok").value;
+  const selectedYearMonth = `${selectedYear}-${selectedMonthStr}`;
+  
+  const allJadwal = getJadwalPengajianList() || [];
+  const allPresensi = getPresensiKehadiranList() || [];
+  const jamaahList = getJamaahList() || [];
+  
+  // 1. Get all Teks sessions in the selected month & year
+  const teksSessions = allJadwal.filter(s => {
+    if (!s || !s.tanggal) return false;
+    const isTeks = (s.jenis_pengajian || "").trim().toLowerCase() === "teks";
+    const isSelectedMonth = s.tanggal.startsWith(selectedYearMonth);
+    return isTeks && isSelectedMonth;
+  });
+  
+  if (teksSessions.length === 0) {
+    const monthName = document.getElementById("teks-filter-bulan").options[document.getElementById("teks-filter-bulan").selectedIndex].text;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted);"><i class="fa-solid fa-calendar-xmark" style="font-size:1.5rem;margin-bottom:8px;display:block;"></i>Tidak ada jadwal pengajian Teks pada bulan ${monthName} ${selectedYear}</td></tr>`;
+    return;
+  }
+  
+  // Sort sessions by date
+  teksSessions.sort((a, b) => a.tanggal.localeCompare(b.tanggal));
+  
+  // 2. Filter jamaah who are obliged (eligible) for at least one of these Teks sessions
+  let obligedJamaah = jamaahList.filter(j => {
+    // If kelompok filter is active, jamaah must match the filter
+    if (selectedKelompok && j.kelompokPengajian !== selectedKelompok) {
+      return false;
+    }
+    // Must be eligible for at least one Teks session
+    return teksSessions.some(s => isJamaahEligibleForSchedule(j, s));
+  });
+  
+  if (obligedJamaah.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted);">Tidak ada jamaah yang berkewajiban hadir pada periode ini.</td></tr>`;
+    return;
+  }
+  
+  obligedJamaah.sort((a, b) => (a.namaLengkap || "").localeCompare(b.namaLengkap || ""));
+  
+  // 3. Map details and compute overall presence status
+  const mappedObliged = obligedJamaah.map(j => {
+    let attendedAny = false;
+    
+    const details = teksSessions.map(s => {
+      const isEligible = isJamaahEligibleForSchedule(j, s);
+      if (!isEligible) return null;
+      
+      const pr = allPresensi.find(p => p && p.id_pengajian == s.id && p.id_jamaah === j.id);
+      const status = pr ? pr.status : 'Belum Absen';
+      const isHadir = status === 'Hadir Fisik' || status === 'Online';
+      if (isHadir) attendedAny = true;
+      
+      let badgeClass = 'badge-danger';
+      if (isHadir) badgeClass = 'badge-green';
+      else if (status === 'Izin') badgeClass = 'badge-warning';
+      else if (status === 'Belum Absen') badgeClass = 'badge-gray';
+      
+      const dateLabel = s.tanggal.substring(8, 10) + "/" + s.tanggal.substring(5, 7);
+      return `<span class="badge ${badgeClass}" style="margin: 2px; font-size: 0.7rem;" title="${s.jenis_pengajian} (${s.tingkat_pengajian}) - Status: ${status}">${dateLabel}: ${status}</span>`;
+    }).filter(Boolean).join(" ");
+
+    return {
+      jamaah: j,
+      attendedAny: attendedAny,
+      detailsHtml: details
+    };
+  });
+  
+  // Apply Status filter (Sudah / Belum)
+  const selectedStatus = document.getElementById("teks-filter-status") ? document.getElementById("teks-filter-status").value : "";
+  let finalObliged = mappedObliged;
+  if (selectedStatus === "sudah") {
+    finalObliged = mappedObliged.filter(x => x.attendedAny);
+  } else if (selectedStatus === "belum") {
+    finalObliged = mappedObliged.filter(x => !x.attendedAny);
+  }
+  
+  if (finalObliged.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted);">Tidak ada jamaah dengan status tersebut pada periode ini.</td></tr>`;
+    return;
+  }
+  
+  // 4. Render table content
+  tbody.innerHTML = finalObliged.map((item, index) => {
+    const j = item.jamaah;
+    const overallStatusHtml = item.attendedAny 
+      ? `<span class="badge badge-green" style="font-weight: 700;">Sudah</span>`
+      : `<span class="badge badge-danger" style="font-weight: 700;">Belum</span>`;
+      
+    return `
+      <tr>
+        <td>${index + 1}</td>
+        <td><strong>${j.namaLengkap}</strong></td>
+        <td>${j.kelompokPengajian || "-"}</td>
+        <td>${j.kelompokPeramutan || "-"}</td>
+        <td style="text-align: center;">${overallStatusHtml}</td>
+        <td><div style="display: flex; flex-wrap: wrap; gap: 4px;">${item.detailsHtml || "-"}</div></td>
+      </tr>
+    `;
+  }).join("");
 };

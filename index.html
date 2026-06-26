@@ -435,6 +435,22 @@
               </div>
               <div class="kpi-icon"><i class="fa-solid fa-hand-holding-heart"></i></div>
             </div>
+
+            <div class="kpi-card teks-presensi">
+              <div class="kpi-details">
+                <h3>Kehadiran Teks (Bulan Ini)</h3>
+                <div class="kpi-value" id="kpi-total-kehadiran-teks">0</div>
+              </div>
+              <div class="kpi-icon" style="background: rgba(236, 72, 153, 0.15); color: #ec4899;"><i class="fa-solid fa-book-open"></i></div>
+            </div>
+
+            <div class="kpi-card pengurus-kpi">
+              <div class="kpi-details">
+                <h3>Total Pengurus</h3>
+                <div class="kpi-value" id="kpi-total-pengurus">0</div>
+              </div>
+              <div class="kpi-icon" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6;"><i class="fa-solid fa-user-shield"></i></div>
+            </div>
           </div>
 
           <!-- Charts Section -->
@@ -1112,6 +1128,9 @@
             <button class="tab-btn" data-subtab="pengajian-monitoring"
               style="padding: 10px 20px; background: transparent; border: none; border-bottom: 3px solid transparent; color: var(--text-secondary); font-weight: 500; cursor: pointer; transition: all 0.3s; font-size: 0.9rem;"><i
                 class="fa-solid fa-chart-line" style="margin-right: 5px;"></i> Monitoring Kehadiran</button>
+            <button class="tab-btn" data-subtab="pengajian-kehadiran-teks"
+              style="padding: 10px 20px; background: transparent; border: none; border-bottom: 3px solid transparent; color: var(--text-secondary); font-weight: 500; cursor: pointer; transition: all 0.3s; font-size: 0.9rem;"><i
+                class="fa-solid fa-book-open" style="margin-right: 5px;"></i> Kehadiran Teks</button>
           </div>
 
           <!-- SUBTAB 1: PENJADWALAN -->
@@ -1430,6 +1449,67 @@
               </div>
             </div>
           </div>
+
+          <!-- SUBTAB 4: KEHADIRAN TEKS -->
+          <div id="subtab-pengajian-kehadiran-teks" class="subtab-content" style="display: none;">
+            <div class="card-panel">
+              <div class="card-panel-header"
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                <span class="card-panel-title"><i class="fa-solid fa-book-open"></i> Rekap Kehadiran Pengajian Teks</span>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                  <div class="select-container" style="min-width: 120px;">
+                    <select id="teks-filter-tahun" class="select-filter" style="width: 100%;" onchange="loadKehadiranTeksTable()"></select>
+                  </div>
+                  <div class="select-container" style="min-width: 150px;">
+                    <select id="teks-filter-bulan" class="select-filter" style="width: 100%;" onchange="loadKehadiranTeksTable()">
+                      <option value="01">Januari</option>
+                      <option value="02">Februari</option>
+                      <option value="03">Maret</option>
+                      <option value="04">April</option>
+                      <option value="05">Mei</option>
+                      <option value="06">Juni</option>
+                      <option value="07">Juli</option>
+                      <option value="08">Agustus</option>
+                      <option value="09">September</option>
+                      <option value="10">Oktober</option>
+                      <option value="11">November</option>
+                      <option value="12">Desember</option>
+                    </select>
+                  </div>
+                  <div class="select-container" style="min-width: 180px;">
+                    <select id="teks-filter-kelompok" class="select-filter" style="width: 100%;" onchange="loadKehadiranTeksTable()">
+                      <option value="">Semua Kelompok</option>
+                    </select>
+                  </div>
+                  <div class="select-container" style="min-width: 150px;">
+                    <select id="teks-filter-status" class="select-filter" style="width: 100%;" onchange="loadKehadiranTeksTable()">
+                      <option value="">Semua Status</option>
+                      <option value="sudah">Sudah Hadir</option>
+                      <option value="belum">Belum Hadir</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table-custom" id="teks-kehadiran-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 50px;">No</th>
+                      <th>Nama Lengkap</th>
+                      <th>Kelompok Pengajian</th>
+                      <th>Peramutan</th>
+                      <th style="width: 150px; text-align: center;">Status Kehadiran</th>
+                      <th>Detail Kehadiran Sesi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="teks-kehadiran-table-body">
+                    <!-- Populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </section>
 
         <section id="section-users" class="page-section">
@@ -1633,6 +1713,10 @@
               <div class="card-panel" style="padding:15px;text-align:center;">
                 <div style="font-size:1.8rem;font-weight:800;color:var(--primary);" id="portal-kpi-pct">0%</div>
                 <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">Keaktifan</div>
+              </div>
+              <div class="card-panel" style="padding:15px;text-align:center; border-left: 4px solid #ec4899;">
+                <div style="font-size:1.8rem;font-weight:800;color:#ef4444;" id="portal-kpi-status-teks">Belum</div>
+                <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">Status Teks Bulan Ini</div>
               </div>
             </div>
           </div>

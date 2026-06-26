@@ -19,6 +19,83 @@
       // Dynamic KPIs added in v2.1
       document.getElementById("kpi-total-paud").textContent = jamaah.filter(j => j.kelompokPeramutan === "PAUD").length;
       document.getElementById("kpi-total-janda").textContent = jamaah.filter(j => j.statusPernikahan === "Janda").length;
+
+      // Calculate presence in "Teks" sessions for current month
+      try {
+        const allJadwal = getJadwalPengajianList() || [];
+        const allPresensi = getPresensiKehadiranList() || [];
+        const todayStr = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
+        const currentYearMonth = todayStr.substring(0, 7); // "YYYY-MM"
+        
+        const currentUser = getCurrentUser();
+        const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
+        const isKelompokRestricted = currentUser && (curRoleClean === "operator kelompok" || curRoleClean === "pengurus kelompok");
+        const filterDashboardEl = document.getElementById("dashboard-kelompok-filter");
+        const activeKelompok = isKelompokRestricted ? currentUser.kelompok : (filterDashboardEl ? filterDashboardEl.value : "");
+        
+        const allowedJamaahIds = new Set(
+          jamaah
+            .filter(j => !activeKelompok || j.kelompokPengajian === activeKelompok)
+            .map(j => j.id)
+        );
+        
+        const teksSessions = allJadwal.filter(s => {
+          if (!s || !s.tanggal) return false;
+          const isTeks = (s.jenis_pengajian || "").trim().toLowerCase() === "teks";
+          const isCurrentMonth = s.tanggal.startsWith(currentYearMonth);
+          return isTeks && isCurrentMonth;
+        });
+        
+        const teksSessionIds = new Set(teksSessions.map(s => s.id));
+        const attendeeIds = new Set();
+        
+        allPresensi.forEach(p => {
+          if (p && teksSessionIds.has(p.id_pengajian)) {
+            const statusLower = (p.status || "").trim().toLowerCase();
+            const isHadir = statusLower === "hadir fisik" || statusLower === "online";
+            if (isHadir && p.id_jamaah && allowedJamaahIds.has(p.id_jamaah)) {
+              attendeeIds.add(p.id_jamaah);
+            }
+          }
+        });
+        
+        const totalActiveJamaah = allowedJamaahIds.size;
+        const pct = totalActiveJamaah > 0 ? Math.round((attendeeIds.size / totalActiveJamaah) * 100) : 0;
+        const kpiTeks = document.getElementById("kpi-total-kehadiran-teks");
+        if (kpiTeks) {
+          kpiTeks.textContent = `${attendeeIds.size} (${pct}%)`;
+        }
+      } catch (err) {
+        console.error("Error calculating Teks KPI:", err);
+      }
+
+      // Calculate total pengurus
+      try {
+        const allPengurus = getPengurusList() || [];
+        const currentUser = getCurrentUser();
+        const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
+        const isKelompokRestricted = currentUser && (curRoleClean === "operator kelompok" || curRoleClean === "pengurus kelompok");
+        const filterDashboardEl = document.getElementById("dashboard-kelompok-filter");
+        const activeKelompok = isKelompokRestricted ? currentUser.kelompok : (filterDashboardEl ? filterDashboardEl.value : "");
+        
+        let filteredPengurus = allPengurus;
+        if (activeKelompok) {
+          const jamaahMap = new Map(jamaah.map(j => [j.id, j]));
+          filteredPengurus = allPengurus.filter(p => {
+            const j = jamaahMap.get(p.jamaah_id);
+            return j && j.kelompokPengajian === activeKelompok;
+          });
+        }
+        
+        // Count unique pengurus by jamaah_id
+        const uniquePengurusIds = new Set(filteredPengurus.map(p => p.jamaah_id).filter(Boolean));
+        const kpiPengurus = document.getElementById("kpi-total-pengurus");
+        if (kpiPengurus) {
+          kpiPengurus.textContent = uniquePengurusIds.size;
+        }
+      } catch (err) {
+        console.error("Error calculating Pengurus KPI:", err);
+      }
     }
 
     function renderDashboardCharts() {
@@ -216,6 +293,7 @@
           }
         }
       });
+      loadDashboardKPIs();
     }
 
     // ----------------------------------------------------

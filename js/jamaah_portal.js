@@ -119,6 +119,43 @@ window.loadJamaahDashboard = function() {
   _set('portal-kpi-total', totalSesi);
   _set('portal-kpi-pct', pct + '%');
 
+  // Calculate "Teks" presence status for current month
+  try {
+    const currentYearMonth = todayStr.substring(0, 7);
+    
+    const currentMonthTeksSchedules = jadwalRelevant.filter(j => {
+      if (!j) return false;
+      const isTeks = (j.jenis_pengajian || "").trim().toLowerCase() === "teks";
+      const isCurrentMonth = (j.tanggal || "").startsWith(currentYearMonth);
+      return isTeks && isCurrentMonth;
+    });
+    
+    const teksPresence = allPresensi.filter(p => {
+      if (!p || p.id_jamaah !== jamaahId) return false;
+      return currentMonthTeksSchedules.some(s => s.id == p.id_pengajian);
+    });
+    
+    const hasHadir = teksPresence.some(p => {
+      const statusLower = (p.status || "").trim().toLowerCase();
+      return statusLower === "hadir fisik" || statusLower === "online";
+    });
+    
+    const statusTeks = hasHadir ? "Sudah" : "Belum";
+    const statusColor = hasHadir ? "#10b981" : "#ef4444";
+    
+    _set('portal-kpi-status-teks', statusTeks);
+    const statusTeksEl = document.getElementById('portal-kpi-status-teks');
+    if (statusTeksEl) {
+      statusTeksEl.style.color = statusColor;
+      const parentCard = statusTeksEl.closest('.card-panel');
+      if (parentCard) {
+        parentCard.style.borderLeft = `4px solid ${statusColor}`;
+      }
+    }
+  } catch (teksErr) {
+    console.error("Error setting portal Teks status KPI:", teksErr);
+  }
+
   const tbody = document.getElementById('portal-rekap-tbody');
   if (tbody) {
     if (rekapRows.length === 0) {
