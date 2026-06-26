@@ -57,7 +57,60 @@ window.loadJamaahDashboard = function() {
   const now = new Date();
   const timeNow = String(now.getHours()).padStart(2, '0') + ":" + String(now.getMinutes()).padStart(2, '0');
   
-  const sudahLewat = jadwalRelevant.filter(j => {
+  // Initialize and populate dropdown selectors
+  const tingkatSelect = document.getElementById('portal-dashboard-tingkat');
+  const monthSelect = document.getElementById('portal-dashboard-bulan');
+
+  if (monthSelect && monthSelect.children.length === 0) {
+    const months = [...new Set(jadwalRelevant.map(j => (j.tanggal || '').substring(0, 7)))].filter(Boolean);
+    const currentMonth = todayStr.substring(0, 7);
+    if (!months.includes(currentMonth)) {
+      months.push(currentMonth);
+    }
+    months.sort().reverse();
+
+    monthSelect.innerHTML = months.map(m => {
+      const parts = m.split('-');
+      const year = parts[0];
+      const monthVal = parseInt(parts[1], 10);
+      const monthNames = [
+        "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+        "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+      ];
+      const monthName = monthNames[monthVal - 1] || m;
+      return `<option value="${m}">${monthName} ${year}</option>`;
+    }).join('');
+    // Set default to current month
+    monthSelect.value = currentMonth;
+
+    // Add change listeners
+    monthSelect.addEventListener('change', () => loadJamaahDashboard());
+  }
+
+  if (tingkatSelect && !tingkatSelect.dataset.listenerAdded) {
+    tingkatSelect.dataset.listenerAdded = "true";
+    tingkatSelect.addEventListener('change', () => loadJamaahDashboard());
+  }
+
+  const selectedTingkatVal = tingkatSelect ? tingkatSelect.value : "Semua Tingkat";
+  const selectedMonthVal = monthSelect ? monthSelect.value : todayStr.substring(0, 7);
+
+  // Apply filters to schedules
+  const filteredJadwal = jadwalRelevant.filter(j => {
+    if (!j) return false;
+    
+    // Month filter
+    const matchesMonth = selectedMonthVal === "Semua Bulan" ? true : (j.tanggal || '').startsWith(selectedMonthVal);
+
+    // Tingkat filter
+    const filterTingkatClean = (selectedTingkatVal || '').toLowerCase().replace('tingkat', '').replace(/ /g, '').trim();
+    const matchesTingkat = (filterTingkatClean === 'semua' || filterTingkatClean === 'semuatingkat' || filterTingkatClean === '') ? true : 
+      (j.tingkat_pengajian || '').toLowerCase().replace('tingkat', '').replace(/ /g, '').trim() === filterTingkatClean;
+
+    return matchesMonth && matchesTingkat;
+  });
+
+  const sudahLewat = filteredJadwal.filter(j => {
     if (j.tanggal < todayStr) return true;
     if (j.tanggal === todayStr) {
       const endTime = j.waktu_selesai || "23:59";
@@ -119,15 +172,15 @@ window.loadJamaahDashboard = function() {
   _set('portal-kpi-total', totalSesi);
   _set('portal-kpi-pct', pct + '%');
 
-  // Calculate "Teks" presence status for current month
+  // Calculate "Teks" presence status for selected month
   try {
-    const currentYearMonth = todayStr.substring(0, 7);
+    const targetMonthForTeks = selectedMonthVal;
     
     const currentMonthTeksSchedules = jadwalRelevant.filter(j => {
       if (!j) return false;
       const isTeks = (j.jenis_pengajian || "").trim().toLowerCase() === "teks";
-      const isCurrentMonth = (j.tanggal || "").startsWith(currentYearMonth);
-      return isTeks && isCurrentMonth;
+      const isTargetMonth = (j.tanggal || "").startsWith(targetMonthForTeks);
+      return isTeks && isTargetMonth;
     });
     
     const teksPresence = allPresensi.filter(p => {

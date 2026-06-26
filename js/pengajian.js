@@ -108,6 +108,8 @@ function refreshSubtabData(subtabName) {
     calculateAndRenderMonitoring();
   } else if (subtabName === "pengajian-kehadiran-teks") {
     loadKehadiranTeksTable();
+  } else if (subtabName === "pengajian-cetak-qr") {
+    loadQRCetakDropdowns();
   }
 }
 
@@ -2196,4 +2198,77 @@ window.loadKehadiranTeksTable = function() {
       </tr>
     `;
   }).join("");
+};
+
+window.loadQRCetakDropdowns = function() {
+  const selectJenis = document.getElementById("qr-jenis");
+  if (!selectJenis) return;
+  selectJenis.innerHTML = "";
+  
+  const list = typeof getMasterJenisPengajianList === 'function' ? getMasterJenisPengajianList() : (typeof localMasterJenisPengajian !== 'undefined' ? localMasterJenisPengajian : []);
+  list.forEach(item => {
+    const name = typeof item === 'object' ? item.nama : item;
+    if (name) {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      selectJenis.appendChild(opt);
+    }
+  });
+};
+
+window.generateStaticQRCode = function() {
+  const tingkat = document.getElementById("qr-tingkat").value;
+  const jenis = document.getElementById("qr-jenis").value;
+  
+  if (!tingkat || !jenis) {
+    alert("Harap pilih tingkat dan jenis pengajian!");
+    return;
+  }
+  
+  const qrData = `AJI_PRESENSI:${tingkat}:${jenis}`;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrData)}`;
+  
+  document.getElementById("qr-print-title").textContent = `${tingkat.toUpperCase()} - ${jenis.toUpperCase()}`;
+  document.getElementById("qr-print-image").src = qrCodeUrl;
+  document.getElementById("qr-print-area").style.display = "flex";
+  document.getElementById("btn-print-qr").style.display = "flex";
+};
+
+window.printStaticQRCode = function() {
+  const printContent = document.getElementById("qr-print-area").innerHTML;
+  
+  const win = window.open("", "_blank");
+  win.document.write(`
+    <html>
+      <head>
+        <title>Cetak QR Code Absensi Dinding</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            color: black;
+            background: white;
+            text-align: center;
+          }
+          h2 { margin: 0 0 10px 0; font-size: 2.2rem; font-weight: 800; letter-spacing: 0.5px; }
+          #qr-print-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 25px; text-transform: uppercase; color: #047857; border-bottom: 3px solid #047857; padding-bottom: 8px; }
+          img { width: 350px; height: 350px; border: 1px solid #ddd; padding: 15px; background: white; }
+          p { margin-top: 25px; font-size: 1.15rem; color: #374151; max-width: 450px; line-height: 1.6; font-weight: 500; }
+          strong { color: #111827; }
+        </style>
+      </head>
+      <body onload="window.print(); window.close();">
+        <div style="display: flex; flex-direction: column; align-items: center;">
+          ${printContent}
+        </div>
+      </body>
+    </html>
+  `);
+  win.document.close();
 };
