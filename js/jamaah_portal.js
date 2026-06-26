@@ -93,7 +93,14 @@ window.loadJamaahDashboard = function() {
   _set('portal-jamaah-dapuan', dapuanText);
   
   const av = document.getElementById('portal-jamaah-avatar');
-  if (av) av.textContent = String(jamaah.namaLengkap || 'U').charAt(0).toUpperCase();
+  if (av) {
+    if (jamaah.fotoUrl) {
+      av.innerHTML = `<img src="${jamaah.fotoUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+    } else {
+      av.innerHTML = "";
+      av.textContent = String(jamaah.namaLengkap || 'U').charAt(0).toUpperCase();
+    }
+  }
 
   // Gauge
   const gaugeCircle = document.getElementById('portal-gauge-circle');
@@ -178,9 +185,13 @@ window.loadJamaahKeluarga = function() {
     const editBtn = canEdit ? '<button class="btn-icon edit" title="Edit" onclick="window.openJamaahModal(\'' + m.id + '\')"><i class="fa-solid fa-pen"></i></button>' : '';
     const viewBtn = '<button class="btn-icon view" title="Lihat Detail" onclick="window.openJamaahViewModal(\'' + m.id + '\')"><i class="fa-solid fa-eye"></i></button>';
     
+    const familyAvatar = m.fotoUrl 
+      ? '<img src="' + m.fotoUrl + '" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">'
+      : '<div style="width:32px;height:32px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;">' + String(m.namaLengkap || '?').charAt(0).toUpperCase() + '</div>';
+
     return '<tr><td>' +
       '<div style="display:flex;align-items:center;gap:8px;">' +
-      '<div style="width:32px;height:32px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;">' + String(m.namaLengkap || '?').charAt(0).toUpperCase() + '</div>' +
+      familyAvatar +
       '<div><div style="font-weight:600;">' + (m.namaLengkap || 'Tanpa Nama') + '</div><div style="font-size:0.78rem;color:var(--text-muted);">' + m.id + '</div></div>' +
       '</div></td>' +
       '<td><span class="badge ' + (isKK ? 'badge-green' : 'badge-blue') + '">' + m.statusHubunganKeluarga + '</span></td>' +

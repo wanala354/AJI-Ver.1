@@ -232,6 +232,19 @@
           document.getElementById("form-ekonomi").value = item.statusEkonomi;
           document.getElementById("form-kelancaran").value = item.kelancaranSambung;
 
+          document.getElementById("form-foto-url").value = item.fotoUrl || "";
+          const previewImg = document.getElementById("form-foto-preview");
+          const placeholder = document.getElementById("form-foto-placeholder");
+          document.getElementById("form-foto").value = "";
+          if (item.fotoUrl) {
+            previewImg.src = item.fotoUrl;
+            previewImg.style.display = "block";
+            placeholder.style.display = "none";
+          } else {
+            previewImg.style.display = "none";
+            placeholder.style.display = "block";
+          }
+
           updateFormKKState();
         }
       } else {
@@ -250,6 +263,11 @@
             populateFormKKDropdown(firstRadio.value);
           }
         }
+        document.getElementById("form-foto-url").value = "";
+        document.getElementById("form-foto").value = "";
+        document.getElementById("form-foto-preview").style.display = "none";
+        document.getElementById("form-foto-placeholder").style.display = "block";
+
         updateFormKKState();
       }
 
@@ -524,6 +542,18 @@
         kkName = kkItem ? `${kkItem.namaLengkap} (${item.kepalaKeluargaId})` : `ID: ${item.kepalaKeluargaId}`;
       }
       
+      // 0. Populate photo
+      const avatarImg = document.getElementById("view-j-avatar-img");
+      const avatarPlaceholder = document.getElementById("view-j-avatar-placeholder");
+      if (item.fotoUrl) {
+        avatarImg.src = item.fotoUrl;
+        avatarImg.style.display = "block";
+        avatarPlaceholder.style.display = "none";
+      } else {
+        avatarImg.style.display = "none";
+        avatarPlaceholder.style.display = "block";
+      }
+
       // 1. Populate text contents for Profile
       document.getElementById("view-j-id").textContent = item.id || "-";
       document.getElementById("view-j-nama").textContent = item.namaLengkap || "-";

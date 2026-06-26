@@ -206,6 +206,16 @@
             </select>
           </div>
           <div class="form-group-login" style="grid-column:span 2;">
+            <label for="reg-new-foto">Foto Profil (Opsional)</label>
+            <div style="display: flex; gap: 15px; align-items: center;">
+              <div id="reg-new-foto-preview-wrapper" style="width: 60px; height: 60px; border-radius: 50%; border: 1px dashed var(--border-color); display: flex; align-items: center; justify-content: center; overflow: hidden; background: rgba(255,255,255,0.05);">
+                <i class="fa-solid fa-camera" id="reg-new-foto-placeholder" style="color: var(--text-secondary); font-size: 1.2rem;"></i>
+                <img id="reg-new-foto-preview" style="display: none; width: 100%; height: 100%; object-fit: cover;">
+              </div>
+              <input type="file" id="reg-new-foto" accept="image/*" style="font-size: 0.85rem; color: var(--text-secondary);">
+            </div>
+          </div>
+          <div class="form-group-login" style="grid-column:span 2;">
             <label for="reg-new-username">Username*</label>
             <div class="input-icon-wrapper"><i class="fa-solid fa-at"></i><input type="text" id="reg-new-username"
                 placeholder="Buat username" required></div>
@@ -1842,6 +1852,21 @@
               </select>
             </div>
 
+            <div class="form-group full-width" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+              <label for="form-foto">Foto Profil (Opsional)</label>
+              <div style="display: flex; gap: 15px; align-items: center;">
+                <div id="form-foto-preview-wrapper" style="width: 70px; height: 70px; border-radius: 50%; border: 1px dashed var(--border-color); display: flex; align-items: center; justify-content: center; overflow: hidden; background: rgba(255,255,255,0.05);">
+                  <i class="fa-solid fa-user" id="form-foto-placeholder" style="color: var(--text-secondary); font-size: 1.5rem;"></i>
+                  <img id="form-foto-preview" style="display: none; width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <input type="file" id="form-foto" accept="image/*" style="font-size: 0.85rem; color: var(--text-secondary);">
+                  <input type="hidden" id="form-foto-url">
+                  <span class="form-hint">Unggah foto profil jamaah. File akan disimpan secara otomatis di Google Drive.</span>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
 
@@ -2171,6 +2196,12 @@
               style="margin-top: 0; font-size: 1.1rem; color: var(--primary); border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 15px;">
               <i class="fa-solid fa-user"></i> Biodata Pribadi
             </h3>
+            <div style="display: flex; justify-content: center; margin-bottom: 15px;">
+              <div id="view-j-avatar-wrapper" style="width: 90px; height: 90px; border-radius: 50%; border: 3px solid var(--primary); display: flex; align-items: center; justify-content: center; overflow: hidden; background: rgba(255,255,255,0.05); box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+                <i class="fa-solid fa-user" id="view-j-avatar-placeholder" style="color: var(--text-secondary); font-size: 2.5rem;"></i>
+                <img id="view-j-avatar-img" style="display: none; width: 100%; height: 100%; object-fit: cover;">
+              </div>
+            </div>
             <table class="table-custom" style="font-size: 0.85rem; width: 100%;">
               <tbody>
                 <tr>
@@ -2336,6 +2367,23 @@
           <button type="submit" class="btn-primary"><i class="fa-solid fa-save"></i> Kirim Presensi</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- IMAGE PREVIEW MODAL -->
+  <div class="modal-overlay" id="image-preview-modal" style="z-index: 11000;">
+    <div class="modal-container" style="max-width: 500px; text-align: center;">
+      <div class="modal-header">
+        <h3>Pratinjau Foto Profil</h3>
+        <button class="modal-close-btn" onclick="closeImagePreviewModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 20px;">
+        <img id="large-profile-image" style="max-width: 100%; max-height: 400px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+      </div>
+      <div class="modal-footer" style="justify-content: center; gap: 15px; display: flex;">
+        <a id="download-profile-image" href="#" target="_blank" class="btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 5px; padding: 10px 15px; border-radius: 6px;"><i class="fa-solid fa-download"></i> Unduh Foto</a>
+        <button class="btn-secondary" onclick="closeImagePreviewModal()">Tutup</button>
+      </div>
     </div>
   </div>
 
