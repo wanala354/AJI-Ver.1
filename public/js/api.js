@@ -8,7 +8,10 @@
 
     function initDatabaseConnection() {
       // Automatically connect using localStorage or hardcoded fallback
-      supabaseUrl = localStorage.getItem("aji_supabase_url") || "https://aji-mobile-one.vercel.app";
+      if (localStorage.getItem("aji_supabase_url") === "https://aji-mobile-one.vercel.app") {
+        localStorage.removeItem("aji_supabase_url");
+      }
+      supabaseUrl = localStorage.getItem("aji_supabase_url") || "https://mphxkqcvcmdqafrslwti.supabase.co";
       supabaseKey = localStorage.getItem("aji_supabase_key") || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1waHhrcWN2Y21kcWFmcnNsd3RpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwNjQ3NTQsImV4cCI6MjA5NjY0MDc1NH0.o2QXxuhTFwjG1RgAjBSd6JBApjtgdCE6bjTUfnWNET8";
       
       if (supabaseUrl && supabaseKey) {
@@ -149,7 +152,8 @@
           pekerjaanUtama: j.pekerjaan_utama,
           dapuan: j.dapuan,
           statusEkonomi: j.status_ekonomi,
-          kelancaranSambung: j.kelancaran_sambung
+          kelancaranSambung: j.kelancaran_sambung,
+          fotoUrl: j.foto_url || ""
         }));
         
         const usersList = (resUsers.data || []).map(u => ({
@@ -304,7 +308,8 @@
               pekerjaan_utama: regData.pekerjaanUtama || '',
               dapuan: regData.dapuan || 'Rokyah biasa',
               status_ekonomi: regData.statusEkonomi || '',
-              kelancaran_sambung: regData.kelancaranSambung || ''
+              kelancaran_sambung: regData.kelancaranSambung || '',
+              foto_url: regData.fotoUrl || null
             };
             return supabaseClient.from("jamaah").insert([jamaahPayload]).then(({ error: e2 }) => {
               if (e2) throw e2;
@@ -440,7 +445,8 @@
           pekerjaan_utama: jamaahData.pekerjaanUtama,
           dapuan: jamaahData.dapuan,
           status_ekonomi: jamaahData.statusEkonomi,
-          kelancaran_sambung: jamaahData.kelancaranSambung
+          kelancaran_sambung: jamaahData.kelancaranSambung,
+          foto_url: jamaahData.fotoUrl || null
         };
         
         return supabaseClient.from("jamaah").select("id").eq("id", finalId).then(({ data }) => {
@@ -458,13 +464,74 @@
       });
     }
 
+    function supabaseUploadPhotoToDrive(fileBase64, fileName) {
+      if (!useSupabase) {
+        return Promise.resolve("https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150");
+      }
+      return supabaseClient.functions.invoke('upload-foto-drive', {
+        body: {
+          fileName: fileName,
+          fileBase64: fileBase64,
+          folderId: '1md8CWZ5FSjKlwAe9CrAPN8vJ71jD4osV'
+        }
+      }).then(async ({ data, error }) => {
+        if (error) {
+          console.error("Functions Error Object:", error);
+          // Try to read error body if available in context
+          if (error.context && typeof error.context.json === 'function') {
+            try {
+              const errJson = await error.context.json();
+              if (errJson && errJson.error) {
+                throw new Error(errJson.error);
+              }
+            } catch (e) {}
+          }
+          throw new Error(error.message || "Edge Function returned a non-2xx status code");
+        }
+        if (data && data.url) {
+          return data.url;
+        }
+      });
+    }
+    window.supabaseUploadPhotoToDrive = supabaseUploadPhotoToDrive;
+
+    function supabaseDeletePhotoFromDrive(fotoUrl) {
+      if (!useSupabase || !fotoUrl) return Promise.resolve(true);
+      const match = fotoUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if (!match) return Promise.resolve(true);
+      const fileId = match[1];
+      return supabaseClient.functions.invoke('upload-foto-drive', {
+        body: {
+          action: 'delete',
+          fileId: fileId
+        }
+      }).then(({ data, error }) => {
+        if (error) {
+          console.warn("Gagal menghapus file dari Google Drive:", error);
+          return false;
+        }
+        return true;
+      }).catch(err => {
+        console.warn("Gagal menghapus file dari Google Drive:", err);
+        return false;
+      });
+    }
+    window.supabaseDeletePhotoFromDrive = supabaseDeletePhotoFromDrive;
+
     function supabaseDeleteJamaah(id, operatorUsername) {
-      return supabaseClient.from("jamaah").select("nama_lengkap").eq("id", id).then(({ data }) => {
-        const nama = data && data.length > 0 ? data[0].nama_lengkap : id;
-        return supabaseClient.from("jamaah").delete().eq("id", id).then(({ error }) => {
-          if (error) throw error;
-          supabaseLogAction(operatorUsername, "DELETE", "Menghapus Jamaah " + nama + " (" + id + ").");
-          return true;
+      return supabaseClient.from("jamaah").select("nama_lengkap, foto_url").eq("id", id).then(({ data }) => {
+        const item = data && data[0];
+        const nama = item ? item.nama_lengkap : id;
+        const fotoUrl = item ? item.foto_url : null;
+        
+        return supabaseClient.from("app_users").delete().eq("jamaah_id", id).then(() => {
+          return supabaseDeletePhotoFromDrive(fotoUrl).then(() => {
+            return supabaseClient.from("jamaah").delete().eq("id", id).then(({ error }) => {
+              if (error) throw error;
+              supabaseLogAction(operatorUsername, "DELETE", "Menghapus Jamaah " + nama + " (" + id + ") beserta akun user & foto Drive.");
+              return true;
+            });
+          });
         });
       });
     }

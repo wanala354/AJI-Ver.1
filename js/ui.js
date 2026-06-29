@@ -267,22 +267,25 @@
       const menuMaster = document.getElementById("menu-master");
       const menuUsers = document.getElementById("menu-users");
       const menuDatabaseSettings = document.getElementById("menu-database-settings");
+      const menuAudit = document.getElementById("menu-audit");
       const btnAdd = document.getElementById("btn-add-jamaah");
       const btnAddJadwal = document.getElementById("btn-add-jadwal");
       const accessNote = document.getElementById("table-access-note");
       
       if (userRoleClean === "admin") {
-        menuMaster.style.display = "block";
-        menuUsers.style.display = "block";
+        if (menuMaster) menuMaster.style.display = "block";
+        if (menuUsers) menuUsers.style.display = "block";
         if (menuDatabaseSettings) menuDatabaseSettings.style.display = "block";
+        if (menuAudit) menuAudit.style.display = "block";
         if (btnAdd) btnAdd.style.display = "inline-flex";
         if (btnAddJadwal) btnAddJadwal.style.display = "inline-flex";
         accessNote.textContent = "Hak Akses: Administrator (Full CRUD Aktif)";
         accessNote.style.color = "#10b981";
       } else if (userRoleClean === "operator kelompok" || userRoleClean === "operator desa") {
-        menuMaster.style.display = "none";
-        menuUsers.style.display = "block"; // operator tetap bisa lihat pending
+        if (menuMaster) menuMaster.style.display = "none";
+        if (menuUsers) menuUsers.style.display = "block";
         if (menuDatabaseSettings) menuDatabaseSettings.style.display = "none";
+        if (menuAudit) menuAudit.style.display = "block";
         if (btnAdd) btnAdd.style.display = "inline-flex";
         if (btnAddJadwal) btnAddJadwal.style.display = "inline-flex";
         if (userRoleClean === "operator kelompok") {
@@ -293,9 +296,10 @@
           accessNote.style.color = "#10b981";
         }
       } else if (userRoleClean === "pengurus desa" || userRoleClean === "pengurus kelompok") {
-        menuMaster.style.display = "none";
-        menuUsers.style.display = "none";
+        if (menuMaster) menuMaster.style.display = "none";
+        if (menuUsers) menuUsers.style.display = "none";
         if (menuDatabaseSettings) menuDatabaseSettings.style.display = "none";
+        if (menuAudit) menuAudit.style.display = "block";
         if (btnAdd) btnAdd.style.display = "none";
         if (btnAddJadwal) btnAddJadwal.style.display = "none";
         if (userRoleClean === "pengurus desa") {
@@ -305,13 +309,22 @@
         }
         accessNote.style.color = "#f59e0b";
       } else {
-        menuMaster.style.display = "none";
-        menuUsers.style.display = "none";
+        if (menuMaster) menuMaster.style.display = "none";
+        if (menuUsers) menuUsers.style.display = "none";
         if (menuDatabaseSettings) menuDatabaseSettings.style.display = "none";
+        if (menuAudit) menuAudit.style.display = "none";
         if (btnAdd) btnAdd.style.display = "none";
         if (btnAddJadwal) btnAddJadwal.style.display = "none";
         accessNote.textContent = "Hak Akses: User (Mode Read-only)";
         accessNote.style.color = "#9ca3af";
+      }
+
+      // Hide parent Pengaturan menu if no submenus are visible
+      const menuPengaturanParent = document.getElementById("menu-pengaturan-parent");
+      if (menuPengaturanParent) {
+        const submenus = [menuMaster, menuUsers, menuDatabaseSettings, menuAudit];
+        const hasVisible = submenus.some(m => m && m.style.display !== "none");
+        menuPengaturanParent.style.display = hasVisible ? "block" : "none";
       }
 
       populateUserProfileData();

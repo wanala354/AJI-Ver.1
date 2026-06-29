@@ -188,13 +188,44 @@
       document.getElementById("app-container").style.display = "none";
     }
 
+    function updateUserAvatarUI(user) {
+      const navAvatar = document.getElementById("nav-user-avatar");
+      const profileCardAvatar = document.getElementById("profile-card-avatar");
+      
+      let fotoUrl = null;
+      if (user && user.jamaah_id) {
+        const jItem = getJamaahList().find(j => j.id === user.jamaah_id);
+        if (jItem && jItem.fotoUrl) {
+          fotoUrl = jItem.fotoUrl;
+        }
+      }
+      
+      if (navAvatar) {
+        if (fotoUrl) {
+          navAvatar.innerHTML = `<img src="${fotoUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+        } else {
+          navAvatar.innerHTML = "";
+          navAvatar.textContent = user.username.charAt(0).toUpperCase();
+        }
+      }
+      
+      if (profileCardAvatar) {
+        if (fotoUrl) {
+          profileCardAvatar.innerHTML = `<img src="${fotoUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+        } else {
+          profileCardAvatar.innerHTML = "";
+          profileCardAvatar.textContent = user.username.charAt(0).toUpperCase();
+        }
+      }
+    }
+
     function showMainApp(user) {
       document.getElementById("login-screen").style.display = "none";
       document.getElementById("register-screen").style.display = "none";
       document.getElementById("app-container").style.display = "flex";
       
       document.getElementById("nav-user-name").textContent = user.username;
-      document.getElementById("nav-user-avatar").textContent = user.username.charAt(0).toUpperCase();
+      updateUserAvatarUI(user);
       
       const userRoleClean = (user.role || "").trim().toLowerCase();
 
@@ -236,22 +267,25 @@
       const menuMaster = document.getElementById("menu-master");
       const menuUsers = document.getElementById("menu-users");
       const menuDatabaseSettings = document.getElementById("menu-database-settings");
+      const menuAudit = document.getElementById("menu-audit");
       const btnAdd = document.getElementById("btn-add-jamaah");
       const btnAddJadwal = document.getElementById("btn-add-jadwal");
       const accessNote = document.getElementById("table-access-note");
       
       if (userRoleClean === "admin") {
-        menuMaster.style.display = "block";
-        menuUsers.style.display = "block";
+        if (menuMaster) menuMaster.style.display = "block";
+        if (menuUsers) menuUsers.style.display = "block";
         if (menuDatabaseSettings) menuDatabaseSettings.style.display = "block";
+        if (menuAudit) menuAudit.style.display = "block";
         if (btnAdd) btnAdd.style.display = "inline-flex";
         if (btnAddJadwal) btnAddJadwal.style.display = "inline-flex";
         accessNote.textContent = "Hak Akses: Administrator (Full CRUD Aktif)";
         accessNote.style.color = "#10b981";
       } else if (userRoleClean === "operator kelompok" || userRoleClean === "operator desa") {
-        menuMaster.style.display = "none";
-        menuUsers.style.display = "block"; // operator tetap bisa lihat pending
+        if (menuMaster) menuMaster.style.display = "none";
+        if (menuUsers) menuUsers.style.display = "block";
         if (menuDatabaseSettings) menuDatabaseSettings.style.display = "none";
+        if (menuAudit) menuAudit.style.display = "block";
         if (btnAdd) btnAdd.style.display = "inline-flex";
         if (btnAddJadwal) btnAddJadwal.style.display = "inline-flex";
         if (userRoleClean === "operator kelompok") {
@@ -262,9 +296,10 @@
           accessNote.style.color = "#10b981";
         }
       } else if (userRoleClean === "pengurus desa" || userRoleClean === "pengurus kelompok") {
-        menuMaster.style.display = "none";
-        menuUsers.style.display = "none";
+        if (menuMaster) menuMaster.style.display = "none";
+        if (menuUsers) menuUsers.style.display = "none";
         if (menuDatabaseSettings) menuDatabaseSettings.style.display = "none";
+        if (menuAudit) menuAudit.style.display = "block";
         if (btnAdd) btnAdd.style.display = "none";
         if (btnAddJadwal) btnAddJadwal.style.display = "none";
         if (userRoleClean === "pengurus desa") {
@@ -274,13 +309,22 @@
         }
         accessNote.style.color = "#f59e0b";
       } else {
-        menuMaster.style.display = "none";
-        menuUsers.style.display = "none";
+        if (menuMaster) menuMaster.style.display = "none";
+        if (menuUsers) menuUsers.style.display = "none";
         if (menuDatabaseSettings) menuDatabaseSettings.style.display = "none";
+        if (menuAudit) menuAudit.style.display = "none";
         if (btnAdd) btnAdd.style.display = "none";
         if (btnAddJadwal) btnAddJadwal.style.display = "none";
         accessNote.textContent = "Hak Akses: User (Mode Read-only)";
         accessNote.style.color = "#9ca3af";
+      }
+
+      // Hide parent Pengaturan menu if no submenus are visible
+      const menuPengaturanParent = document.getElementById("menu-pengaturan-parent");
+      if (menuPengaturanParent) {
+        const submenus = [menuMaster, menuUsers, menuDatabaseSettings, menuAudit];
+        const hasVisible = submenus.some(m => m && m.style.display !== "none");
+        menuPengaturanParent.style.display = hasVisible ? "block" : "none";
       }
 
       populateUserProfileData();
@@ -308,7 +352,7 @@
       const cAvatar = document.getElementById("profile-card-avatar");
       
       if (cUsername) cUsername.textContent = user.username;
-      if (cAvatar) cAvatar.textContent = user.username.charAt(0).toUpperCase();
+       updateUserAvatarUI(user);
       if (cRole) {
         let roleLabel = "User (Lihat Saja)";
         const r = (user.role || "").trim().toLowerCase();
@@ -456,18 +500,42 @@
       const btn = document.getElementById("btn-register-new");
       const orig = btn.innerHTML;
       btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...';
-      google.script.run
-        .withSuccessHandler(function(res) {
-          btn.disabled = false; btn.innerHTML = orig;
-          if (res.success && res.pending) {
-            showRegMsg("success", "Pendaftaran berhasil dikirim! Akun Anda menunggu persetujuan dari admin/operator kelompok " + kelompok + ".");
-            btn.style.display = "none";
-          } else if (res.reason === "username_taken") {
-            showRegMsg("error", 'Username "' + username + '" sudah digunakan.');
-          } else { showRegMsg("error", "Gagal mendaftar. Coba lagi."); }
-        })
-        .withFailureHandler(function(err) { btn.disabled = false; btn.innerHTML = orig; showRegMsg("error", "Error: " + (err.message || err)); })
-        .registerJamaahNewGAS({ namaLengkap: nama, kelompok, jenisKelamin: jk, tanggalLahir: tglLahir, nomorHp: hp, statusPernikahan: pernikahan, statusHubunganKeluarga: "Kepala Keluarga", username: username.toLowerCase(), passwordHash: sha256(pass1) });
+
+      const fotoInput = document.getElementById("reg-new-foto");
+      let uploadPromise = Promise.resolve(null);
+      if (fotoInput && fotoInput.files && fotoInput.files[0]) {
+        const file = fotoInput.files[0];
+        const ext = file.name.split('.').pop();
+        const newFileName = `foto_${username.toLowerCase()}_${Date.now()}.${ext}`;
+        uploadPromise = new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            const base64Str = e.target.result.split(',')[1];
+            window.supabaseUploadPhotoToDrive(base64Str, newFileName).then(resolve).catch(reject);
+          };
+          reader.onerror = err => reject(err);
+          reader.readAsDataURL(file);
+        });
+      }
+
+      uploadPromise.then(fotoUrl => {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            btn.disabled = false; btn.innerHTML = orig;
+            if (res.success && res.pending) {
+              showRegMsg("success", "Pendaftaran berhasil dikirim! Akun Anda menunggu persetujuan dari admin/operator kelompok " + kelompok + ".");
+              btn.style.display = "none";
+            } else if (res.reason === "username_taken") {
+              showRegMsg("error", 'Username "' + username + '" sudah digunakan.');
+            } else { showRegMsg("error", "Gagal mendaftar. Coba lagi."); }
+          })
+          .withFailureHandler(function(err) { btn.disabled = false; btn.innerHTML = orig; showRegMsg("error", "Error: " + (err.message || err)); })
+          .registerJamaahNewGAS({ namaLengkap: nama, kelompok, jenisKelamin: jk, tanggalLahir: tglLahir, nomorHp: hp, statusPernikahan: pernikahan, statusHubunganKeluarga: "Kepala Keluarga", username: username.toLowerCase(), passwordHash: sha256(pass1), fotoUrl: fotoUrl });
+      }).catch(err => {
+        btn.disabled = false;
+        btn.innerHTML = orig;
+        showRegMsg("error", "Gagal mengunggah foto profil: " + (err.message || err));
+      });
     }
 
     function showRegMsg(type, msg) {
@@ -954,7 +1022,49 @@
         });
       }
 
-      // Registrasi: tidak ada di daftar → step 2
+      // Foto preview untuk registrasi baru
+      const regFotoInput = document.getElementById("reg-new-foto");
+      if (regFotoInput) {
+        regFotoInput.addEventListener("change", function(e) {
+          const file = e.target.files[0];
+          const previewImg = document.getElementById("reg-new-foto-preview");
+          const placeholder = document.getElementById("reg-new-foto-placeholder");
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+              previewImg.src = evt.target.result;
+              previewImg.style.display = "block";
+              placeholder.style.display = "none";
+            };
+            reader.readAsDataURL(file);
+          } else {
+            previewImg.style.display = "none";
+            placeholder.style.display = "block";
+          }
+        });
+      }
+
+      // Foto preview untuk edit/add jamaah
+      const formFotoInput = document.getElementById("form-foto");
+      if (formFotoInput) {
+        formFotoInput.addEventListener("change", function(e) {
+          const file = e.target.files[0];
+          const previewImg = document.getElementById("form-foto-preview");
+          const placeholder = document.getElementById("form-foto-placeholder");
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+              previewImg.src = evt.target.result;
+              previewImg.style.display = "block";
+              placeholder.style.display = "none";
+            };
+            reader.readAsDataURL(file);
+          } else {
+            previewImg.style.display = "none";
+            placeholder.style.display = "block";
+          }
+        });
+      }
       const btnNotInList = document.getElementById("btn-not-in-list");
       if (btnNotInList) {
         btnNotInList.addEventListener("click", (e) => {
@@ -1215,25 +1325,66 @@
           return;
         }
 
-        const jamaahData = {
-          id: editingJamaahId,
-          namaLengkap: document.getElementById("form-nama").value.trim(),
-          kelompokPengajian: selectedKelompok,
-          jenisKelamin: document.getElementById("form-gender").value,
-          tempatLahir: document.getElementById("form-tempat-lahir").value.trim(),
-          tanggalLahir: document.getElementById("form-tanggal-lahir").value,
-          statusPernikahan: document.getElementById("form-pernikahan").value,
-          statusHubunganKeluarga: relationship,
-          kepalaKeluargaId: kkId,
-          nomorHp: document.getElementById("form-hp").value.trim(),
-          tingkatPendidikan: document.getElementById("form-pendidikan").value,
-          pekerjaanUtama: document.getElementById("form-pekerjaan").value,
-          dapuan: document.getElementById("form-dapuan").value,
-          statusEkonomi: document.getElementById("form-ekonomi").value,
-          kelancaranSambung: document.getElementById("form-kelancaran").value
-        };
+        const namaLengkapClean = document.getElementById("form-nama").value.trim();
+        const fotoInput = document.getElementById("form-foto");
+        const existingFotoUrl = document.getElementById("form-foto-url").value;
+        let uploadPromise = Promise.resolve(existingFotoUrl);
 
-        saveJamaah(jamaahData, currentUser.username);
+        if (fotoInput && fotoInput.files && fotoInput.files[0]) {
+          const file = fotoInput.files[0];
+          const ext = file.name.split('.').pop();
+          const cleanName = namaLengkapClean.toLowerCase().replace(/[^a-z0-9]/g, '_');
+          const newFileName = `foto_${cleanName}_${Date.now()}.${ext}`;
+          
+          const saveBtn = document.getElementById("modal-save-btn");
+          const oldHtml = saveBtn.innerHTML;
+          saveBtn.disabled = true;
+          saveBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Mengunggah Foto...`;
+
+          uploadPromise = new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+              const base64Str = evt.target.result.split(',')[1];
+              window.supabaseUploadPhotoToDrive(base64Str, newFileName)
+                .then(resolve)
+                .catch(err => {
+                  saveBtn.disabled = false;
+                  saveBtn.innerHTML = oldHtml;
+                  reject(err);
+                });
+            };
+            reader.onerror = err => {
+              saveBtn.disabled = false;
+              saveBtn.innerHTML = oldHtml;
+              reject(err);
+            };
+            reader.readAsDataURL(file);
+          });
+        }
+
+        uploadPromise.then(fotoUrl => {
+          const jamaahData = {
+            id: editingJamaahId,
+            namaLengkap: namaLengkapClean,
+            kelompokPengajian: selectedKelompok,
+            jenisKelamin: document.getElementById("form-gender").value,
+            tempatLahir: document.getElementById("form-tempat-lahir").value.trim(),
+            tanggalLahir: document.getElementById("form-tanggal-lahir").value,
+            statusPernikahan: document.getElementById("form-pernikahan").value,
+            statusHubunganKeluarga: relationship,
+            kepalaKeluargaId: kkId,
+            nomorHp: document.getElementById("form-hp").value.trim(),
+            tingkatPendidikan: document.getElementById("form-pendidikan").value,
+            pekerjaanUtama: document.getElementById("form-pekerjaan").value,
+            dapuan: document.getElementById("form-dapuan").value,
+            statusEkonomi: document.getElementById("form-ekonomi").value,
+            kelancaranSambung: document.getElementById("form-kelancaran").value,
+            fotoUrl: fotoUrl
+          };
+          saveJamaah(jamaahData, currentUser.username);
+        }).catch(err => {
+          showToast("Gagal mengunggah foto profil: " + (err.message || err), "error");
+        });
       });
 
       // Database Inspector tabs
@@ -1644,5 +1795,60 @@
         switchTab(activeSection.id);
       }
     }
+
+    function openImagePreviewModal(url) {
+      const modal = document.getElementById("image-preview-modal");
+      const img = document.getElementById("large-profile-image");
+      const downloadLink = document.getElementById("download-profile-image");
+      if (modal && img && downloadLink) {
+        img.src = url;
+        downloadLink.href = url;
+        modal.classList.add("active");
+      }
+    }
+    function closeImagePreviewModal() {
+      const modal = document.getElementById("image-preview-modal");
+      if (modal) modal.classList.remove("active");
+    }
+    window.openImagePreviewModal = openImagePreviewModal;
+    window.closeImagePreviewModal = closeImagePreviewModal;
+
+    // Attach click events to avatars
+    document.addEventListener("click", (e) => {
+      // 1. Profile card avatar
+      const pAvatar = e.target.closest("#profile-card-avatar");
+      if (pAvatar) {
+        const img = pAvatar.querySelector("img");
+        if (img && img.src) {
+          openImagePreviewModal(img.src);
+        }
+        return;
+      }
+      
+      // 2. View details modal avatar
+      if (e.target.id === "view-j-avatar-img" && e.target.src) {
+        openImagePreviewModal(e.target.src);
+        return;
+      }
+
+      // 3. Portal Dashboard Avatar
+      const portalAvatar = e.target.closest("#portal-jamaah-avatar");
+      if (portalAvatar) {
+        const img = portalAvatar.querySelector("img");
+        if (img && img.src) {
+          openImagePreviewModal(img.src);
+        }
+        return;
+      }
+    });
+
+    // Make elements visually clickable
+    setTimeout(() => {
+      const elIds = ["profile-card-avatar", "view-j-avatar-img", "portal-jamaah-avatar"];
+      elIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.cursor = "pointer";
+      });
+    }, 1000);
 
     // ----------------------------------------------------

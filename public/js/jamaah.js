@@ -26,13 +26,15 @@
       // Dapuan Filter
       const filterD = document.getElementById("filter-dapuan");
       const savedSelD = filterD.value;
-      filterD.innerHTML = '<option value="">-- Semua Dapuan --</option>';
-      localMasterDapuan.forEach(d => {
-        const opt = document.createElement("option");
-        opt.value = d;
-        opt.textContent = d;
-        filterD.appendChild(opt);
-      });
+      filterD.innerHTML = `
+        <option value="">Semua Jamaah</option>
+        <option value="Semua Tingkat">Semua Tingkat (Pengurus)</option>
+        <option value="Tingkat Daerah">Tingkat Daerah</option>
+        <option value="Tingkat Desa">Tingkat Desa</option>
+        <option value="Tingkat Kelompok">Tingkat Kelompok</option>
+        <option value="Tingkat Organisasi">Tingkat Organisasi</option>
+        <option value="Tingkat Yayasan">Tingkat Yayasan</option>
+      `;
       filterD.value = savedSelD;
     }
 
@@ -54,7 +56,23 @@
         const matchKelompok = kelompokVal === "" || j.kelompokPengajian === kelompokVal;
         const matchPeramutan = peramutanVal === "" || j.kelompokPeramutan === peramutanVal;
         const matchEkonomi = ekonomiVal === "" || j.statusEkonomi === ekonomiVal;
-        const matchDapuan = dapuanVal === "" || j.dapuan === dapuanVal;
+        let matchDapuan = true;
+        if (dapuanVal) {
+          const allPengurus = getPengurusList() || [];
+          if (dapuanVal === "Semua Tingkat") {
+            const pengurusIds = new Set(allPengurus.map(p => p.jamaah_id).filter(Boolean));
+            matchDapuan = pengurusIds.has(j.id);
+          } else {
+            const tingkat = dapuanVal.replace("Tingkat ", "");
+            const pengurusIds = new Set(
+              allPengurus
+                .filter(p => p.tingkat_pengurus === tingkat)
+                .map(p => p.jamaah_id)
+                .filter(Boolean)
+            );
+            matchDapuan = pengurusIds.has(j.id);
+          }
+        }
         
         let matchKelancaran = true;
         if (kelancaranVal !== "") {
@@ -232,6 +250,19 @@
           document.getElementById("form-ekonomi").value = item.statusEkonomi;
           document.getElementById("form-kelancaran").value = item.kelancaranSambung;
 
+          document.getElementById("form-foto-url").value = item.fotoUrl || "";
+          const previewImg = document.getElementById("form-foto-preview");
+          const placeholder = document.getElementById("form-foto-placeholder");
+          document.getElementById("form-foto").value = "";
+          if (item.fotoUrl) {
+            previewImg.src = item.fotoUrl;
+            previewImg.style.display = "block";
+            placeholder.style.display = "none";
+          } else {
+            previewImg.style.display = "none";
+            placeholder.style.display = "block";
+          }
+
           updateFormKKState();
         }
       } else {
@@ -250,6 +281,11 @@
             populateFormKKDropdown(firstRadio.value);
           }
         }
+        document.getElementById("form-foto-url").value = "";
+        document.getElementById("form-foto").value = "";
+        document.getElementById("form-foto-preview").style.display = "none";
+        document.getElementById("form-foto-placeholder").style.display = "block";
+
         updateFormKKState();
       }
 
@@ -293,7 +329,7 @@
       fillSelectWithOptions(document.getElementById("form-hubungan"), localMasterHubungan, "Hubungan Keluarga");
       fillSelectWithOptions(document.getElementById("form-pendidikan"), localMasterPendidikan, "Pendidikan");
       fillSelectWithOptions(document.getElementById("form-pekerjaan"), localMasterPekerjaan, "Pekerjaan");
-      fillSelectWithOptions(document.getElementById("form-dapuan"), localMasterDapuan, "Dapuan");
+      fillSelectWithOptions(document.getElementById("form-dapuan"), ["Pengurus", "MT", "MS", "Rokyah Biasa"], "Dapuan");
       fillSelectWithOptions(document.getElementById("form-ekonomi"), MASTER_EKONOMI, "Status Ekonomi");
       fillSelectWithOptions(document.getElementById("form-kelancaran"), MASTER_KELANCARAN, "Kelancaran Sambung");
 
@@ -524,6 +560,18 @@
         kkName = kkItem ? `${kkItem.namaLengkap} (${item.kepalaKeluargaId})` : `ID: ${item.kepalaKeluargaId}`;
       }
       
+      // 0. Populate photo
+      const avatarImg = document.getElementById("view-j-avatar-img");
+      const avatarPlaceholder = document.getElementById("view-j-avatar-placeholder");
+      if (item.fotoUrl) {
+        avatarImg.src = item.fotoUrl;
+        avatarImg.style.display = "block";
+        avatarPlaceholder.style.display = "none";
+      } else {
+        avatarImg.style.display = "none";
+        avatarPlaceholder.style.display = "block";
+      }
+
       // 1. Populate text contents for Profile
       document.getElementById("view-j-id").textContent = item.id || "-";
       document.getElementById("view-j-nama").textContent = item.namaLengkap || "-";

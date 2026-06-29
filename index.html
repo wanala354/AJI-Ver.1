@@ -287,27 +287,33 @@
           </ul>
         </li>
 
-        <li class="menu-item" data-target="section-report">
-          <a href="#"><i class="fa-solid fa-file-contract"></i> Laporan & Rekap</a>
-        </li>
-        <li class="menu-item" data-target="section-master" id="menu-master" style="display: none;">
-          <a href="#"><i class="fa-solid fa-folder-tree"></i> Data Master</a>
-        </li>
-        <li class="menu-item" data-target="section-users" id="menu-users" style="display: none;">
-          <a href="#"><i class="fa-solid fa-users-gear"></i> Manajemen User</a>
-        </li>
         <li class="menu-item" data-target="section-pengurus" id="menu-pengurus">
           <a href="#"><i class="fas fa-sitemap"></i> Data Pengurus</a>
         </li>
         <li class="menu-item" data-target="section-pengajian" id="menu-pengajian">
           <a href="#"><i class="fa-solid fa-book-open-reader"></i> Manajemen Kegiatan</a>
         </li>
-        <li class="menu-item" data-target="section-database-settings" id="menu-database-settings">
-          <a href="#"><i class="fa-solid fa-database"></i> Koneksi Database</a>
+        <li class="menu-item" data-target="section-report">
+          <a href="#"><i class="fa-solid fa-file-contract"></i> Laporan & Rekap</a>
         </li>
 
-        <li class="menu-item" data-target="section-audit">
-          <a href="#"><i class="fa-solid fa-history"></i> Audit Trail Log</a>
+        <li class="menu-item has-submenu" id="menu-pengaturan-parent">
+          <a href="#" class="menu-toggle"><i class="fa-solid fa-gear"></i> Pengaturan <i
+              class="fa-solid fa-chevron-down submenu-arrow"></i></a>
+          <ul class="submenu">
+            <li class="submenu-item" data-target="section-master" id="menu-master" style="display: none;">
+              <a href="#"><i class="fa-solid fa-folder-tree"></i> Data Master</a>
+            </li>
+            <li class="submenu-item" data-target="section-users" id="menu-users" style="display: none;">
+              <a href="#"><i class="fa-solid fa-users-gear"></i> Manajemen User</a>
+            </li>
+            <li class="submenu-item" data-target="section-database-settings" id="menu-database-settings" style="display: none;">
+              <a href="#"><i class="fa-solid fa-database"></i> Koneksi Database</a>
+            </li>
+            <li class="submenu-item" data-target="section-audit" id="menu-audit">
+              <a href="#"><i class="fa-solid fa-history"></i> Audit Trail Log</a>
+            </li>
+          </ul>
         </li>
       </ul>
 
@@ -461,7 +467,6 @@
               onchange="renderDashboardCharts()">
               <option value="">Semua Kelompok</option>
             </select>
-
           </div>
           <div class="chart-grid">
             <div class="card-panel">
@@ -736,6 +741,19 @@
             </div>
           </div>
 
+          <!-- Rekap Kehadiran Speedometer Gauge Panel (v2.2) -->
+          <div class="card-panel" style="margin-bottom: 20px;">
+            <div class="card-panel-header" style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">
+              <span class="card-panel-title"><i class="fa-solid fa-calendar-check"></i> Rekap Kehadiran Pengajian (Bulan Ini)</span>
+            </div>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: space-around; padding: 10px 0;">
+              <div id="gauge-sambung-daerah-container"></div>
+              <div id="gauge-sambung-desa-container"></div>
+              <div id="gauge-sambung-kelompok-container"></div>
+              <div id="gauge-teks-container"></div>
+            </div>
+          </div>
+
           <div class="chart-grid">
             <div class="card-panel">
               <div class="card-panel-header">
@@ -1007,7 +1025,7 @@
               <div class="master-tabs" id="master-tabs-list">
                 <button class="master-tab-btn active" data-tab="Kelompok">Kelompok Kegiatan</button>
                 <button class="master-tab-btn" data-tab="Tingkat Pendidikan">Tingkat Pendidikan</button>
-                <button class="master-tab-btn" data-tab="Dapuan">Dapuan (Jabatan)</button>
+                <button class="master-tab-btn" data-tab="Dapuan">Dapuan</button>
                 <button class="master-tab-btn" data-tab="Pekerjaan">Pekerjaan Utama</button>
                 <button class="master-tab-btn" data-tab="Status Hubungan Keluarga">Hubungan Keluarga</button>
                 <button class="master-tab-btn" data-tab="Materi Kegiatan">Materi Kegiatan</button>
@@ -1046,9 +1064,14 @@
         <section id="section-pengurus" class="page-section">
           <div class="card-panel">
             <div class="card-panel-header" style="margin-bottom:15px;">
-              <span class="card-panel-title"><i class="fa-solid fa-sitemap"></i> Manajemen Data Pengurus</span>
-              <button class="btn-primary" onclick="showAddPengurusModal()"
-                style="padding:8px 15px; font-size:0.85rem;"><i class="fa-solid fa-plus"></i> Tambah Pengurus</button>
+              <span class="card-panel-title"><i class="fa-solid fa-sitemap"></i> Laporan Rekapitulasi Pengurus</span>
+              <div style="display:flex; gap:10px; align-items:center;">
+                <button class="btn-secondary" onclick="window.print()" style="padding:8px 15px; font-size:0.85rem;">
+                  <i class="fa-solid fa-print"></i> Cetak Laporan (PDF)
+                </button>
+                <button class="btn-primary" onclick="showAddPengurusModal()"
+                  style="padding:8px 15px; font-size:0.85rem;"><i class="fa-solid fa-plus"></i> Tambah Pengurus</button>
+              </div>
             </div>
 
             <div class="table-actions-bar">
@@ -1061,7 +1084,7 @@
                   <option value="Yayasan">Yayasan</option>
                 </select>
                 <select id="filter-kelompok-pengurus" class="select-filter" onchange="renderPengurusTable()">
-                  <option value="">Semua Kelompok Kegiatan</option>
+                  <option value="">Semua Kelompok Pengajian</option>
                 </select>
               </div>
             </div>
@@ -1072,9 +1095,9 @@
                   <tr>
                     <th>No</th>
                     <th>Nama Jamaah</th>
-                    <th>Kelompok Kegiatan</th>
+                    <th>Kelompok Pengajian</th>
                     <th>Tingkat</th>
-                    <th>Dapuan / Jabatan</th>
+                    <th>Dapuan</th>
                     <th style="text-align: center;">Aksi</th>
                   </tr>
                 </thead>
@@ -1982,7 +2005,7 @@
             </div>
 
             <div class="form-group">
-              <label for="form-dapuan">Dapuan (Jabatan)*</label>
+              <label for="form-dapuan">Dapuan*</label>
               <select id="form-dapuan" required>
               </select>
             </div>
@@ -2057,13 +2080,13 @@
             </select>
           </div>
           <div class="form-group" id="master-form-dapuan-container" style="display:none; margin-top: 15px;">
-            <label for="master-form-dapuan">Batasan Dapuan (Jabatan) - *Opsional</label>
+            <label for="master-form-dapuan">Batasan Dapuan - *Opsional</label>
             <select id="master-form-dapuan" multiple
               style="width: 100%; height: 100px; background: rgba(255,255,255,0.05); color: var(--text-primary); border: 1px solid rgba(16,185,129,0.25); border-radius: 6px; padding: 8px;">
               <!-- Populated dynamically -->
             </select>
             <small style="color: var(--text-secondary); margin-top: 4px; display: block;">Tahan Ctrl/Cmd untuk memilih
-              beberapa jabatan. Kosongkan jika semua jabatan boleh ikut.</small>
+              beberapa dapuan. Kosongkan jika semua dapuan boleh ikut.</small>
           </div>
           <div class="form-group" id="master-form-grup-kustom-container" style="display:none; margin-top: 15px;">
             <div class="form-group" style="margin-bottom: 12px;">
@@ -2196,7 +2219,7 @@
             </select>
           </div>
           <div class="form-group">
-            <label for="pengurus-dapuan">Dapuan / Jabatan*</label>
+            <label for="pengurus-dapuan">Dapuan*</label>
             <select id="pengurus-dapuan" required>
               <!-- Populated by JS -->
             </select>

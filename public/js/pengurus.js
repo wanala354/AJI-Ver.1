@@ -68,8 +68,8 @@
             if (hasWriteAccess) {
               actionButtons = `
                 <div class="action-btns" style="justify-content: center; gap: 4px;">
-                  <button class="btn-icon edit" style="padding: 2px 6px; font-size: 0.75rem;" title="Edit Jabatan" onclick="showEditPengurusModal('${role.id}')"><i class="fa-solid fa-pen"></i></button>
-                  <button class="btn-icon delete" style="padding: 2px 6px; font-size: 0.75rem;" title="Hapus Jabatan" onclick="deletePengurus('${role.id}')"><i class="fa-solid fa-trash"></i></button>
+                  <button class="btn-icon edit" style="padding: 2px 6px; font-size: 0.75rem;" title="Edit Dapuan" onclick="showEditPengurusModal('${role.id}')"><i class="fa-solid fa-pen"></i></button>
+                  <button class="btn-icon delete" style="padding: 2px 6px; font-size: 0.75rem;" title="Hapus Dapuan" onclick="deletePengurus('${role.id}')"><i class="fa-solid fa-trash"></i></button>
                 </div>`;
             } else {
               actionButtons = `<span style="color: var(--text-secondary); font-size:0.85rem;">-</span>`;
@@ -339,7 +339,7 @@
           reportHtml += `<div style="margin-bottom: 25px;">
             <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 10px; color: var(--primary);"><i class="fa-solid fa-users-rectangle"></i> Kelompok Pengajian: ${kel}</div>
             <table class="table-custom" style="margin-top:0;">
-              <thead><tr><th style="width: 25%;">Tingkat</th><th style="width: 35%;">Dapuan / Jabatan</th><th style="width: 40%;">Nama Jamaah</th></tr></thead>
+              <thead><tr><th style="width: 25%;">Tingkat</th><th style="width: 35%;">Dapuan</th><th style="width: 40%;">Nama Jamaah</th></tr></thead>
               <tbody>`;
               
           kelompokMap[kel].sort((a,b) => a.tingkat_pengurus.localeCompare(b.tingkat_pengurus)).forEach(p => {

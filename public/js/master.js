@@ -35,7 +35,7 @@
             <th>Nama Opsi</th>
             <th>Sasaran Peserta</th>
             <th>Batasan Gender</th>
-            <th>Batasan Jabatan (Dapuan)</th>
+            <th>Batasan Dapuan</th>
             <th style="width: 150px; text-align:center;">Aksi</th>
           </tr>
         `;
