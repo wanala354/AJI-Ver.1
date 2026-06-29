@@ -206,13 +206,30 @@
     // JAMAAH FORM ENTRY MODAL
     // ----------------------------------------------------
     function openJamaahModal(jamaahId = null) {
+      const currentUser = getCurrentUser();
+      const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
+
+      if (jamaahId) {
+        const item = getJamaahList().find(j => j.id === jamaahId);
+        if (item) {
+          const isAdmin = curRoleClean === "admin";
+          const isOperatorDesa = curRoleClean === "operator desa";
+          const isOperatorKelompok = curRoleClean === "operator kelompok";
+          const canWriteThisRow = isAdmin || isOperatorDesa || (isOperatorKelompok && item.kelompokPengajian === currentUser.kelompok);
+
+          if (!canWriteThisRow) {
+            showToast("Anda tidak memiliki akses untuk mengedit data jamaah ini!", "error");
+            return;
+          }
+        }
+      }
+
       const modal = document.getElementById("jamaah-modal");
       const form = document.getElementById("jamaah-form");
       form.reset();
       editingJamaahId = jamaahId;
       
       populateFormDropdowns();
-      const currentUser = getCurrentUser();
       
       if (jamaahId) {
         document.getElementById("modal-title").innerHTML = `<i class="fa-solid fa-user-pen"></i> Edit Data Jamaah (${jamaahId})`;

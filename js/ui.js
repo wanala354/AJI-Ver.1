@@ -1504,12 +1504,14 @@
           return;
         }
 
+        const existingUser = getUsersList().find(u => u.username.toLowerCase() === username.toLowerCase());
         const userData = {
           username,
           email,
           role,
           kelompok,
-          passwordHash: password ? sha256(password) : ""
+          passwordHash: password ? sha256(password) : "",
+          jamaahId: existingUser ? (existingUser.jamaahId || existingUser.jamaah_id || null) : null
         };
 
         const saveBtn = document.getElementById("user-modal-save-btn");

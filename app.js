@@ -178,7 +178,8 @@
           email: u.email,
           role: u.role,
           passwordHash: u.password_hash,
-          kelompok: u.kelompok
+          kelompok: u.kelompok,
+          jamaahId: u.jamaah_id || null
         }));
         
         const auditLogs = (resLogs.data || []).map(l => ({
@@ -404,6 +405,14 @@
       });
     }
 
+    function supabaseDeleteUser(username, operatorUsername) {
+      return supabaseClient.from("app_users").delete().eq("username", username).then(({ error }) => {
+        if (error) throw error;
+        supabaseLogAction(operatorUsername, "DELETE_USER", "Menghapus akun pengguna: " + username);
+        return true;
+      });
+    }
+
     function supabaseChangePassword(targetUsername, newPasswordHash, operatorUsername) {
       return supabaseClient.from("app_users")
         .update({ password_hash: newPasswordHash })
@@ -573,6 +582,10 @@
           },
           saveUserGAS: function(userData, operatorUsername) {
             this._call(() => supabaseSaveUser(userData, operatorUsername));
+            return this;
+          },
+          deleteUserGAS: function(username, operatorUsername) {
+            this._call(() => supabaseDeleteUser(username, operatorUsername));
             return this;
           },
           changePasswordGAS: function(targetUsername, newPasswordHash, operatorUsername) {
@@ -794,7 +807,14 @@
                   kepalaKeluargaList: filteredKK,
                   kartuKeluargaMappings: filteredMappings,
                   auditLogs: filteredLogs,
-                  usersList: usersList,
+                  usersList: usersList.map(u => ({
+                    username: u.username,
+                    email: u.email,
+                    role: u.role,
+                    passwordHash: u.passwordHash || u.password_hash || "",
+                    kelompok: u.kelompok,
+                    jamaahId: u.jamaahId || u.jamaah_id || null
+                  })),
                   masterKelompok,
                   masterPendidikan,
                   masterDapuan,
@@ -1036,6 +1056,16 @@
                   localStorage.setItem("aji_users", JSON.stringify(users));
                   this.logActionGAS(operatorUsername, "CREATE_USER", "Membuat akun pengguna baru: " + userData.username + " (" + userData.role + ")");
                 }
+                return true;
+              });
+              return this;
+            },
+            deleteUserGAS: function(username, operatorUsername) {
+              this._call(() => {
+                const users = JSON.parse(localStorage.getItem("aji_users") || "[]");
+                const filtered = users.filter(u => u.username.toLowerCase() !== username.toLowerCase());
+                localStorage.setItem("aji_users", JSON.stringify(filtered));
+                this.logActionGAS(operatorUsername, "DELETE_USER", "Menghapus akun pengguna: " + username);
                 return true;
               });
               return this;
@@ -1361,6 +1391,19 @@
     function deleteJamaah(id, operatorUsername) {
       const item = getJamaahList().find(j => j.id === id);
       if (!item) return;
+
+      const currentUser = getCurrentUser();
+      const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
+      const isAdmin = currentUser && curRoleClean === "admin";
+      const isOperatorDesa = currentUser && curRoleClean === "operator desa";
+      const isOperator = currentUser && curRoleClean === "operator kelompok";
+      const canDelete = isAdmin || isOperatorDesa || (isOperator && item.kelompokPengajian === currentUser.kelompok);
+
+      if (!canDelete) {
+        showToast("Anda tidak memiliki akses untuk menghapus jamaah ini!", "error");
+        return;
+      }
+
       if (confirm(`Apakah Anda yakin ingin menghapus Jamaah: "${item.namaLengkap}" (${id})?`)) {
         google.script.run
           .withSuccessHandler(function() {
@@ -1373,6 +1416,22 @@
             showToast("Gagal menghapus data: " + err.message, "error");
           })
           .deleteJamaahGAS(id, operatorUsername);
+      }
+    }
+
+    function deleteUser(username, operatorUsername) {
+      if (confirm(`Apakah Anda yakin ingin menghapus akun pengguna: "${username}"?`)) {
+        google.script.run
+          .withSuccessHandler(function() {
+            fetchDatabaseFromServer(function() {
+              renderUsersTable();
+              showToast(`Akun pengguna ${username} berhasil dihapus!`, "success");
+            });
+          })
+          .withFailureHandler(function(err) {
+            showToast("Gagal menghapus pengguna: " + err.message, "error");
+          })
+          .deleteUserGAS(username, operatorUsername);
       }
     }
 
@@ -2446,12 +2505,14 @@
           return;
         }
 
+        const existingUser = getUsersList().find(u => u.username.toLowerCase() === username.toLowerCase());
         const userData = {
           username,
           email,
           role,
           kelompok,
-          passwordHash: password ? sha256(password) : ""
+          passwordHash: password ? sha256(password) : "",
+          jamaahId: existingUser ? (existingUser.jamaahId || existingUser.jamaah_id || null) : null
         };
 
         const saveBtn = document.getElementById("user-modal-save-btn");
@@ -3385,13 +3446,30 @@
     // JAMAAH FORM ENTRY MODAL
     // ----------------------------------------------------
     function openJamaahModal(jamaahId = null) {
+      const currentUser = getCurrentUser();
+      const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
+
+      if (jamaahId) {
+        const item = getJamaahList().find(j => j.id === jamaahId);
+        if (item) {
+          const isAdmin = curRoleClean === "admin";
+          const isOperatorDesa = curRoleClean === "operator desa";
+          const isOperatorKelompok = curRoleClean === "operator kelompok";
+          const canWriteThisRow = isAdmin || isOperatorDesa || (isOperatorKelompok && item.kelompokPengajian === currentUser.kelompok);
+
+          if (!canWriteThisRow) {
+            showToast("Anda tidak memiliki akses untuk mengedit data jamaah ini!", "error");
+            return;
+          }
+        }
+      }
+
       const modal = document.getElementById("jamaah-modal");
       const form = document.getElementById("jamaah-form");
       form.reset();
       editingJamaahId = jamaahId;
       
       populateFormDropdowns();
-      const currentUser = getCurrentUser();
       
       if (jamaahId) {
         document.getElementById("modal-title").innerHTML = `<i class="fa-solid fa-user-pen"></i> Edit Data Jamaah (${jamaahId})`;
@@ -4152,19 +4230,42 @@
       const tbody = document.getElementById("table-users-body");
       tbody.innerHTML = "";
       
+      const currentUser = getCurrentUser();
+      const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
+      const isAdmin = currentUser && curRoleClean === "admin";
+      const isOperatorDesa = currentUser && curRoleClean === "operator desa";
+      const isOperatorKelompok = currentUser && curRoleClean === "operator kelompok";
+
       const list = getUsersList();
       list.forEach(u => {
         const tr = document.createElement("tr");
-        const passDisplay = u.passwordHash.substring(0, 8) + "...";
         
+        // Find related jamaah full name
+        const jamaahObj = getJamaahList().find(j => j.id === (u.jamaahId || u.jamaah_id));
+        const namaJamaah = jamaahObj ? jamaahObj.namaLengkap : "-";
+        
+        // Operator Kelompok can only edit/delete users in their own kelompok
+        const canWriteThisUser = isAdmin || isOperatorDesa || (isOperatorKelompok && u.kelompok === currentUser.kelompok);
+        
+        let actionButtons = "";
+        if (canWriteThisUser) {
+          actionButtons = `
+            <button class="btn-icon edit" data-user="${u.username}" title="Edit"><i class="fa-solid fa-pen"></i></button>
+            <button class="btn-icon delete" data-user="${u.username}" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+          `;
+        } else {
+          actionButtons = `<span style="color: var(--text-muted); font-size: 0.85rem;">Read-only</span>`;
+        }
+
         tr.innerHTML = `
           <td><strong>${u.username}</strong></td>
           <td>${u.email}</td>
           <td><span class="badge ${(u.role || '').trim().toLowerCase() === 'admin' ? 'badge-red' : 'badge-blue' }">${u.role}</span></td>
           <td>${u.kelompok || "Semua"}</td>
+          <td>${namaJamaah}</td>
           <td style="text-align:center;">
             <div class="action-btns" style="justify-content:center;">
-              <button class="btn-icon edit" data-user="${u.username}" title="Edit"><i class="fa-solid fa-pen"></i></button>
+              ${actionButtons}
             </div>
           </td>
         `;
@@ -4174,12 +4275,26 @@
       tbody.querySelectorAll(".btn-icon.edit").forEach(btn => {
         btn.addEventListener("click", () => openUserModal(btn.getAttribute("data-user")));
       });
+
+      tbody.querySelectorAll(".btn-icon.delete").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const username = btn.getAttribute("data-user");
+          deleteUser(username, currentUser.username);
+        });
+      });
     }
 
     function populateUserKelompokDropdown() {
       const select = document.getElementById("user-form-kelompok");
       select.innerHTML = '<option value="" disabled selected>-- Pilih Kelompok --</option>';
+      
+      const currentUser = getCurrentUser();
+      const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
+      
       localMasterKelompok.forEach(k => {
+        if (curRoleClean === "operator kelompok" && k !== currentUser.kelompok) {
+          return;
+        }
         const opt = document.createElement("option");
         opt.value = k;
         opt.textContent = k;
@@ -4203,7 +4318,29 @@
       const form = document.getElementById("user-form");
       form.reset();
       
+      const currentUser = getCurrentUser();
+      
       populateUserKelompokDropdown();
+      
+      // Restrict Role dropdown options for Operator Kelompok
+      const roleSelect = document.getElementById("user-form-role");
+      const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
+      for (let i = 0; i < roleSelect.options.length; i++) {
+        const opt = roleSelect.options[i];
+        const val = opt.value.toLowerCase();
+        if (curRoleClean === "operator kelompok") {
+          if (val === "admin" || val === "operator desa" || val === "pengurus desa") {
+            opt.style.display = "none";
+            opt.disabled = true;
+          } else {
+            opt.style.display = "block";
+            opt.disabled = false;
+          }
+        } else {
+          opt.style.display = "block";
+          opt.disabled = false;
+        }
+      }
       
       const isEditInput = document.getElementById("user-form-is-edit");
       const usernameInput = document.getElementById("user-form-username");
@@ -4221,7 +4358,7 @@
           document.getElementById("user-form-email").value = userObj.email;
           document.getElementById("user-form-role").value = userObj.role;
           toggleUserKelompokField();
-          if ((userObj.role || "").trim().toLowerCase() === "operator kelompok") {
+          if ((userObj.role || "").trim().toLowerCase() === "operator kelompok" || (userObj.role || "").trim().toLowerCase() === "pengurus kelompok") {
             document.getElementById("user-form-kelompok").value = userObj.kelompok;
           }
           document.getElementById("user-form-password").placeholder = "Kosongkan jika tidak diubah";
