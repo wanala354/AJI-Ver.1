@@ -260,17 +260,17 @@
           if (data && data.length > 0) return { success: false, reason: 'username_taken' };
           const payload = {
             username: regData.username,
-            email: regData.email || (regData.username + '@jamaah.aji'),
+            email: regData.email || (regData.username + '@linked.aji'),
             role: 'jamaah',
             password_hash: regData.passwordHash,
             kelompok: regData.kelompok || '',
             jamaah_id: regData.jamaah_id,
-            status: 'active'
+            status: 'pending'
           };
           return supabaseClient.from("app_users").insert([payload]).then(({ error: e2 }) => {
             if (e2) throw e2;
-            supabaseLogAction(regData.username, "REGISTER", "Jamaah " + regData.namaLengkap + " mendaftar akun (linked, id=" + regData.jamaah_id + ").");
-            return { success: true };
+            supabaseLogAction('SYSTEM', "REGISTER_PENDING", "Pendaftaran akun linked: " + regData.namaLengkap + " (" + regData.username + ") menunggu persetujuan kelompok " + regData.kelompok + ".");
+            return { success: true, pending: true };
           });
         });
     }
@@ -371,9 +371,11 @@
           if (error) throw error;
           const u = data && data[0];
           const jamaahId = u ? u.jamaah_id : null;
+          const isLinked = u && u.email && u.email.endsWith('@linked.aji');
+          
           return supabaseClient.from("app_users").delete().eq("username", username).then(({ error: e2 }) => {
             if (e2) throw e2;
-            if (jamaahId) {
+            if (jamaahId && !isLinked) {
               // Hapus data jamaah yang dibuat saat pendaftaran baru
               return supabaseClient.from("jamaah").delete().eq("id", jamaahId).then(() => {
                 supabaseLogAction(operatorUsername, "REJECT_USER", "Menolak akun jamaah: " + username + " (data jamaah " + jamaahId + " dihapus).");

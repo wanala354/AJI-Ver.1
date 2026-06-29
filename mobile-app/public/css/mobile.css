@@ -1,0 +1,223 @@
+/* MOBILE RESPONSIVE OVERRIDES (AJI MOBILE) */
+
+@media (max-width: 768px) {
+  /* 1. Reset Desktop Layout */
+  #app-sidebar {
+    display: none !important; /* Hide desktop sidebar completely */
+  }
+
+  .main-wrapper {
+    margin-left: 0 !important;
+    padding-bottom: 70px !important; /* Spacing for bottom navigation bar */
+    width: 100vw !important;
+    overflow-x: hidden;
+  }
+
+  /* 2. Top Navbar Adjustments */
+  .top-navbar {
+    left: 0 !important;
+    width: 100% !important;
+    padding: 0 16px !important;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 999;
+    background: var(--bg-body, #0a0f1a);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+
+  .nav-toggle-btn {
+    display: block !important; /* Show Hamburger button to toggle Drawer */
+    font-size: 1.25rem;
+    color: var(--text-primary);
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+
+  .nav-title {
+    font-size: 1.1rem !important;
+    max-width: 60%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Hide notification button / status on mobile navbar to save space if needed, or keep compact */
+  .top-navbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  /* 3. Dashboard KPI Grid Overrides */
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important; /* Force 2 columns instead of 3 or 4 */
+    gap: 10px !important;
+    padding: 12px !important;
+  }
+
+  .kpi-card {
+    padding: 12px !important;
+    border-radius: 10px !important;
+  }
+
+  .kpi-card h3 {
+    font-size: 0.75rem !important;
+  }
+
+  .kpi-value {
+    font-size: 1.25rem !important;
+  }
+
+  .kpi-icon {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 0.95rem !important;
+  }
+
+  /* 4. Chart Section Adjustments */
+  .charts-grid {
+    grid-template-columns: 1fr !important; /* Stack charts vertically */
+    gap: 16px !important;
+    padding: 12px !important;
+  }
+
+  .chart-card {
+    padding: 12px !important;
+    width: 100% !important;
+    box-sizing: border-box;
+    overflow-x: auto;
+  }
+
+  .chart-container {
+    position: relative;
+    width: 100% !important;
+    height: 240px !important; /* Fixed responsive height */
+  }
+
+  /* 5. Modals to Native-like Sheets/Views */
+  .modal-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    position: fixed;
+    bottom: -100%;
+    left: 0;
+    right: 0;
+    border-radius: 16px 16px 0 0 !important;
+    max-height: 90vh !important;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-card) !important;
+    transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  .modal-overlay.active .modal-container {
+    bottom: 0 !important;
+  }
+
+  .modal-body {
+    overflow-y: auto !important;
+    max-height: calc(90vh - 120px) !important;
+    padding: 16px !important;
+  }
+
+  /* 6. Form Adjustments for Touch Screens */
+  .form-grid {
+    grid-template-columns: 1fr !important; /* Force vertical stacking on forms */
+    gap: 12px !important;
+  }
+
+  input, select, textarea {
+    font-size: 16px !important; /* Prevents iOS/Android auto-zoom on focus */
+    padding: 10px 12px !important;
+    height: auto !important;
+  }
+
+  /* 7. General Content Adaptations */
+  .content-body {
+    padding: 12px !important;
+  }
+
+  .section-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    padding: 8px 12px !important;
+  }
+
+  .section-actions {
+    width: 100% !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .section-actions button, .section-actions a {
+    flex: 1 !important;
+    justify-content: center !important;
+  }
+
+  /* 8. Table Adaptations: Horizontal Scroll for Wide Tables */
+  .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    border-radius: 8px !important;
+    border: 1px solid var(--border-color);
+  }
+
+  .table-responsive table {
+    min-width: 600px !important; /* Ensure table headers don't collapse */
+  }
+
+  th, td {
+    padding: 10px 8px !important;
+    font-size: 0.8rem !important;
+  }
+
+  /* Horizontal scrolling for tab bars */
+  .tab-buttons {
+    display: flex !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding-bottom: 6px !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    gap: 6px !important;
+  }
+
+  .tab-btn {
+    padding: 8px 16px !important;
+    font-size: 0.85rem !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Portal-specific adaptations */
+  .portal-header-banner {
+    padding: 20px 16px !important;
+    text-align: center;
+  }
+
+  .gauge-wrapper {
+    width: 140px !important;
+    height: 140px !important;
+    margin: 0 auto 10px auto !important;
+  }
+
+  /* Card layout lists */
+  .jamaah-card-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .search-filter-wrapper {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  .search-filter-wrapper input, .search-filter-wrapper select {
+    width: 100% !important;
+  }
+}

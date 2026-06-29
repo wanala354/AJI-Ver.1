@@ -483,7 +483,8 @@
     }
 
     function doRegisterNew() {
-      const nama = document.getElementById("reg-new-nama").value.trim();
+      const nama = document.getElementById("reg-jamaah-search").value.trim();
+      const jamaahId = document.getElementById("reg-jamaah-select").value;
       const kelompok = document.getElementById("reg-new-kelompok").value;
       const jk = document.getElementById("reg-new-jk").value;
       const tglLahir = document.getElementById("reg-new-tgl-lahir").value;
@@ -492,11 +493,13 @@
       const username = document.getElementById("reg-new-username").value.trim();
       const pass1 = document.getElementById("reg-new-password").value;
       const pass2 = document.getElementById("reg-new-password2").value;
+
       if (!nama) { showRegMsg("warning", "Nama lengkap wajib diisi."); return; }
       if (!kelompok) { showRegMsg("warning", "Kelompok pengajian wajib dipilih."); return; }
       if (!username) { showRegMsg("warning", "Username tidak boleh kosong."); return; }
       if (pass1.length < 6) { showRegMsg("warning", "Password minimal 6 karakter."); return; }
       if (pass1 !== pass2) { showRegMsg("warning", "Konfirmasi password tidak cocok."); return; }
+
       const btn = document.getElementById("btn-register-new");
       const orig = btn.innerHTML;
       btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...';
@@ -519,22 +522,39 @@
       }
 
       uploadPromise.then(fotoUrl => {
-        google.script.run
-          .withSuccessHandler(function(res) {
-            btn.disabled = false; btn.innerHTML = orig;
-            if (res.success && res.pending) {
-              showRegMsg("success", "Pendaftaran berhasil dikirim! Akun Anda menunggu persetujuan dari admin/operator kelompok " + kelompok + ".");
-              btn.style.display = "none";
-            } else if (res.reason === "username_taken") {
-              showRegMsg("error", 'Username "' + username + '" sudah digunakan.');
-            } else { showRegMsg("error", "Gagal mendaftar. Coba lagi."); }
-          })
-          .withFailureHandler(function(err) { btn.disabled = false; btn.innerHTML = orig; showRegMsg("error", "Error: " + (err.message || err)); })
-          .registerJamaahNewGAS({ namaLengkap: nama, kelompok, jenisKelamin: jk, tanggalLahir: tglLahir, nomorHp: hp, statusPernikahan: pernikahan, statusHubunganKeluarga: "Kepala Keluarga", username: username.toLowerCase(), passwordHash: sha256(pass1), fotoUrl: fotoUrl });
+        if (jamaahId) {
+          // Registrasi linked (jamaah sudah ada) -> pending approval
+          google.script.run
+            .withSuccessHandler(function(res) {
+              btn.disabled = false; btn.innerHTML = orig;
+              if (res.success && res.pending) {
+                showRegMsg("success", "Pendaftaran berhasil dikirim! Akun Anda menunggu persetujuan dari admin/operator kelompok " + kelompok + ".");
+                btn.style.display = "none";
+              } else if (res.reason === "username_taken") {
+                showRegMsg("error", 'Username "' + username + '" sudah digunakan.');
+              } else { showRegMsg("error", "Gagal mendaftar. Coba lagi."); }
+            })
+            .withFailureHandler(function(err) { btn.disabled = false; btn.innerHTML = orig; showRegMsg("error", "Error: " + (err.message || err)); })
+            .registerJamaahLinkedGAS({ username: username.toLowerCase(), passwordHash: sha256(pass1), jamaah_id: jamaahId, namaLengkap: nama, kelompok: kelompok });
+        } else {
+          // Registrasi baru (jamaah baru) -> pending approval
+          google.script.run
+            .withSuccessHandler(function(res) {
+              btn.disabled = false; btn.innerHTML = orig;
+              if (res.success && res.pending) {
+                showRegMsg("success", "Pendaftaran berhasil dikirim! Akun Anda menunggu persetujuan dari admin/operator kelompok " + kelompok + ".");
+                btn.style.display = "none";
+              } else if (res.reason === "username_taken") {
+                showRegMsg("error", 'Username "' + username + '" sudah digunakan.');
+              } else { showRegMsg("error", "Gagal mendaftar. Coba lagi."); }
+            })
+            .withFailureHandler(function(err) { btn.disabled = false; btn.innerHTML = orig; showRegMsg("error", "Error: " + (err.message || err)); })
+            .registerJamaahNewGAS({ namaLengkap: nama, kelompok, jenisKelamin: jk, tanggalLahir: tglLahir, nomorHp: hp, statusPernikahan: pernikahan, statusHubunganKeluarga: "Kepala Keluarga", username: username.toLowerCase(), passwordHash: sha256(pass1), fotoUrl: fotoUrl });
+        }
       }).catch(err => {
         btn.disabled = false;
         btn.innerHTML = orig;
-        showRegMsg("error", "Gagal mengunggah foto profil: " + (err.message || err));
+        showRegMsg("error", "Gagal mendaftar: " + (err.message || err));
       });
     }
 
@@ -988,7 +1008,11 @@
       // Registrasi: search dropdown jamaah
       const regSearch = document.getElementById("reg-jamaah-search");
       if (regSearch) {
-        regSearch.addEventListener("input", () => populateJamaahSearchDropdown(regSearch.value));
+        regSearch.addEventListener("input", () => {
+          const sel = document.getElementById("reg-jamaah-select");
+          if (sel) sel.value = "";
+          populateJamaahSearchDropdown(regSearch.value);
+        });
         regSearch.addEventListener("focus", () => populateJamaahSearchDropdown(regSearch.value));
       }
 
@@ -1005,19 +1029,15 @@
       if (regSelect) {
         regSelect.addEventListener("change", () => {
           const selectedId = regSelect.value;
-          const infoArea = document.getElementById("reg-selected-info");
-          const credArea = document.getElementById("reg-credentials-area");
           if (selectedId) {
             const jamaah = localJamaahList.find(j => j.id === selectedId);
             if (jamaah) {
-              document.getElementById("reg-selected-name").textContent = jamaah.namaLengkap;
-              document.getElementById("reg-selected-kelompok").textContent = "Kelompok: " + jamaah.kelompokPengajian;
-              infoArea.style.display = "block";
-              credArea.style.display = "block";
+              if (document.getElementById("reg-new-kelompok")) document.getElementById("reg-new-kelompok").value = jamaah.kelompokPengajian || "";
+              if (document.getElementById("reg-new-jk")) document.getElementById("reg-new-jk").value = jamaah.jenisKelamin || "";
+              if (document.getElementById("reg-new-tgl-lahir")) document.getElementById("reg-new-tgl-lahir").value = jamaah.tanggalLahir || "";
+              if (document.getElementById("reg-new-hp")) document.getElementById("reg-new-hp").value = jamaah.nomorHp || "";
+              if (document.getElementById("reg-new-pernikahan")) document.getElementById("reg-new-pernikahan").value = jamaah.statusPernikahan || "";
             }
-          } else {
-            infoArea.style.display = "none";
-            credArea.style.display = "none";
           }
         });
       }
@@ -1065,28 +1085,7 @@
           }
         });
       }
-      const btnNotInList = document.getElementById("btn-not-in-list");
-      if (btnNotInList) {
-        btnNotInList.addEventListener("click", (e) => {
-          e.preventDefault();
-          document.getElementById("register-step1").style.display = "none";
-          document.getElementById("register-step2").style.display = "block";
-        });
-      }
-      const btnBackStep1 = document.getElementById("btn-back-to-step1");
-      if (btnBackStep1) {
-        btnBackStep1.addEventListener("click", (e) => {
-          e.preventDefault();
-          document.getElementById("register-step2").style.display = "none";
-          document.getElementById("register-step1").style.display = "block";
-        });
-      }
 
-      // Registrasi linked (dari dropdown)
-      const btnRegLinked = document.getElementById("btn-register-linked");
-      if (btnRegLinked) {
-        btnRegLinked.addEventListener("click", () => doRegisterLinked());
-      }
       // Registrasi baru (form lengkap)
       const btnRegNew = document.getElementById("btn-register-new");
       if (btnRegNew) {

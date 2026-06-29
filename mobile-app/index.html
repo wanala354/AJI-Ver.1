@@ -1,0 +1,2632 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AJI V.1 - Aplikasi Jatiwarna Info</title>
+
+  <!-- Global Error Logger (Membantu Debugging) -->
+  <script>
+    window.addEventListener('error', function (e) {
+      console.error("GLOBAL ERROR DETECTED:", e);
+      alert('RUNTIME ERROR: ' + e.message + '\nFile: ' + e.filename + '\nLine: ' + e.lineno);
+    });
+    window.addEventListener('unhandledrejection', function (e) {
+      console.error("UNHANDLED REJECTION DETECTED:", e);
+      alert('PROMISE ERROR: ' + (e.reason ? e.reason.message || JSON.stringify(e.reason) : e));
+    });
+  </script>
+
+  <!-- FontAwesome Icons (Local) -->
+  <link rel="stylesheet" href="./lib/fontawesome/css/all.min.css">
+
+  <!-- Chart.js (Local) -->
+  <script src="./lib/chart.umd.js"></script>
+
+  <!-- Supabase JS Client (Local) -->
+  <script src="./lib/supabase.js"></script>
+
+  <!-- Embedded Stylesheet -->
+  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./css/components.css">
+  <link rel="stylesheet" href="./css/animations.css">
+  <link rel="stylesheet" href="./css/mobile.css">
+</head>
+
+<body class="dark-theme">
+  <div id="toast-container"></div>
+
+  <!-- ----------------------------------------------------
+       LOGIN SCREEN
+       ---------------------------------------------------- -->
+  <div id="login-screen" class="login-wrapper">
+    <div class="login-card">
+      <div class="login-logo">
+        <i class="fa-solid fa-mosque"></i>
+        <h1>AJI V.1</h1>
+      </div>
+      <div class="login-subtitle">Aplikasi Jatiwarna Info</div>
+
+      <div id="login-error-msg"></div>
+
+      <!-- PENDING MESSAGE -->
+      <div id="login-pending-msg"
+        style="display:none; margin-bottom:15px; padding:12px 15px; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:8px; color:#f59e0b; font-size:0.9rem; text-align:center;">
+        <i class="fa-solid fa-hourglass-half"></i> Akun Anda sedang <strong>menunggu persetujuan</strong> dari admin
+        atau operator kelompok Anda.
+      </div>
+
+      <form id="login-form">
+        <div class="form-group-login">
+          <label for="login-username">Username</label>
+          <div class="input-icon-wrapper">
+            <i class="fa-solid fa-user"></i>
+            <input type="text" id="login-username" placeholder="Masukkan username" required autocomplete="username">
+          </div>
+        </div>
+
+        <div class="form-group-login">
+          <label for="login-password">Password</label>
+          <div class="input-icon-wrapper">
+            <i class="fa-solid fa-lock"></i>
+            <input type="password" id="login-password" placeholder="Masukkan password" required
+              autocomplete="current-password">
+          </div>
+        </div>
+
+        <button type="submit" class="login-btn">Masuk ke Dashboard</button>
+      </form>
+
+      <div style="text-align:center;margin-top:20px;padding-top:15px;border-top:1px solid var(--border-color);">
+        <span style="color:var(--text-secondary);font-size:0.9rem;">Belum punya akun? </span>
+        <a href="#" id="link-to-register" style="color:var(--primary);font-weight:600;font-size:0.9rem;text-decoration:none;"><i class="fa-solid fa-user-plus"></i> Registrasi</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ----------------------------------------------------
+       REGISTER SCREEN
+       ---------------------------------------------------- -->
+  <div id="register-screen"
+    style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:radial-gradient(circle at center, #0e291f 0%, #030806 100%); display:none; justify-content:center; align-items:flex-start; z-index:9999; padding:20px; overflow-y:auto;">
+    <div class="login-card" style="max-width:520px; width:100%; margin:auto;">
+      <div class="login-logo" style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 5px;">
+        <i class="fa-solid fa-mosque" style="font-size: 2.5rem; color: #10b981;"></i>
+        <h1 style="font-size: 2.5rem; font-weight: 800; color: #ffffff; margin: 0; letter-spacing: 0.5px;">AJI V.1</h1>
+      </div>
+      <div class="login-subtitle" style="text-align: center; color: var(--text-secondary); margin-bottom: 20px;">Pendaftaran Akun</div>
+
+      <div id="register-msg"></div>
+
+      <!-- Single-Step Form -->
+      <form id="register-form" onsubmit="return false;">
+        <div style="background:rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius:8px; padding:12px; margin-bottom:20px; font-size:0.85rem; color:#f59e0b; display:flex; align-items:flex-start; gap:8px; line-height:1.4;">
+          <i class="fa-solid fa-triangle-exclamation" style="margin-top:3px;"></i>
+          <span>Pendaftaran baru memerlukan <strong>persetujuan admin/operator kelompok</strong> sebelum dapat login.</span>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <!-- Autocomplete Name Search -->
+          <div class="form-group-login" style="grid-column:span 2; position: relative;">
+            <label for="reg-jamaah-search">Nama Lengkap (Sesuai KTP)*</label>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-user"></i>
+              <input type="text" id="reg-jamaah-search" placeholder="Nama lengkap" required autocomplete="off">
+            </div>
+            <div id="reg-jamaah-dropdown" class="custom-autocomplete-dropdown" style="display:none; position:absolute; left:0; right:0; top:100%; background:var(--bg-card); border:1px solid var(--border-color); border-radius:8px; box-shadow:0 8px 16px rgba(0,0,0,0.25); max-height:200px; overflow-y:auto; z-index:100; margin-top:4px;"></div>
+            <select id="reg-jamaah-select" style="display:none;">
+              <option value="">-- Ketik nama untuk mencari --</option>
+            </select>
+          </div>
+
+          <!-- Kelompok Pengajian -->
+          <div class="form-group-login" style="grid-column:span 2;">
+            <label for="reg-new-kelompok">Kelompok Pengajian*</label>
+            <select id="reg-new-kelompok"
+              style="width:100%; padding:12px 15px; background:rgba(0,0,0,0.25); border:1px solid var(--border-color); border-radius:8px; color:var(--text-primary); font-family:inherit; font-size:0.95rem;"
+              required>
+              <option value="">-- Pilih Kelompok --</option>
+            </select>
+          </div>
+
+          <!-- Jenis Kelamin -->
+          <div class="form-group-login">
+            <label for="reg-new-jk">Jenis Kelamin*</label>
+            <select id="reg-new-jk"
+              style="width:100%; padding:12px 15px; background:rgba(0,0,0,0.25); border:1px solid var(--border-color); border-radius:8px; color:var(--text-primary); font-family:inherit; font-size:0.95rem;"
+              required>
+              <option value="">--</option>
+              <option value="Laki-laki">Laki-laki</option>
+              <option value="Perempuan">Perempuan</option>
+            </select>
+          </div>
+
+          <!-- Tanggal Lahir -->
+          <div class="form-group-login">
+            <label for="reg-new-tgl-lahir">Tanggal Lahir</label>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-calendar"></i>
+              <input type="date" id="reg-new-tgl-lahir">
+            </div>
+          </div>
+
+          <!-- Nomor HP -->
+          <div class="form-group-login">
+            <label for="reg-new-hp">Nomor HP</label>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-phone"></i>
+              <input type="tel" id="reg-new-hp" placeholder="08xx...">
+            </div>
+          </div>
+
+          <!-- Status Pernikahan -->
+          <div class="form-group-login">
+            <label for="reg-new-pernikahan">Status Pernikahan</label>
+            <select id="reg-new-pernikahan"
+              style="width:100%; padding:12px 15px; background:rgba(0,0,0,0.25); border:1px solid var(--border-color); border-radius:8px; color:var(--text-primary); font-family:inherit; font-size:0.95rem;">
+              <option value="">--</option>
+              <option value="Belum Menikah">Belum Menikah</option>
+              <option value="Menikah">Menikah</option>
+              <option value="Janda">Janda</option>
+              <option value="Duda">Duda</option>
+            </select>
+          </div>
+
+          <!-- Foto Profil (Opsional) -->
+          <div class="form-group-login" style="grid-column:span 2;">
+            <label for="reg-new-foto">Foto Profil (Opsional)</label>
+            <div style="display: flex; gap: 15px; align-items: center;">
+              <div id="reg-new-foto-preview-wrapper" style="width: 50px; height: 50px; border-radius: 50%; border: 1px dashed var(--border-color); display: flex; align-items: center; justify-content: center; overflow: hidden; background: rgba(255,255,255,0.05); flex-shrink:0;">
+                <i class="fa-solid fa-camera" id="reg-new-foto-placeholder" style="color: var(--text-secondary); font-size: 1.1rem;"></i>
+                <img id="reg-new-foto-preview" style="display: none; width: 100%; height: 100%; object-fit: cover;">
+              </div>
+              <input type="file" id="reg-new-foto" accept="image/*" style="font-size: 0.85rem; color: var(--text-secondary);">
+            </div>
+          </div>
+
+          <!-- Username -->
+          <div class="form-group-login" style="grid-column:span 2;">
+            <label for="reg-new-username">Username*</label>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-at"></i>
+              <input type="text" id="reg-new-username" placeholder="Buat username" required autocomplete="off">
+            </div>
+          </div>
+
+          <!-- Password -->
+          <div class="form-group-login">
+            <label for="reg-new-password">Password*</label>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-lock"></i>
+              <input type="password" id="reg-new-password" placeholder="Min. 6 karakter" required autocomplete="new-password">
+            </div>
+          </div>
+
+          <!-- Konfirmasi Password -->
+          <div class="form-group-login">
+            <label for="reg-new-password2">Konfirmasi Password*</label>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-lock"></i>
+              <input type="password" id="reg-new-password2" placeholder="Ulangi" required autocomplete="new-password">
+            </div>
+          </div>
+        </div>
+
+        <button type="button" id="btn-register-new" class="login-btn" style="margin-top:20px; background:#10b981; border:none; display:flex; align-items:center; justify-content:center; gap:8px;">
+          <i class="fa-solid fa-paper-plane"></i> Kirim Pendaftaran
+        </button>
+      </form>
+
+      <div style="text-align:center; margin-top:20px; padding-top:15px; border-top:1px solid var(--border-color);">
+        <a href="#" id="link-to-login" style="color:var(--text-muted); font-size:0.9rem; text-decoration:none;">
+          <i class="fa-solid fa-arrow-left"></i> Sudah punya akun? Masuk
+        </a>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ----------------------------------------------------
+       MAIN APPLICATION LAYOUT
+       ---------------------------------------------------- -->
+  <div id="app-container" style="display: none;">
+
+    <!-- BOTTOM NAVIGATION FOR JAMAAH -->
+    <nav class="bottom-nav" id="bottom-nav-jamaah" style="display: none;">
+      <button class="bottom-nav-item active" data-target="section-jamaah-dashboard">
+        <i class="fa-solid fa-gauge-high"></i>
+        <span>Dashboard</span>
+      </button>
+      <button class="bottom-nav-item" data-target="section-jamaah-keluarga">
+        <i class="fa-solid fa-house-user"></i>
+        <span>Keluarga</span>
+      </button>
+      <button class="bottom-nav-item" data-target="section-jamaah-jadwal">
+        <i class="fa-solid fa-calendar-check"></i>
+        <span>Jadwal</span>
+      </button>
+      <button class="bottom-nav-item" data-target="section-jamaah-absensi">
+        <i class="fa-solid fa-qrcode"></i>
+        <span>Absensi</span>
+      </button>
+      <button class="bottom-nav-item" id="bottom-nav-jamaah-profile">
+        <i class="fa-solid fa-user-gear"></i>
+        <span>Profil</span>
+      </button>
+    </nav>
+
+    <!-- BOTTOM NAVIGATION FOR ADMIN/OPERATOR -->
+    <nav class="bottom-nav" id="bottom-nav-admin" style="display: none;">
+      <button class="bottom-nav-item active" data-target="section-dashboard">
+        <i class="fa-solid fa-chart-pie"></i>
+        <span>Dashboard</span>
+      </button>
+      <button class="bottom-nav-item" data-target="section-jamaah">
+        <i class="fa-solid fa-user-group"></i>
+        <span>Jamaah</span>
+      </button>
+      <button class="bottom-nav-item" data-target="section-pengajian">
+        <i class="fa-solid fa-book-open-reader"></i>
+        <span>Kegiatan</span>
+      </button>
+      <button class="bottom-nav-item" id="bottom-nav-toggle-drawer">
+        <i class="fa-solid fa-bars"></i>
+        <span>Lainnya</span>
+      </button>
+    </nav>
+
+    <!-- NAVIGATION DRAWER (MOBILE ADMIN) -->
+    <div class="drawer-overlay" id="drawer-overlay"></div>
+    <aside class="mobile-drawer" id="mobile-drawer">
+      <div class="drawer-header">
+        <i class="fa-solid fa-mosque"></i>
+        <span class="drawer-brand">AJI Mobile</span>
+      </div>
+      <div class="drawer-user-info">
+        <div class="drawer-avatar" id="drawer-user-avatar">A</div>
+        <div class="drawer-user-details">
+          <span class="drawer-user-name" id="drawer-user-name">Admin</span>
+          <span class="drawer-user-role" id="drawer-user-role">Administrator</span>
+        </div>
+      </div>
+      <ul class="drawer-menu">
+        <li class="drawer-menu-item" data-target="section-report">
+          <a href="#"><i class="fa-solid fa-file-contract"></i> Laporan & Rekap</a>
+        </li>
+        <li class="drawer-menu-item" data-target="section-pengurus">
+          <a href="#"><i class="fas fa-sitemap"></i> Data Pengurus</a>
+        </li>
+        <li class="drawer-menu-item" data-target="section-master" id="drawer-menu-master" style="display: none;">
+          <a href="#"><i class="fa-solid fa-folder-tree"></i> Data Master</a>
+        </li>
+        <li class="drawer-menu-item" data-target="section-users" id="drawer-menu-users" style="display: none;">
+          <a href="#"><i class="fa-solid fa-users-gear"></i> Manajemen User</a>
+        </li>
+        <li class="drawer-menu-item" data-target="section-database-settings" id="drawer-menu-db">
+          <a href="#"><i class="fa-solid fa-database"></i> Koneksi DB</a>
+        </li>
+        <li class="drawer-menu-item" data-target="section-audit">
+          <a href="#"><i class="fa-solid fa-history"></i> Audit Trail Log</a>
+        </li>
+        <li class="drawer-menu-item" id="drawer-menu-profile">
+          <a href="#"><i class="fa-solid fa-user-gear"></i> Menu Profil</a>
+        </li>
+      </ul>
+      <div class="drawer-footer">
+        <button class="drawer-logout-btn" id="drawer-logout-btn">
+          <i class="fa-solid fa-sign-out-alt"></i> Keluar
+        </button>
+      </div>
+    </aside>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="app-sidebar">
+      <div class="sidebar-header">
+        <i class="fa-solid fa-mosque"></i>
+        <span class="brand-title">AJI V.1</span>
+      </div>
+
+      <div class="sidebar-user-panel">
+        <div class="user-avatar" id="nav-user-avatar">A</div>
+        <div class="user-info">
+          <span class="user-name" id="nav-user-name">Admin</span>
+          <span class="user-role-badge" id="nav-user-role">ADMINISTRATOR</span>
+          <a href="#" class="profile-link" id="nav-profile-link"
+            style="display: block; margin-top: 5px; font-size: 0.8rem; color: var(--primary); text-decoration: none; font-weight: 600; transition: color 0.3s;"><i
+              class="fa-solid fa-user-gear"></i> Menu Profil</a>
+        </div>
+      </div>
+
+      <ul class="sidebar-menu" id="sidebar-menu-admin">
+        <li class="menu-item active" data-target="section-dashboard">
+          <a href="#"><i class="fa-solid fa-chart-pie"></i> Dashboard</a>
+        </li>
+        <li class="menu-item has-submenu" id="menu-jamaah-parent">
+          <a href="#" class="menu-toggle"><i class="fa-solid fa-users"></i> Modul Jamaah <i
+              class="fa-solid fa-chevron-down submenu-arrow"></i></a>
+          <ul class="submenu">
+            <li class="submenu-item" data-target="section-jamaah" id="submenu-jamaah-data">
+              <a href="#"><i class="fa-solid fa-user-group"></i> Data Jamaah</a>
+            </li>
+            <li class="submenu-item" data-target="section-kartu-keluarga" id="submenu-kartu-keluarga">
+              <a href="#"><i class="fa-solid fa-file-invoice"></i> Kartu Keluarga</a>
+            </li>
+          </ul>
+        </li>
+
+        <li class="menu-item" data-target="section-report">
+          <a href="#"><i class="fa-solid fa-file-contract"></i> Laporan & Rekap</a>
+        </li>
+        <li class="menu-item" data-target="section-master" id="menu-master" style="display: none;">
+          <a href="#"><i class="fa-solid fa-folder-tree"></i> Data Master</a>
+        </li>
+        <li class="menu-item" data-target="section-users" id="menu-users" style="display: none;">
+          <a href="#"><i class="fa-solid fa-users-gear"></i> Manajemen User</a>
+        </li>
+        <li class="menu-item" data-target="section-pengurus" id="menu-pengurus">
+          <a href="#"><i class="fas fa-sitemap"></i> Data Pengurus</a>
+        </li>
+        <li class="menu-item" data-target="section-pengajian" id="menu-pengajian">
+          <a href="#"><i class="fa-solid fa-book-open-reader"></i> Manajemen Kegiatan</a>
+        </li>
+        <li class="menu-item" data-target="section-database-settings" id="menu-database-settings">
+          <a href="#"><i class="fa-solid fa-database"></i> Koneksi Database</a>
+        </li>
+
+        <li class="menu-item" data-target="section-audit">
+          <a href="#"><i class="fa-solid fa-history"></i> Audit Trail Log</a>
+        </li>
+      </ul>
+
+      <!-- SIDEBAR MENU JAMAAH (hanya muncul untuk role jamaah) -->
+      <ul class="sidebar-menu" id="sidebar-menu-jamaah" style="display:none;">
+        <li class="menu-item active" data-target="section-jamaah-dashboard">
+          <a href="#"><i class="fa-solid fa-gauge-high"></i> Dashboard Saya</a>
+        </li>
+        <li class="menu-item" data-target="section-jamaah-keluarga">
+          <a href="#"><i class="fa-solid fa-house-user"></i> Keluarga Saya</a>
+        </li>
+        <li class="menu-item" data-target="section-jamaah-jadwal">
+          <a href="#"><i class="fa-solid fa-calendar-check"></i> Jadwal Kegiatan</a>
+        </li>
+      </ul>
+
+      <div class="sidebar-footer">
+        <button id="logout-btn" class="logout-btn">
+          <i class="fa-solid fa-sign-out-alt"></i> Keluar
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN WRAPPER -->
+    <main class="main-wrapper">
+
+      <!-- TOP NAVBAR -->
+      <header class="top-navbar">
+        <button class="nav-toggle-btn" id="sidebar-toggle">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+
+        <div class="nav-title" id="page-nav-title">
+          <i class="fa-solid fa-chart-pie"></i> Dashboard Utama
+        </div>
+
+        <div class="top-navbar-actions">
+          <button class="theme-toggle-btn" id="theme-toggle" title="Ubah Tema">
+            <i class="fa-solid fa-sun" id="theme-icon"></i>
+          </button>
+          <button class="notifications-btn" id="nav-notif-btn" title="Histori Log">
+            <i class="fa-solid fa-bell"></i>
+            <span class="badge-dot" id="nav-notif-dot" style="display: none;"></span>
+          </button>
+        </div>
+      </header>
+
+      <!-- CONTENT BODY -->
+      <div class="content-body">
+
+        <!-- PAGE 1: DASHBOARD -->
+        <section id="section-dashboard" class="page-section active">
+          <!-- KPI Cards Grid -->
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-details">
+                <h3>Total Jamaah</h3>
+                <div class="kpi-value" id="kpi-total-jamaah">0</div>
+              </div>
+              <div class="kpi-icon"><i class="fa-solid fa-users"></i></div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-details">
+                <h3>Total KK</h3>
+                <div class="kpi-value" id="kpi-total-kk">0</div>
+              </div>
+              <div class="kpi-icon"><i class="fa-solid fa-file-invoice"></i></div>
+            </div>
+
+
+
+            <div class="kpi-card caberawit">
+              <div class="kpi-details">
+                <h3>Caberawit (6-12 Th)</h3>
+                <div class="kpi-value" id="kpi-total-caberawit">0</div>
+              </div>
+              <div class="kpi-icon"><i class="fa-solid fa-child"></i></div>
+            </div>
+
+            <div class="kpi-card gus">
+              <div class="kpi-details">
+                <h3>GUS (13-18 Th)</h3>
+                <div class="kpi-value" id="kpi-total-gus">0</div>
+              </div>
+              <div class="kpi-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-details">
+                <h3>GUM (19-29 Th BM)</h3>
+                <div class="kpi-value" id="kpi-total-gum">0</div>
+              </div>
+              <div class="kpi-icon"><i class="fa-solid fa-user-astronaut"></i></div>
+            </div>
+
+            <div class="kpi-card paud">
+              <div class="kpi-details">
+                <h3>Total Anak PAUD</h3>
+                <div class="kpi-value" id="kpi-total-paud">0</div>
+              </div>
+              <div class="kpi-icon"><i class="fa-solid fa-baby"></i></div>
+            </div>
+
+            <div class="kpi-card janda">
+              <div class="kpi-details">
+                <h3>Total Janda</h3>
+                <div class="kpi-value" id="kpi-total-janda">0</div>
+              </div>
+              <div class="kpi-icon"><i class="fa-solid fa-user-tag"></i></div>
+            </div>
+
+            <div class="kpi-card aghnia">
+              <div class="kpi-details">
+                <h3>Total Aghnia</h3>
+                <div class="kpi-value" id="kpi-total-aghnia">0</div>
+              </div>
+              <div class="kpi-icon"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+            </div>
+
+            <div class="kpi-card dhuafa">
+              <div class="kpi-details">
+                <h3>Total Dhuafa</h3>
+                <div class="kpi-value" id="kpi-total-dhuafa">0</div>
+              </div>
+              <div class="kpi-icon"><i class="fa-solid fa-hand-holding-heart"></i></div>
+            </div>
+
+            <div class="kpi-card teks-presensi">
+              <div class="kpi-details">
+                <h3>Kehadiran Teks (Bulan Ini)</h3>
+                <div class="kpi-value" id="kpi-total-kehadiran-teks">0</div>
+              </div>
+              <div class="kpi-icon" style="background: rgba(236, 72, 153, 0.15); color: #ec4899;"><i class="fa-solid fa-book-open"></i></div>
+            </div>
+
+            <div class="kpi-card pengurus-kpi">
+              <div class="kpi-details">
+                <h3>Total Pengurus</h3>
+                <div class="kpi-value" id="kpi-total-pengurus">0</div>
+              </div>
+              <div class="kpi-icon" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6;"><i class="fa-solid fa-user-shield"></i></div>
+            </div>
+          </div>
+
+          <!-- Charts Section -->
+          <div style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+            <label for="dashboard-kelompok-filter" style="font-weight: 600; color: var(--text);">Filter Kelompok
+              Pengajian:</label>
+            <select id="dashboard-kelompok-filter" class="select-filter" style="min-width: 200px;"
+              onchange="renderDashboardCharts()">
+              <option value="">Semua Kelompok</option>
+            </select>
+
+          </div>
+          <div class="chart-grid">
+            <div class="card-panel">
+              <div class="card-panel-header">
+                <span class="card-panel-title"><i class="fa-solid fa-chart-bar"></i> Distribusi Jamaah per
+                  Kelompok</span>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="chart-kelompok"></canvas>
+              </div>
+            </div>
+
+            <div class="card-panel">
+              <div class="card-panel-header">
+                <span class="card-panel-title"><i class="fa-solid fa-chart-pie"></i> Komposisi Status Ekonomi</span>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="chart-ekonomi"></canvas>
+              </div>
+            </div>
+
+            <div class="card-panel">
+              <div class="card-panel-header">
+                <span class="card-panel-title"><i class="fa-solid fa-chart-line"></i> Tingkat Pendidikan</span>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="chart-pendidikan"></canvas>
+              </div>
+            </div>
+
+            <div class="card-panel">
+              <div class="card-panel-header">
+                <span class="card-panel-title"><i class="fa-solid fa-briefcase"></i> Sebaran Pekerjaan Utama</span>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="chart-pekerjaan"></canvas>
+              </div>
+            </div>
+
+            <div class="card-panel">
+              <div class="card-panel-header">
+                <span class="card-panel-title"><i class="fa-solid fa-layer-group"></i> Sebaran Kelompok Peramutan</span>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="chart-peramutan"></canvas>
+              </div>
+            </div>
+
+            <div class="card-panel">
+              <div class="card-panel-header">
+                <span class="card-panel-title"><i class="fa-solid fa-signal"></i> Tingkat Kelancaran Sambung</span>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="chart-sambung"></canvas>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- PAGE 2: MODUL JAMAAH -->
+        <section id="section-jamaah" class="page-section">
+          <div class="card-panel">
+            <div class="card-panel-header">
+              <span class="card-panel-title"><i class="fa-solid fa-users"></i> Data Master Jamaah</span>
+              <button class="btn-primary" id="btn-add-jamaah" style="display: none;">
+                <i class="fa-solid fa-user-plus"></i> Tambah Jamaah Baru
+              </button>
+            </div>
+
+            <div class="table-actions-bar">
+              <div class="search-filter-group">
+                <div class="search-input-wrapper">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                  <input type="text" id="filter-search" placeholder="Cari Nama / ID Jamaah...">
+                </div>
+
+                <select id="filter-kelompok" class="select-filter">
+                  <option value="">Semua Kelompok</option>
+                </select>
+
+                <select id="filter-dapuan" class="select-filter">
+                  <option value="">-- Semua Dapuan --</option>
+                </select>
+                <select id="filter-peramutan" class="select-filter">
+                  <option value="">Semua Kelompok Peramutan</option>
+                  <option value="PAUD">PAUD</option>
+                  <option value="Caberawit">Caberawit</option>
+                  <option value="GUS">GUS</option>
+                  <option value="GUM">GUM</option>
+                  <option value="Dewasa">Dewasa</option>
+                  <option value="Manula">Manula</option>
+                </select>
+
+                <select id="filter-ekonomi" class="select-filter">
+                  <option value="">Semua Status Ekonomi</option>
+                  <option value="Aghnia">Aghnia</option>
+                  <option value="Menengah">Menengah</option>
+                  <option value="Dhuafa">Dhuafa</option>
+                </select>
+
+                <select id="filter-kelancaran" class="select-filter">
+                  <option value="">Semua Kelancaran Sambung</option>
+                  <option value="Lancar">Lancar</option>
+                  <option value="Kurang Lancar">Kurang Lancar</option>
+                  <option value="Perlu Perhatian">Perlu Perhatian</option>
+                </select>
+              </div>
+
+              <button class="btn-secondary" id="btn-reset-filters">
+                <i class="fa-solid fa-filter-circle-xmark"></i> Reset
+              </button>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table-custom" id="table-jamaah">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Nama Lengkap</th>
+                    <th>Kelompok</th>
+                    <th>Gender</th>
+                    <th>Umur</th>
+                    <th>Peramutan</th>
+                    <th>Pendidikan</th>
+                    <th>Status Ekonomi</th>
+                    <th>Sambung</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="table-jamaah-body">
+                </tbody>
+              </table>
+            </div>
+
+            <!-- PAGINATION BAR -->
+            <div class="pagination-container" id="jamaah-pagination"
+              style="display:flex; justify-content:space-between; align-items:center; margin-top:15px; flex-wrap:wrap; gap:10px;">
+              <div style="font-size:0.85rem; color:var(--text-secondary);">
+                Menampilkan <span id="pag-start">0</span> - <span id="pag-end">0</span> dari <span
+                  id="pag-total">0</span> data
+              </div>
+              <div class="pagination-buttons" style="display:flex; gap:5px; align-items:center;">
+                <button class="btn-secondary" id="btn-pag-first" style="padding:5px 10px; font-size:0.8rem;"><i
+                    class="fa-solid fa-angles-left"></i></button>
+                <button class="btn-secondary" id="btn-pag-prev" style="padding:5px 10px; font-size:0.8rem;"><i
+                    class="fa-solid fa-angle-left"></i> Prev</button>
+                <span id="pag-page-num" style="margin:0 10px; font-size:0.85rem; font-weight:600;">Halaman 1 dari
+                  1</span>
+                <button class="btn-secondary" id="btn-pag-next" style="padding:5px 10px; font-size:0.8rem;">Next <i
+                    class="fa-solid fa-angle-right"></i></button>
+                <button class="btn-secondary" id="btn-pag-last" style="padding:5px 10px; font-size:0.8rem;"><i
+                    class="fa-solid fa-angles-right"></i></button>
+              </div>
+            </div>
+
+            <div class="table-footer-info">
+              <div>Menampilkan <span id="jamaah-shown-count">0</span> dari <span id="jamaah-total-count">0</span> Jamaah
+              </div>
+              <div id="table-access-note" class="form-hint">Mode: Read-only</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- PAGE 3: MODUL KARTU KELUARGA -->
+        <section id="section-kartu-keluarga" class="page-section">
+          <div class="kk-explorer">
+            <div class="card-panel kk-sidebar-card">
+              <div class="card-panel-header" style="margin-bottom:15px; padding-bottom:10px;">
+                <span class="card-panel-title"><i class="fa-solid fa-search"></i> Pilih KK</span>
+              </div>
+              <div style="margin-bottom: 15px;">
+                <label for="kk-filter-kelompok" class="form-hint"
+                  style="font-weight:600; display:block; margin-bottom:5px;">Filter Kelompok:</label>
+                <select id="kk-filter-kelompok" class="select-filter" style="width: 100%;">
+                </select>
+              </div>
+              <div class="kk-list" id="kk-sidebar-list">
+              </div>
+            </div>
+
+            <div class="kk-detail-panel">
+              <div class="kk-cert-card" id="kk-details-container">
+                <div style="text-align: center; padding: 40px 0; color: var(--text-secondary);">
+                  <i class="fa-solid fa-folder-open" style="font-size:3rem; margin-bottom:15px; display:block;"></i>
+                  Silakan pilih salah satu Kepala Keluarga di daftar sebelah kiri untuk memuat data Kartu Keluarga.
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- PAGE 4: REPORT & REKAPITULASI (REVISED) -->
+        <section id="section-report" class="page-section">
+          <div class="report-filter-bar">
+            <div style="display:flex; align-items:center; gap: 15px; flex-wrap:wrap;">
+              <span style="font-weight:700;"><i class="fa-solid fa-filter"></i> Rekap Kelompok Pengajian:</span>
+              <select id="report-filter-kelompok" class="select-filter">
+                <option value="">Semua Kelompok (PC Pondok Melati)</option>
+              </select>
+            </div>
+
+            <div style="display:flex; gap:10px;">
+              <button class="btn-secondary" onclick="window.print()">
+                <i class="fa-solid fa-print"></i> Cetak Laporan (PDF)
+              </button>
+              <button class="btn-primary" id="btn-export-report-csv">
+                <i class="fa-solid fa-file-csv"></i> Ekspor CSV
+              </button>
+            </div>
+          </div>
+
+          <div class="report-grid-summary">
+            <div class="card-panel report-summary-card">
+              <div class="card-panel-header" style="margin-bottom:10px; padding-bottom:10px;">
+                <span class="card-panel-title"><i class="fa-solid fa-house-user"></i> Profil Keluarga & Jamaah</span>
+              </div>
+              <div class="report-summary-row">
+                <span class="label">Jumlah Total Jamaah:</span>
+                <span class="val" id="rep-total-jamaah">0</span>
+              </div>
+              <div class="report-summary-row">
+                <span class="label">Jumlah Kepala Keluarga (KK):</span>
+                <span class="val" id="rep-total-kk">0</span>
+              </div>
+              <div class="report-summary-row">
+                <span class="label">Rata-rata Anggota Per KK:</span>
+                <span class="val" id="rep-avg-kk">0.0</span>
+              </div>
+              <div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border-color);">
+                <div class="report-summary-row">
+                  <span class="label"><i class="fa-solid fa-mars" style="color:#3b82f6;"></i> Laki-laki:</span>
+                  <span class="val" id="rep-total-male">0</span>
+                </div>
+                <div class="progress-container">
+                  <div class="progress-bar" id="rep-pb-male" style="width: 0%; background: #3b82f6;"></div>
+                </div>
+                <div class="report-summary-row" style="margin-top:8px;">
+                  <span class="label"><i class="fa-solid fa-venus" style="color:#ec4899;"></i> Perempuan:</span>
+                  <span class="val" id="rep-total-female">0</span>
+                </div>
+                <div class="progress-container">
+                  <div class="progress-bar" id="rep-pb-female" style="width: 0%; background: #ec4899;"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-panel report-summary-card">
+              <div class="card-panel-header" style="margin-bottom:10px; padding-bottom:10px;">
+                <span class="card-panel-title"><i class="fa-solid fa-wallet"></i> Kesejahteraan Ekonomi</span>
+              </div>
+              <div class="report-summary-row">
+                <span class="label">Aghnia (Mampu):</span>
+                <span class="val" id="rep-total-aghnia">0</span>
+              </div>
+              <div class="progress-container">
+                <div class="progress-bar" id="rep-pb-aghnia" style="width: 0%;"></div>
+              </div>
+              <div class="report-summary-row">
+                <span class="label">Dhuafa (Memerlukan Bantuan):</span>
+                <span class="val" id="rep-total-dhuafa">0</span>
+              </div>
+              <div class="progress-container">
+                <div class="progress-bar" id="rep-pb-dhuafa" style="width: 0%; background: var(--warning);"></div>
+              </div>
+              <div class="report-summary-row">
+                <span class="label">Menengah:</span>
+                <span class="val" id="rep-total-menengah">0</span>
+              </div>
+              <div class="progress-container">
+                <div class="progress-bar" id="rep-pb-menengah" style="width: 0%; background: var(--info);"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="chart-grid">
+            <div class="card-panel">
+              <div class="card-panel-header">
+                <span class="card-panel-title"><i class="fa-solid fa-graduation-cap"></i> Rekap Kelompok
+                  Peramutan</span>
+              </div>
+              <div style="display:flex; flex-direction:column; gap: 15px;">
+                <div>
+                  <div class="report-summary-row">
+                    <span class="label">Balita (&lt; 5 Tahun):</span>
+                    <span class="val" id="rep-per-balita">0</span>
+                  </div>
+                  <div class="progress-container">
+                    <div class="progress-bar" id="rep-pb-balita" style="width: 0%;"></div>
+                  </div>
+                  <div style="display:flex; gap:20px; margin-top:4px; font-size:0.78rem; color:var(--text-secondary);">
+                    <span>L: <strong id="rep-per-balita-l-val">0</strong></span>
+                    <div class="progress-container" style="flex:1; height:4px;">
+                      <div class="progress-bar" id="rep-pb-balita-l" style="width: 0%; background:#3b82f6;"></div>
+                    </div>
+                    <span>P: <strong id="rep-per-balita-p-val">0</strong></span>
+                    <div class="progress-container" style="flex:1; height:4px;">
+                      <div class="progress-bar" id="rep-pb-balita-p" style="width: 0%; background:#ec4899;"></div>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <div class="report-summary-row">
+                    <span class="label">PAUD (0 - 5 Tahun):</span>
+                    <span class="val" id="rep-per-paud">0</span>
+                  </div>
+                  <div class="progress-container">
+                    <div class="progress-bar" id="rep-pb-paud" style="width: 0%;"></div>
+                  </div>
+                  <div style="display:flex; gap:20px; margin-top:4px; font-size:0.78rem; color:var(--text-secondary);">
+                    <span>L: <strong id="rep-per-paud-l-val">0</strong></span>
+                    <div class="progress-container" style="flex:1; height:4px;">
+                      <div class="progress-bar" id="rep-pb-paud-l" style="width: 0%; background:#3b82f6;"></div>
+                    </div>
+                    <span>P: <strong id="rep-per-paud-p-val">0</strong></span>
+                    <div class="progress-container" style="flex:1; height:4px;">
+                      <div class="progress-bar" id="rep-pb-paud-p" style="width: 0%; background:#ec4899;"></div>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <div class="report-summary-row">
+                    <span class="label">Caberawit (6 - 12 Tahun):</span>
+                    <span class="val" id="rep-per-caberawit">0</span>
+                  </div>
+                  <div class="progress-container">
+                    <div class="progress-bar" id="rep-pb-caberawit" style="width: 0%;"></div>
+                  </div>
+                  <div style="display:flex; gap:20px; margin-top:4px; font-size:0.78rem; color:var(--text-secondary);">
+                    <span>L: <strong id="rep-per-caberawit-l-val">0</strong></span>
+                    <div class="progress-container" style="flex:1; height:4px;">
+                      <div class="progress-bar" id="rep-pb-caberawit-l" style="width: 0%; background:#3b82f6;"></div>
+                    </div>
+                    <span>P: <strong id="rep-per-caberawit-p-val">0</strong></span>
+                    <div class="progress-container" style="flex:1; height:4px;">
+                      <div class="progress-bar" id="rep-pb-caberawit-p" style="width: 0%; background:#ec4899;"></div>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <div class="report-summary-row">
+                    <span class="label">GUS (13 - 18 Tahun):</span>
+                    <span class="val" id="rep-per-gus">0</span>
+                  </div>
+                  <div class="progress-container">
+                    <div class="progress-bar" id="rep-pb-gus" style="width: 0%;"></div>
+                  </div>
+                  <div style="display:flex; gap:20px; margin-top:4px; font-size:0.78rem; color:var(--text-secondary);">
+                    <span>L: <strong id="rep-per-gus-l-val">0</strong></span>
+                    <div class="progress-container" style="flex:1; height:4px;">
+                      <div class="progress-bar" id="rep-pb-gus-l" style="width: 0%; background:#3b82f6;"></div>
+                    </div>
+                    <span>P: <strong id="rep-per-gus-p-val">0</strong></span>
+                    <div class="progress-container" style="flex:1; height:4px;">
+                      <div class="progress-bar" id="rep-pb-gus-p" style="width: 0%; background:#ec4899;"></div>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <div class="report-summary-row">
+                    <span class="label">GUM (19 - 29 Tahun & Belum Menikah):</span>
+                    <span class="val" id="rep-per-gum">0</span>
+                  </div>
+                  <div class="progress-container">
+                    <div class="progress-bar" id="rep-pb-gum" style="width: 0%;"></div>
+                  </div>
+                  <div style="display:flex; gap:20px; margin-top:4px; font-size:0.78rem; color:var(--text-secondary);">
+                    <span>L: <strong id="rep-per-gum-l-val">0</strong></span>
+                    <div class="progress-container" style="flex:1; height:4px;">
+                      <div class="progress-bar" id="rep-pb-gum-l" style="width: 0%; background:#3b82f6;"></div>
+                    </div>
+                    <span>P: <strong id="rep-per-gum-p-val">0</strong></span>
+                    <div class="progress-container" style="flex:1; height:4px;">
+                      <div class="progress-bar" id="rep-pb-gum-p" style="width: 0%; background:#ec4899;"></div>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <div class="report-summary-row">
+                    <span class="label">Dewasa (30 - 59 Tahun / Married):</span>
+                    <span class="val" id="rep-per-dewasa">0</span>
+                  </div>
+                  <div class="progress-container">
+                    <div class="progress-bar" id="rep-pb-dewasa" style="width: 0%;"></div>
+                  </div>
+                  <div style="display:flex; gap:20px; margin-top:4px; font-size:0.78rem; color:var(--text-secondary);">
+                    <span>L: <strong id="rep-per-dewasa-l-val">0</strong></span>
+                    <div class="progress-container" style="flex:1; height:4px;">
+                      <div class="progress-bar" id="rep-pb-dewasa-l" style="width: 0%; background:#3b82f6;"></div>
+                    </div>
+                    <span>P: <strong id="rep-per-dewasa-p-val">0</strong></span>
+                    <div class="progress-container" style="flex:1; height:4px;">
+                      <div class="progress-bar" id="rep-pb-dewasa-p" style="width: 0%; background:#ec4899;"></div>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <div class="report-summary-row">
+                    <span class="label">Manula (>= 60 Tahun):</span>
+                    <span class="val" id="rep-per-manula">0</span>
+                  </div>
+                  <div class="progress-container">
+                    <div class="progress-bar" id="rep-pb-manula" style="width: 0%;"></div>
+                  </div>
+                  <div style="display:flex; gap:20px; margin-top:4px; font-size:0.78rem; color:var(--text-secondary);">
+                    <span>L: <strong id="rep-per-manula-l-val">0</strong></span>
+                    <div class="progress-container" style="flex:1; height:4px;">
+                      <div class="progress-bar" id="rep-pb-manula-l" style="width: 0%; background:#3b82f6;"></div>
+                    </div>
+                    <span>P: <strong id="rep-per-manula-p-val">0</strong></span>
+                    <div class="progress-container" style="flex:1; height:4px;">
+                      <div class="progress-bar" id="rep-pb-manula-p" style="width: 0%; background:#ec4899;"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-panel">
+              <div class="card-panel-header">
+                <span class="card-panel-title"><i class="fa-solid fa-briefcase"></i> Rekap Dapuan & Pengurus</span>
+              </div>
+              <div class="table-responsive">
+                <table class="table-custom" style="font-size:0.85rem;">
+                  <thead>
+                    <tr>
+                      <th>Dapuan / Tugas</th>
+                      <th>Jumlah Pengurus</th>
+                      <th>Rasio Persentase</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rep-table-dapuan-body">
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- PAGE 5: DATABASE SUPABASE SETTINGS -->
+        <section id="section-database-settings" class="page-section">
+          <div class="card-panel">
+            <div class="card-panel-header" style="margin-bottom:15px; padding-bottom:5px;">
+              <span class="card-panel-title"><i class="fa-solid fa-database"></i> Pengaturan Database Supabase</span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+              <div class="card"
+                style="padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px;">
+                <h3 style="margin-top:0; margin-bottom:15px; font-size:1.1rem; color:var(--primary);"><i
+                    class="fa-solid fa-circle-nodes"></i> Koneksi Aktif</h3>
+                <div
+                  style="margin: 15px 0; padding: 12px; border-radius: 6px; display: flex; align-items: center; gap: 10px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2);"
+                  id="db-status-box">
+                  <i class="fa-solid fa-circle-exclamation" id="db-status-icon"
+                    style="color: #ef4444; font-size: 1.5rem;"></i>
+                  <div>
+                    <strong id="db-status-title">Belum Terhubung</strong>
+                    <p id="db-status-desc" style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">
+                      Menggunakan Demo Offline (Mock Storage).</p>
+                  </div>
+                </div>
+
+                <form id="db-settings-form">
+                  <div class="form-group" style="margin-bottom: 12px;">
+                    <label for="settings-url" style="display:block; margin-bottom:5px; font-size:0.85rem;">Supabase
+                      Project URL</label>
+                    <input type="url" id="settings-url" class="form-control"
+                      style="width:100%; padding:8px; box-sizing:border-box; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:#fff;"
+                      required>
+                  </div>
+                  <div class="form-group" style="margin-bottom: 12px;">
+                    <label for="settings-key" style="display:block; margin-bottom:5px; font-size:0.85rem;">Supabase API
+                      Anon Key</label>
+                    <input type="password" id="settings-key" class="form-control"
+                      style="width:100%; padding:8px; box-sizing:border-box; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:#fff;"
+                      required>
+                  </div>
+                  <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button type="submit" class="btn-primary" style="padding: 8px 16px;"><i
+                        class="fa-solid fa-save"></i> Simpan & Hubungkan</button>
+                    <button type="button" class="btn-secondary" style="padding: 8px 16px;"
+                      onclick="disconnectSupabase()"><i class="fa-solid fa-unlink"></i> Reset</button>
+                  </div>
+                </form>
+              </div>
+
+              <div class="card" id="importer-card"
+                style="padding: 20px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px;">
+                <h3 style="margin-top:0; margin-bottom:15px; font-size:1.1rem; color:var(--primary);"><i
+                    class="fa-solid fa-file-import"></i> Migrasi Data dari Google Sheets</h3>
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 15px; line-height: 1.4;">
+                  Gunakan alat ini untuk menyalin data dari Google Sheets ke database Supabase Anda. Anda dapat
+                  mengimpor data jamaah, data user, audit log, dan opsi master dalam satu klik.
+                </p>
+
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                  <div id="importer-gas-detect"
+                    style="padding: 10px; border-radius: 6px; font-size: 0.85rem; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2);">
+                    <i class="fa-solid fa-info-circle"></i> Terdeteksi di lingkungan Apps Script. Anda dapat langsung
+                    memicu pengambilan data spreadsheet.
+                  </div>
+                  <div id="importer-manual-url" style="display: none;">
+                    <div class="form-group">
+                      <label for="importer-gas-url" style="display:block; margin-bottom:5px; font-size:0.85rem;">GAS Web
+                        App URL (untuk ambil data)</label>
+                      <input type="url" id="importer-gas-url" class="form-control"
+                        style="width:100%; padding:8px; box-sizing:border-box; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:#fff;"
+                        placeholder="https://script.google.com/macros/s/.../exec">
+                    </div>
+                  </div>
+                  <button type="button" class="btn-primary" id="btn-run-import"
+                    style="width: fit-content; background: #f59e0b; padding: 8px 16px; border: none; cursor: pointer;"><i
+                      class="fa-solid fa-file-import"></i> Jalankan Impor Data</button>
+                  <div id="import-log"
+                    style="display: none; padding: 12px; background: #0f172a; color: #38bdf8; font-family: monospace; font-size: 0.8rem; border-radius: 6px; max-height: 200px; overflow-y: auto; white-space: pre-wrap;">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- PAGE 6: AUDIT TRAIL LOG -->
+        <section id="section-audit" class="page-section">
+          <div class="card-panel">
+            <div class="card-panel-header">
+              <span class="card-panel-title"><i class="fa-solid fa-history"></i> Riwayat Aktivitas Pengguna (Audit
+                Trail)</span>
+            </div>
+            <div class="audit-list" id="audit-logs-container">
+            </div>
+          </div>
+        </section>
+
+
+        <!-- PAGE 7: DATA MASTER (CRUD) -->
+        <section id="section-master" class="page-section">
+          <div class="card-panel">
+            <div class="card-panel-header" style="margin-bottom:15px; padding-bottom:10px;">
+              <span class="card-panel-title"><i class="fa-solid fa-folder-tree"></i> Pengaturan Data Master</span>
+            </div>
+            <div class="master-container">
+              <div class="master-tabs" id="master-tabs-list">
+                <button class="master-tab-btn active" data-tab="Kelompok">Kelompok Kegiatan</button>
+                <button class="master-tab-btn" data-tab="Tingkat Pendidikan">Tingkat Pendidikan</button>
+                <button class="master-tab-btn" data-tab="Dapuan">Dapuan (Jabatan)</button>
+                <button class="master-tab-btn" data-tab="Pekerjaan">Pekerjaan Utama</button>
+                <button class="master-tab-btn" data-tab="Status Hubungan Keluarga">Hubungan Keluarga</button>
+                <button class="master-tab-btn" data-tab="Materi Kegiatan">Materi Kegiatan</button>
+                <button class="master-tab-btn" data-tab="Pengajar">Daftar Pengajar</button>
+                <button class="master-tab-btn" data-tab="Jenis Kegiatan">Jenis Kegiatan</button>
+                <button class="master-tab-btn" data-tab="Peserta Kegiatan">Peserta Kegiatan</button>
+                <button class="master-tab-btn" data-tab="Grup Kustom">Grup Kustom</button>
+                <button class="master-tab-btn" data-tab="Tempat Kegiatan">Tempat Kegiatan</button>
+              </div>
+              <div class="master-tab-content">
+                <div
+                  style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+                  <h4 id="master-tab-title" style="color:var(--primary); font-weight:600;">Kelompok Kegiatan</h4>
+                  <button class="btn-primary" id="btn-add-master" style="padding:8px 15px; font-size:0.85rem;"><i
+                      class="fa-solid fa-plus"></i> Tambah Opsi</button>
+                </div>
+                <div class="table-responsive">
+                  <table class="table-custom" id="table-master">
+                    <thead>
+                      <tr>
+                        <th>Nama Opsi</th>
+                        <th style="width: 150px; text-align:center;">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody id="table-master-body">
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- PAGE 8: MANAJEMEN USER (CRUD) -->
+
+        <section id="section-pengurus" class="page-section">
+          <div class="card-panel">
+            <div class="card-panel-header" style="margin-bottom:15px;">
+              <span class="card-panel-title"><i class="fa-solid fa-sitemap"></i> Manajemen Data Pengurus</span>
+              <button class="btn-primary" onclick="showAddPengurusModal()"
+                style="padding:8px 15px; font-size:0.85rem;"><i class="fa-solid fa-plus"></i> Tambah Pengurus</button>
+            </div>
+
+            <div class="table-actions-bar">
+              <div class="search-filter-group">
+                <select id="filter-tingkat-pengurus" class="select-filter" onchange="renderPengurusTable()">
+                  <option value="">Semua Tingkat</option>
+                  <option value="Desa">Desa</option>
+                  <option value="Kelompok">Kelompok</option>
+                  <option value="Organisasi">Organisasi</option>
+                  <option value="Yayasan">Yayasan</option>
+                </select>
+                <select id="filter-kelompok-pengurus" class="select-filter" onchange="renderPengurusTable()">
+                  <option value="">Semua Kelompok Kegiatan</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table-custom" id="pengurusTable">
+                <thead>
+                  <tr>
+                    <th>No</th>
+                    <th>Nama Jamaah</th>
+                    <th>Kelompok Kegiatan</th>
+                    <th>Tingkat</th>
+                    <th>Dapuan / Jabatan</th>
+                    <th style="text-align: center;">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="pengurusTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card-panel" style="margin-top:20px;">
+            <div class="card-panel-header" style="margin-bottom:15px;">
+              <span class="card-panel-title"><i class="fa-solid fa-chart-bar"></i> Laporan Rekapitulasi Pengurus</span>
+              <button class="btn-secondary" onclick="renderPengurusReport()"
+                style="padding:5px 10px; font-size:0.8rem;"><i class="fa-solid fa-sync"></i> Refresh Laporan</button>
+            </div>
+            <div class="report-summary-cards" style="display: flex; gap: 10px; margin-bottom: 20px;">
+              <div class="report-summary-row"
+                style="flex: 1; flex-direction: column; align-items: center; padding: 15px;">
+                <span class="label" style="color: var(--primary);">Tingkat Desa</span>
+                <span class="val" id="count-desa">0</span>
+              </div>
+              <div class="report-summary-row"
+                style="flex: 1; flex-direction: column; align-items: center; padding: 15px;">
+                <span class="label" style="color: #60a5fa;">Tingkat Kelompok</span>
+                <span class="val" id="count-kelompok">0</span>
+              </div>
+              <div class="report-summary-row"
+                style="flex: 1; flex-direction: column; align-items: center; padding: 15px;">
+                <span class="label" style="color: #f59e0b;">Tingkat Organisasi</span>
+                <span class="val" id="count-organisasi">0</span>
+              </div>
+              <div class="report-summary-row"
+                style="flex: 1; flex-direction: column; align-items: center; padding: 15px;">
+                <span class="label" style="color: #ef4444;">Tingkat Yayasan</span>
+                <span class="val" id="count-yayasan">0</span>
+              </div>
+            </div>
+            <div id="pengurus-report-container"></div>
+          </div>
+        </section>
+
+        <!-- PAGE 5.5: MANAJEMEN KEGIATAN -->
+        <section id="section-pengajian" class="page-section">
+          <div class="card-panel-tabs"
+            style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; flex-wrap: wrap;">
+            <button class="tab-btn active" data-subtab="pengajian-penjadwalan"
+              style="padding: 10px 20px; background: transparent; border: none; border-bottom: 3px solid var(--primary); color: var(--primary); font-weight: 600; cursor: pointer; transition: all 0.3s; font-size: 0.9rem;"><i
+                class="fa-solid fa-calendar-days" style="margin-right: 5px;"></i> Penjadwalan</button>
+            <button class="tab-btn" data-subtab="pengajian-presensi"
+              style="padding: 10px 20px; background: transparent; border: none; border-bottom: 3px solid transparent; color: var(--text-secondary); font-weight: 500; cursor: pointer; transition: all 0.3s; font-size: 0.9rem;"><i
+                class="fa-solid fa-circle-check" style="margin-right: 5px;"></i> Presensi</button>
+            <button class="tab-btn" data-subtab="pengajian-monitoring"
+              style="padding: 10px 20px; background: transparent; border: none; border-bottom: 3px solid transparent; color: var(--text-secondary); font-weight: 500; cursor: pointer; transition: all 0.3s; font-size: 0.9rem;"><i
+                class="fa-solid fa-chart-line" style="margin-right: 5px;"></i> Monitoring Kehadiran</button>
+            <button class="tab-btn" data-subtab="pengajian-kehadiran-teks"
+              style="padding: 10px 20px; background: transparent; border: none; border-bottom: 3px solid transparent; color: var(--text-secondary); font-weight: 500; cursor: pointer; transition: all 0.3s; font-size: 0.9rem;"><i
+                class="fa-solid fa-book-open" style="margin-right: 5px;"></i> Kehadiran Teks</button>
+          </div>
+
+          <!-- SUBTAB 1: PENJADWALAN -->
+          <div id="subtab-pengajian-penjadwalan" class="subtab-content active-tab">
+            <div class="card-panel">
+              <div class="card-panel-header"
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                <span class="card-panel-title"><i class="fa-solid fa-calendar-days"></i> Kalender Jadwal Kegiatan</span>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                  <div class="select-container" style="min-width: 120px;">
+                    <select id="filter-jadwal-tahun" class="select-filter" style="width: 100%;"
+                      onchange="renderCalendar()"></select>
+                  </div>
+                  <div class="select-container" style="min-width: 150px;">
+                    <select id="filter-jadwal-bulan" class="select-filter" style="width: 100%;"
+                      onchange="renderCalendar()">
+                      <option value="0">Januari</option>
+                      <option value="1">Februari</option>
+                      <option value="2">Maret</option>
+                      <option value="3">April</option>
+                      <option value="4">Mei</option>
+                      <option value="5">Juni</option>
+                      <option value="6">Juli</option>
+                      <option value="7">Agustus</option>
+                      <option value="8">September</option>
+                      <option value="9">Oktober</option>
+                      <option value="10">November</option>
+                      <option value="11">Desember</option>
+                    </select>
+                  </div>
+                  <button class="btn-primary" id="btn-add-jadwal" style="padding: 8px 15px; font-size: 0.85rem;"
+                    onclick="openAddJadwalModal()"><i class="fa-solid fa-plus"></i> Tambah Jadwal</button>
+                </div>
+              </div>
+              <div class="calendar-scroll-wrapper"
+                style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%;">
+                <div id="pengajian-calendar-container" class="calendar-container">
+                  <!-- Days header and date cells will be rendered here dynamically -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUBTAB 2: PRESENSI -->
+          <div id="subtab-pengajian-presensi" class="subtab-content" style="display: none;">
+            <div class="card-panel">
+              <div class="card-panel-header" style="margin-bottom: 15px;">
+                <span class="card-panel-title"><i class="fa-solid fa-circle-check"></i> Pencatatan Presensi
+                  Kehadiran</span>
+              </div>
+              <div class="search-filter-group"
+                style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; width: 100%;">
+                <select id="presensi-filter-tingkat" class="select-filter" onchange="loadPresensiSesiDropdown()">
+                  <option value="">Semua Tingkat</option>
+                  <option value="Tingkat Kelompok">Tingkat Kelompok</option>
+                  <option value="Tingkat Desa">Tingkat Desa</option>
+                  <option value="Tingkat Daerah">Tingkat Daerah</option>
+                </select>
+                <select id="presensi-filter-periode" class="select-filter" onchange="loadPresensiSesiDropdown()">
+                  <option value="today">Hari Ini</option>
+                  <option value="">Semua Periode</option>
+                  <option value="1week">1 Minggu Terakhir</option>
+                </select>
+              </div>
+              <div class="form-grid" style="margin-bottom: 20px; display: none;">
+                <div class="form-group" style="grid-column: span 12;">
+                  <label for="presensi-jadwal-select" style="font-weight: 600;">Pilih Sesi Kegiatan Terjadwal*</label>
+                  <select id="presensi-jadwal-select" class="select-filter" style="width: 100%; max-width: 100%;"
+                    onchange="loadPresensiSheet()">
+                    <option value="">-- Pilih Sesi Kegiatan --</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group" style="margin-bottom: 20px;">
+                <label style="font-weight: 600; margin-bottom: 10px; display: block;">Pilih Sesi Kegiatan
+                  Terjadwal*</label>
+                <div id="presensi-sessions-list" class="sessions-card-grid"
+                  style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;">
+                  <!-- Dynamically filled with styled cards -->
+                </div>
+              </div>
+              <div id="presensi-jadwal-info" class="card-panel"
+                style="background: rgba(var(--primary-rgb), 0.05); border: 1px solid var(--border-color); display: none; margin-bottom: 20px; padding: 15px;">
+                <!-- Dynamically filled with selected session details -->
+              </div>
+              <div id="presensi-sheet-area" style="display: none;">
+                <div class="table-actions-bar"
+                  style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                  <div class="search-filter-group" style="display: flex; gap: 10px; flex-wrap: wrap; flex: 1;">
+                    <input type="text" id="presensi-search" class="search-input" placeholder="Cari Nama Jamaah..."
+                      oninput="filterPresensiTable()">
+                    <select id="presensi-gender-filter" class="select-filter" onchange="filterPresensiTable()">
+                      <option value="">Semua Gender</option>
+                      <option value="Laki-laki">Laki-laki (L)</option>
+                      <option value="Perempuan">Perempuan (P)</option>
+                    </select>
+
+                  </div>
+                </div>
+                <div class="table-responsive">
+                  <table class="table-custom" id="presensi-table">
+                    <thead>
+                      <tr>
+                        <th style="width: 50px;">No</th>
+                        <th>Nama Lengkap</th>
+                        <th style="width: 100px;">Gender</th>
+                        <th style="width: 150px;">Peramutan</th>
+                        <th style="width: 380px; text-align: center;">Status Kehadiran</th>
+                        <th>Keterangan</th>
+                      </tr>
+                    </thead>
+                    <tbody id="presensi-table-body">
+                      <!-- Populated dynamically -->
+                    </tbody>
+                  </table>
+                </div>
+                <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+                  <button class="btn-primary" id="btn-save-presensi" onclick="submitPresensiKehadiran()"><i
+                      class="fa-solid fa-save"></i> Simpan Presensi Sesi Ini</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUBTAB 3: MONITORING -->
+          <div id="subtab-pengajian-monitoring" class="subtab-content" style="display: none;">
+            <div class="card-panel-tabs"
+              style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: none; padding-bottom: 0;">
+              <div class="search-filter-group" style="display: flex; gap: 10px; flex-wrap: wrap; width: 100%;">
+                <select id="monitor-tingkat" class="select-filter" onchange="calculateAndRenderMonitoring()">
+                  <option value="">Semua Tingkat</option>
+                  <option value="Tingkat Kelompok">Tingkat Kelompok</option>
+                  <option value="Tingkat Desa">Tingkat Desa</option>
+                </select>
+                <select id="monitor-jenis" class="select-filter" onchange="calculateAndRenderMonitoring()">
+                  <option value="">Semua Jenis Kegiatan</option>
+                </select>
+                <select id="monitor-periode" class="select-filter" onchange="calculateAndRenderMonitoring(false)">
+                  <option value="monthly">Periode Bulanan</option>
+                  <option value="weekly">Periode Mingguan</option>
+                </select>
+                <select id="monitor-sesi" class="select-filter" onchange="calculateAndRenderMonitoring(true)">
+                  <option value="">Semua Sesi</option>
+                </select>
+                <select id="monitor-kelompok" class="select-filter" onchange="filterMonitoringTable()">
+                  <!-- Dynamically populated -->
+                </select>
+              </div>
+            </div>
+
+            <div class="report-summary-cards" style="display: flex; gap: 20px; margin-bottom: 25px; flex-wrap: wrap;">
+              <div class="report-summary-row"
+                style="flex: 1; min-width: 200px; flex-direction: column; align-items: center; padding: 20px;">
+                <span class="label" style="color: var(--primary); font-size: 0.9rem; font-weight: 500;">Total Sesi
+                  Kegiatan</span>
+                <span class="val" id="monitor-total-sesi" style="font-size: 2.2rem; font-weight: 800;">0</span>
+              </div>
+              <div class="report-summary-row"
+                style="flex: 1; min-width: 200px; flex-direction: column; align-items: center; padding: 20px;">
+                <span class="label" style="color: #10b981; font-size: 0.9rem; font-weight: 500;">Rata-rata
+                  Kehadiran</span>
+                <span class="val" id="monitor-avg-kehadiran" style="font-size: 2.2rem; font-weight: 800;">0%</span>
+              </div>
+            </div>
+
+            <!-- Trend Grafik Kehadiran -->
+            <div class="card-panel" style="margin-bottom: 25px;">
+              <div class="card-panel-header"
+                style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <span class="card-panel-title"><i class="fa-solid fa-chart-line"></i> Tren Kehadiran</span>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <label for="monitor-trend-grouping"
+                    style="font-size: 0.85rem; font-weight: 500; color: var(--text-secondary);">Grup
+                    Berdasarkan:</label>
+                  <select id="monitor-trend-grouping" class="select-filter"
+                    style="padding: 4px 8px; font-size: 0.8rem; min-width: 100px;"
+                    onchange="updateAttendanceTrendChart()">
+                    <option value="day">Hari</option>
+                    <option value="week" selected>Minggu</option>
+                    <option value="month">Bulan</option>
+                  </select>
+                </div>
+              </div>
+              <div style="position: relative; height: 300px; width: 100%;">
+                <canvas id="attendance-trend-chart"></canvas>
+              </div>
+            </div>
+
+            <div class="report-detailed-grid"
+              style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 25px;">
+              <div class="card-panel">
+                <div class="card-panel-header" style="margin-bottom: 15px;">
+                  <span class="card-panel-title"><i class="fa-solid fa-chart-pie"></i> Komposisi Status Kehadiran</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                  <div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.85rem;">
+                      <span>Hadir Fisik:</span>
+                      <strong id="monitor-stat-fisik-val">0 (0%)</strong>
+                    </div>
+                    <div class="progress-container" style="height: 6px; background: rgba(16, 185, 129, 0.1);">
+                      <div class="progress-bar" id="monitor-pb-fisik" style="width: 0%; background: #10b981;"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.85rem;">
+                      <span>Online:</span>
+                      <strong id="monitor-stat-online-val">0 (0%)</strong>
+                    </div>
+                    <div class="progress-container" style="height: 6px; background: rgba(59, 130, 246, 0.1);">
+                      <div class="progress-bar" id="monitor-pb-online" style="width: 0%; background: #3b82f6;"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.85rem;">
+                      <span>Izin:</span>
+                      <strong id="monitor-stat-izin-val">0 (0%)</strong>
+                    </div>
+                    <div class="progress-container" style="height: 6px; background: rgba(245, 158, 11, 0.1);">
+                      <div class="progress-bar" id="monitor-pb-izin" style="width: 0%; background: #f59e0b;"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.85rem;">
+                      <span>Alpha (Tidak Hadir):</span>
+                      <strong id="monitor-stat-alpha-val">0 (0%)</strong>
+                    </div>
+                    <div class="progress-container" style="height: 6px; background: rgba(239, 68, 68, 0.1);">
+                      <div class="progress-bar" id="monitor-pb-alpha" style="width: 0%; background: #ef4444;"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card-panel">
+                <div class="card-panel-header" style="margin-bottom: 15px;">
+                  <span class="card-panel-title"><i class="fa-solid fa-venus-mars"></i> Keaktifan Kehadiran per
+                    Gender</span>
+                </div>
+                <div
+                  style="display: flex; flex-direction: column; gap: 20px; justify-content: center; height: calc(100% - 50px);">
+                  <div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem;">
+                      <span style="font-weight: 500; display: flex; align-items: center; gap: 5px;"><i
+                          class="fa-solid fa-mars" style="color: #3b82f6;"></i> Laki-laki (L)</span>
+                      <strong id="monitor-gender-l-val">0 (0%)</strong>
+                    </div>
+                    <div class="progress-container"
+                      style="height: 12px; border-radius: 6px; background: rgba(59, 130, 246, 0.1);">
+                      <div class="progress-bar" id="monitor-pb-gender-l"
+                        style="width: 0%; background: #3b82f6; border-radius: 6px;"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem;">
+                      <span style="font-weight: 500; display: flex; align-items: center; gap: 5px;"><i
+                          class="fa-solid fa-venus" style="color: #ec4899;"></i> Perempuan (P)</span>
+                      <strong id="monitor-gender-p-val">0 (0%)</strong>
+                    </div>
+                    <div class="progress-container"
+                      style="height: 12px; border-radius: 6px; background: rgba(236, 72, 153, 0.1);">
+                      <div class="progress-bar" id="monitor-pb-gender-p"
+                        style="width: 0%; background: #ec4899; border-radius: 6px;"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-panel">
+              <div class="card-panel-header"
+                style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <span class="card-panel-title"><i class="fa-solid fa-address-book"></i> Detail Persentase Keaktifan per
+                  Jamaah</span>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                  <select id="monitor-filter-peramutan" class="select-filter"
+                    style="padding: 4px 8px; font-size: 0.8rem; min-width: 130px;" onchange="filterMonitoringTable()">
+                    <option value="">Semua Peramutan</option>
+                    <option value="Balita">Balita</option>
+                    <option value="PAUD">PAUD</option>
+                    <option value="Caberawit">Caberawit</option>
+                    <option value="GUS">GUS</option>
+                    <option value="GUM">GUM</option>
+                    <option value="Dewasa">Dewasa</option>
+                    <option value="Manula">Manula</option>
+                  </select>
+                  <select id="monitor-filter-gender" class="select-filter"
+                    style="padding: 4px 8px; font-size: 0.8rem; min-width: 130px;" onchange="filterMonitoringTable()">
+                    <option value="">Semua Gender</option>
+                    <option value="Laki-laki">Laki-laki (L)</option>
+                    <option value="Perempuan">Perempuan (P)</option>
+                  </select>
+                  <input type="text" id="monitor-search" class="search-input" placeholder="Cari Nama Jamaah..."
+                    style="max-width: 250px;" oninput="filterMonitoringTable()">
+                </div>
+              </div>
+              <div class="table-responsive">
+                <table class="table-custom" id="monitor-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 50px;">No</th>
+                      <th>Nama Lengkap</th>
+                      <th style="width: 150px;">Kelompok Peramutan</th>
+                      <th style="width: 100px; text-align: center;">Total Sesi</th>
+                      <th style="width: 100px; text-align: center;">Hadir Fisik</th>
+                      <th style="width: 100px; text-align: center;">Online</th>
+                      <th style="width: 100px; text-align: center;">Izin</th>
+                      <th style="width: 100px; text-align: center;">Alpha</th>
+                      <th style="width: 150px; text-align: center;">Persentase Aktif</th>
+                    </tr>
+                  </thead>
+                  <tbody id="monitor-table-body">
+                    <!-- Populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUBTAB 4: KEHADIRAN TEKS -->
+          <div id="subtab-pengajian-kehadiran-teks" class="subtab-content" style="display: none;">
+            <div class="card-panel">
+              <div class="card-panel-header"
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                <span class="card-panel-title"><i class="fa-solid fa-book-open"></i> Rekap Kehadiran Pengajian Teks</span>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                  <div class="select-container" style="min-width: 120px;">
+                    <select id="teks-filter-tahun" class="select-filter" style="width: 100%;" onchange="loadKehadiranTeksTable()"></select>
+                  </div>
+                  <div class="select-container" style="min-width: 150px;">
+                    <select id="teks-filter-bulan" class="select-filter" style="width: 100%;" onchange="loadKehadiranTeksTable()">
+                      <option value="01">Januari</option>
+                      <option value="02">Februari</option>
+                      <option value="03">Maret</option>
+                      <option value="04">April</option>
+                      <option value="05">Mei</option>
+                      <option value="06">Juni</option>
+                      <option value="07">Juli</option>
+                      <option value="08">Agustus</option>
+                      <option value="09">September</option>
+                      <option value="10">Oktober</option>
+                      <option value="11">November</option>
+                      <option value="12">Desember</option>
+                    </select>
+                  </div>
+                  <div class="select-container" style="min-width: 180px;">
+                    <select id="teks-filter-kelompok" class="select-filter" style="width: 100%;" onchange="loadKehadiranTeksTable()">
+                      <option value="">Semua Kelompok</option>
+                    </select>
+                  </div>
+                  <div class="select-container" style="min-width: 150px;">
+                    <select id="teks-filter-status" class="select-filter" style="width: 100%;" onchange="loadKehadiranTeksTable()">
+                      <option value="">Semua Status</option>
+                      <option value="sudah">Sudah Hadir</option>
+                      <option value="belum">Belum Hadir</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table-custom" id="teks-kehadiran-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 50px;">No</th>
+                      <th>Nama Lengkap</th>
+                      <th>Kelompok Pengajian</th>
+                      <th>Peramutan</th>
+                      <th style="width: 150px; text-align: center;">Status Kehadiran</th>
+                      <th>Detail Kehadiran Sesi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="teks-kehadiran-table-body">
+                    <!-- Populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="section-users" class="page-section">
+          <!-- TAB SWITCHER -->
+          <div
+            style="display:flex;gap:10px;margin-bottom:20px;border-bottom:1px solid var(--border-color);padding-bottom:10px;">
+            <button class="tab-btn active" id="users-tab-active" data-usertab="active"
+              style="padding:8px 18px;background:transparent;border:none;border-bottom:3px solid var(--primary);color:var(--primary);font-weight:600;cursor:pointer;font-size:0.9rem;font-family:inherit;"><i
+                class="fa-solid fa-users-gear"></i> Pengguna Aktif</button>
+            <button class="tab-btn" id="users-tab-pending" data-usertab="pending"
+              style="padding:8px 18px;background:transparent;border:none;border-bottom:3px solid transparent;color:var(--text-secondary);font-weight:500;cursor:pointer;font-size:0.9rem;font-family:inherit;"><i
+                class="fa-solid fa-hourglass-half"></i> Pending Approval <span id="pending-count-badge"
+                style="display:none;background:#ef4444;color:#fff;border-radius:99px;padding:1px 7px;font-size:0.75rem;margin-left:4px;">0</span></button>
+          </div>
+
+          <!-- PANEL: PENGGUNA AKTIF -->
+          <div id="users-panel-active">
+            <div class="card-panel">
+              <div class="card-panel-header" style="margin-bottom:15px;">
+                <span class="card-panel-title"><i class="fa-solid fa-users-gear"></i> Manajemen Akun Pengguna</span>
+                <button class="btn-primary" id="btn-add-user" style="padding:8px 15px; font-size:0.85rem;"><i
+                    class="fa-solid fa-user-plus"></i> Tambah User</button>
+              </div>
+              <div class="table-responsive">
+                <table class="table-custom" id="table-users">
+                  <thead>
+                    <tr>
+                      <th>Username</th>
+                      <th>Email</th>
+                      <th>Role</th>
+                      <th>Kelompok Otoritas</th>
+                      <th style="width: 150px; text-align:center;">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="table-users-body">
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- PANEL: PENDING APPROVAL -->
+          <div id="users-panel-pending" style="display:none;">
+            <div class="card-panel">
+              <div class="card-panel-header" style="margin-bottom:15px;">
+                <span class="card-panel-title"><i class="fa-solid fa-user-clock"></i> Pendaftaran Menunggu
+                  Persetujuan</span>
+                <button class="btn-secondary" style="padding:8px 15px;font-size:0.85rem;"
+                  onclick="loadPendingUsers()"><i class="fa-solid fa-sync"></i> Refresh</button>
+              </div>
+              <div id="pending-users-container">
+                <div style="text-align:center;padding:30px;color:var(--text-muted);"><i
+                    class="fa-solid fa-spinner fa-spin"></i> Memuat...</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- PAGE 9: PROFIL SAYA & KEAMANAN -->
+        <section id="section-profile" class="page-section">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+
+            <!-- CARD 1: EDIT PROFILE FORM -->
+            <div class="card-panel">
+              <div class="card-panel-header"
+                style="margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">
+                <span class="card-panel-title"><i class="fa-solid fa-user-gear"></i> Pengaturan Profil</span>
+              </div>
+              <form id="profile-form">
+                <div class="form-grid" style="display:block;">
+                  <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="profile-username">Nama Pengguna (Username)*</label>
+                    <input type="text" id="profile-username" required placeholder="Masukkan nama pengguna">
+                  </div>
+                  <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="profile-email">Alamat Email*</label>
+                    <input type="email" id="profile-email" required placeholder="Masukkan alamat email">
+                  </div>
+                  <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="profile-role">Hak Akses (Role)</label>
+                    <input type="text" id="profile-role" readonly disabled
+                      style="background: rgba(255,255,255,0.02); color: var(--text-muted); border-color: rgba(255,255,255,0.08);">
+                  </div>
+                  <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="profile-kelompok">Kelompok Otoritas</label>
+                    <input type="text" id="profile-kelompok" readonly disabled
+                      style="background: rgba(255,255,255,0.02); color: var(--text-muted); border-color: rgba(255,255,255,0.08);">
+                  </div>
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
+
+                <div class="card-panel-header" style="margin-bottom: 20px; padding-bottom: 10px;">
+                  <span class="card-panel-title" style="font-size: 1rem;"><i class="fa-solid fa-lock"></i> Perbarui
+                    Keamanan (Ubah Password)</span>
+                </div>
+                <div class="form-grid" style="display:block;">
+                  <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="profile-old-password">Password Saat Ini* (Diperlukan untuk menyimpan perubahan)</label>
+                    <input type="password" id="profile-old-password" required placeholder="Masukkan password saat ini">
+                  </div>
+                  <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="profile-new-password">Password Baru (Opsional)</label>
+                    <input type="password" id="profile-new-password"
+                      placeholder="Kosongkan jika tidak ingin mengubah password">
+                  </div>
+                  <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="profile-confirm-password">Konfirmasi Password Baru</label>
+                    <input type="password" id="profile-confirm-password" placeholder="Ulangi password baru">
+                  </div>
+                </div>
+
+                <button type="submit" class="btn-primary" id="profile-save-btn"
+                  style="width: 100%; justify-content: center; padding: 12px; margin-top: 10px;">
+                  <i class="fa-solid fa-save"></i> Simpan Perubahan Profil
+                </button>
+              </form>
+            </div>
+
+            <!-- CARD 2: PROFILE DETAILS SUMMARY CARD -->
+            <div class="card-panel"
+              style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 30px;">
+              <div id="profile-card-avatar"
+                style="width: 100px; height: 100px; border-radius: 50%; background: var(--primary); color: #fff; font-size: 3rem; font-weight: 800; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">
+                A
+              </div>
+              <h2 id="profile-card-username"
+                style="margin: 0; font-size: 1.6rem; font-weight: 700; color: var(--text-primary);">Admin</h2>
+              <p id="profile-card-role"
+                style="margin: 5px 0 15px 0; font-size: 0.9rem; color: var(--primary); font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">
+                SUPER ADMINISTRATOR</p>
+
+              <div
+                style="width: 100%; text-align: left; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; margin-top: 10px;">
+                <div style="margin-bottom: 10px; font-size: 0.85rem;"><span
+                    style="color: var(--text-muted);">Email:</span> <strong id="profile-card-email"
+                    style="display:block; color: var(--text-primary); margin-top: 2px;">admin@jatiwarnainfo.or.id</strong>
+                </div>
+                <div style="font-size: 0.85rem;"><span style="color: var(--text-muted);">Kelompok Otoritas:</span>
+                  <strong id="profile-card-kelompok"
+                    style="display:block; color: var(--text-primary); margin-top: 2px;">Semua</strong>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- PORTAL JAMAAH SECTIONS -->
+
+        <!-- PORTAL: DASHBOARD SAYA -->
+        <section id="section-jamaah-dashboard" class="page-section portal-section">
+          <!-- Filter Bar Dashboard -->
+          <div class="card-panel" style="display:flex; gap:15px; align-items:center; flex-wrap:wrap; margin-bottom:20px; padding:15px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <label for="portal-dashboard-tingkat" style="font-size:0.85rem; color:var(--text-muted); font-weight:600;">Tingkat:</label>
+              <select id="portal-dashboard-tingkat" style="padding:6px 12px; font-size:0.85rem; background:rgba(255,255,255,0.05); border:1px solid var(--border-color); border-radius:6px; color:var(--text-primary); cursor:pointer;">
+                <option value="Semua Tingkat">Semua Tingkat</option>
+                <option value="Tingkat Daerah">Tingkat Daerah</option>
+                <option value="Tingkat Desa">Tingkat Desa</option>
+                <option value="Tingkat Kelompok">Tingkat Kelompok</option>
+              </select>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <label for="portal-dashboard-bulan" style="font-size:0.85rem; color:var(--text-muted); font-weight:600;">Bulan:</label>
+              <select id="portal-dashboard-bulan" style="padding:6px 12px; font-size:0.85rem; background:rgba(255,255,255,0.05); border:1px solid var(--border-color); border-radius:6px; color:var(--text-primary); cursor:pointer;">
+                <!-- Akan diisi secara dinamis -->
+              </select>
+            </div>
+          </div>
+
+          <!-- Info Card Jamaah -->
+          <div class="card-panel"
+            style="background:linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(5,150,105,0.05) 100%); border-color:rgba(16,185,129,0.3); margin-bottom:20px;">
+            <div style="display:flex;align-items:center;gap:15px;">
+              <div id="portal-jamaah-avatar"
+                style="width:52px;height:52px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:800;">
+                A</div>
+              <div>
+                <div id="portal-jamaah-name" style="font-size:1.2rem;font-weight:700;">Memuat...</div>
+                <div id="portal-jamaah-kelompok" style="font-size:0.85rem;color:var(--text-muted);"></div>
+                <div id="portal-jamaah-dapuan" style="font-size:0.85rem;color:var(--primary);margin-top:4px;font-weight:600;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- KPI + Gauge -->
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:20px;margin-bottom:20px;align-items:start;">
+            <!-- Gauge Circle -->
+            <div class="card-panel" style="display:flex;flex-direction:column;align-items:center;padding:20px 25px;">
+              <svg width="120" height="120" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="12" />
+                <circle id="portal-gauge-circle" cx="60" cy="60" r="54" fill="none" stroke="#10b981" stroke-width="12"
+                  stroke-linecap="round" transform="rotate(-90 60 60)" style="transition:stroke-dashoffset 1s ease;" />
+              </svg>
+              <div id="portal-gauge-pct"
+                style="font-size:1.8rem;font-weight:800;color:var(--primary);margin-top:-65px;text-align:center;">0%
+              </div>
+              <div style="margin-top:45px;font-size:0.8rem;color:var(--text-muted);text-align:center;">Tingkat Hadir
+              </div>
+            </div>
+            <!-- KPI Cards -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:12px;">
+              <div class="card-panel" style="padding:15px;text-align:center;">
+                <div style="font-size:1.8rem;font-weight:800;color:#10b981;" id="portal-kpi-hadir">0</div>
+                <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">Hadir</div>
+              </div>
+              <div class="card-panel" style="padding:15px;text-align:center;">
+                <div style="font-size:1.8rem;font-weight:800;color:#f59e0b;" id="portal-kpi-izin">0</div>
+                <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">Izin</div>
+              </div>
+              <div class="card-panel" style="padding:15px;text-align:center;">
+                <div style="font-size:1.8rem;font-weight:800;color:#ef4444;" id="portal-kpi-alpha">0</div>
+                <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">Alpha</div>
+              </div>
+              <div class="card-panel" style="padding:15px;text-align:center;">
+                <div style="font-size:1.8rem;font-weight:800;color:var(--text-primary);" id="portal-kpi-total">0</div>
+                <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">Total Sesi</div>
+              </div>
+              <div class="card-panel" style="padding:15px;text-align:center;">
+                <div style="font-size:1.8rem;font-weight:800;color:var(--primary);" id="portal-kpi-pct">0%</div>
+                <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">Keaktifan</div>
+              </div>
+              <div class="card-panel" style="padding:15px;text-align:center; border-left: 4px solid #ec4899;">
+                <div style="font-size:1.8rem;font-weight:800;color:#ef4444;" id="portal-kpi-status-teks">Belum</div>
+                <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px;">Status Teks Bulan Ini</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabel Rekap Presensi -->
+          <div class="card-panel">
+            <div class="card-panel-header" style="margin-bottom:15px;">
+              <span class="card-panel-title"><i class="fa-solid fa-list-check"></i> Rekap Presensi Saya</span>
+            </div>
+            <div class="table-responsive">
+              <table class="table-custom" style="font-size:0.85rem;">
+                <thead>
+                  <tr>
+                    <th>Tanggal</th>
+                    <th>Tingkat</th>
+                    <th>Jenis Kegiatan</th>
+                    <th>Waktu</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="portal-rekap-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- PORTAL: KELUARGA SAYA -->
+        <section id="section-jamaah-keluarga" class="page-section portal-section">
+          <div class="card-panel">
+            <div class="card-panel-header" style="margin-bottom:15px;">
+              <span class="card-panel-title"><i class="fa-solid fa-house-user"></i> Data Kartu Keluarga Saya</span>
+              <button class="btn-primary" id="portal-btn-add-family"
+                style="padding:8px 15px;font-size:0.85rem;display:none;"><i class="fa-solid fa-user-plus"></i> Tambah
+                Anggota</button>
+            </div>
+            <div class="table-responsive">
+              <table class="table-custom" id="portal-family-table">
+                <thead>
+                  <tr>
+                    <th>Nama</th>
+                    <th>Hub. Keluarga</th>
+                    <th>Usia</th>
+                    <th>Peramutan</th>
+                    <th>Kehadiran</th>
+                    <th style="text-align:center;">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="portal-family-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- PORTAL: JADWAL KEGIATAN -->
+        <section id="section-jamaah-jadwal" class="page-section portal-section">
+          <div class="card-panel" style="margin-bottom:15px;">
+            <div class="card-panel-header" style="flex-direction: column; align-items: flex-start; gap: 10px;">
+              <span class="card-panel-title"><i class="fa-solid fa-calendar-check"></i> Jadwal Kegiatan &amp; Presensi Saya</span>
+              <div class="master-tabs" id="portal-jadwal-tabs" style="width: 100%; border-bottom: 2px solid var(--border-color); margin-top: 10px; padding-bottom: 0;">
+                <button class="master-tab-btn active" data-tab="kalender" onclick="window.switchPortalJadwalTab('kalender')">Tab Kalender Kegiatan</button>
+                <button class="master-tab-btn" data-tab="presensi" onclick="window.switchPortalJadwalTab('presensi')">Tab Presensi Kegiatan</button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Content tab Kalender -->
+          <div id="portal-tab-content-kalender" class="portal-tab-content" style="display: block;">
+            <div class="card-panel">
+              <div class="search-filter-group" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; width: 100%;">
+                <div style="flex: 1; min-width: 120px;">
+                  <label for="portal-filter-jadwal-tahun" style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">Tahun</label>
+                  <select id="portal-filter-jadwal-tahun" class="select-filter" style="width: 100%;" onchange="window.renderJamaahCalendarGrid()"></select>
+                </div>
+                <div style="flex: 1; min-width: 120px;">
+                  <label for="portal-filter-jadwal-bulan" style="display:block; font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;">Bulan</label>
+                  <select id="portal-filter-jadwal-bulan" class="select-filter" style="width: 100%;" onchange="window.renderJamaahCalendarGrid()">
+                    <option value="0">Januari</option>
+                    <option value="1">Februari</option>
+                    <option value="2">Maret</option>
+                    <option value="3">April</option>
+                    <option value="4">Mei</option>
+                    <option value="5">Juni</option>
+                    <option value="6">Juli</option>
+                    <option value="7">Agustus</option>
+                    <option value="8">September</option>
+                    <option value="9">Oktober</option>
+                    <option value="10">November</option>
+                    <option value="11">Desember</option>
+                  </select>
+                </div>
+              </div>
+              <div class="calendar-scroll-wrapper" style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%;">
+                <div id="portal-calendar-container" class="calendar-container" style="min-width: 1050px;">
+                  <!-- Days header and date cells will be rendered here dynamically -->
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Content tab Presensi -->
+          <div id="portal-tab-content-presensi" class="portal-tab-content" style="display: none;">
+            <div id="portal-jadwal-container"></div>
+          </div>
+        </section>
+
+        <!-- NEW PAGE: ABSENSI PORTAL JAMAAH -->
+        <section id="section-jamaah-absensi" class="page-section portal-section">
+          <!-- QR Scanner Card -->
+          <div class="card-panel" style="margin-bottom: 15px;">
+            <div class="card-panel-header">
+              <span class="card-panel-title"><i class="fa-solid fa-qrcode"></i> Scan Barcode / QR Presensi</span>
+            </div>
+            <div style="text-align: center; padding: 20px 10px;">
+              <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 15px;">
+                Arahkan kamera ke QR Code pengajian di lokasi untuk melakukan presensi kehadiran secara otomatis.
+              </p>
+              
+              <!-- Scanning Frame Wrapper -->
+              <div id="scanner-frame-wrapper" style="display: none; position: relative; width: 100%; max-width: 300px; margin: 0 auto 15px auto; aspect-ratio: 1; border-radius: 12px; overflow: hidden; border: 2px solid var(--primary);">
+                <div id="qr-reader" style="width: 100%; height: 100%;"></div>
+                <!-- Laser Scanning Line -->
+                <div class="scanner-laser-line" style="position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: var(--primary); box-shadow: 0 0 8px var(--primary); animation: scannerLaser 2s infinite linear; z-index: 10;"></div>
+              </div>
+
+              <div id="scanner-status" style="margin-bottom: 15px; font-weight: 600; font-size: 0.9rem; color: var(--primary); display: none;"></div>
+
+              <div style="display: flex; gap: 10px; justify-content: center;">
+                <button type="button" id="btn-start-scan" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px;">
+                  <i class="fa-solid fa-camera"></i> Mulai Scan Barcode
+                </button>
+                <button type="button" id="btn-stop-scan" class="btn-secondary" style="display: none; align-items: center; gap: 8px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">
+                  <i class="fa-solid fa-circle-stop"></i> Hentikan Scan
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fallback: Manual Attendance List for Today -->
+          <div class="card-panel">
+            <div class="card-panel-header">
+              <span class="card-panel-title"><i class="fa-solid fa-list-check"></i> Presensi Manual Hari Ini</span>
+            </div>
+            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 12px; padding: 0 5px;">
+              Jika terjadi kendala pada kamera, Anda dapat melakukan presensi mandiri secara manual untuk jadwal pengajian hari ini di bawah ini:
+            </p>
+            <div id="portal-today-absen-list" class="mobile-card-list">
+              <!-- Today's eligible schedules for presence will be loaded here dynamically -->
+              <div style="text-align: center; color: var(--text-muted); font-style: italic; padding: 15px 0;">
+                Tidak ada jadwal pengajian untuk hari ini
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ENTRY MODAL FORM JAMAAH -->
+  <div class="modal-overlay" id="jamaah-modal">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h2 id="modal-title"><i class="fa-solid fa-user-plus"></i> Tambah Data Jamaah</h2>
+        <button class="modal-close-btn" id="modal-close-btn">&times;</button>
+      </div>
+
+      <form id="jamaah-form">
+        <input type="hidden" id="form-id">
+
+        <div class="modal-body">
+          <div class="form-grid">
+
+            <div class="form-group full-width">
+              <label for="form-nama">Nama Lengkap (Sesuai KTP)*</label>
+              <input type="text" id="form-nama" required placeholder="Contoh: Achmad Subarjo">
+            </div>
+
+            <div class="form-group">
+              <label>Kelompok Kegiatan*</label>
+              <div class="radio-group" id="form-kelompok-group">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="form-gender">Jenis Kelamin*</label>
+              <select id="form-gender" required>
+                <option value="Laki-laki">Laki-laki</option>
+                <option value="Perempuan">Perempuan</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="form-tempat-lahir">Tempat Lahir*</label>
+              <input type="text" id="form-tempat-lahir" required placeholder="Kota atau Kabupaten">
+            </div>
+
+            <div class="form-group">
+              <label for="form-tanggal-lahir">Tanggal Lahir*</label>
+              <input type="date" id="form-tanggal-lahir" required>
+            </div>
+
+            <div class="form-group">
+              <label for="form-umur">Umur (Otomatis)</label>
+              <input type="text" id="form-umur" readonly value="0">
+              <span class="form-hint">Dihitung otomatis berdasarkan Tanggal Lahir</span>
+            </div>
+
+            <div class="form-group">
+              <label for="form-pernikahan">Status Pernikahan*</label>
+              <select id="form-pernikahan" required>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="form-peramutan">Kelompok Peramutan (Otomatis)</label>
+              <input type="text" id="form-peramutan" readonly value="-">
+              <span class="form-hint">Kalkulasi: Usia & Status Pernikahan (GUM / Dewasa / Manula dll)</span>
+            </div>
+
+            <div class="form-group">
+              <label for="form-hubungan">Status Hubungan Keluarga*</label>
+              <select id="form-hubungan" required>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="form-kepala-keluarga">Kepala Keluarga (Relasi)*</label>
+              <input type="text" id="form-kepala-keluarga" list="form-kepala-keluarga-list"
+                placeholder="Ketik nama untuk mencari...">
+              <datalist id="form-kepala-keluarga-list"></datalist>
+              <span class="form-hint" id="form-kk-hint">Disaring berdasarkan kelompok kegiatan yang sama</span>
+            </div>
+
+            <div class="form-group">
+              <label for="form-hp">Nomor HP / Kontak Aktif</label>
+              <input type="text" id="form-hp" placeholder="Contoh: 0812xxxxxxxx">
+            </div>
+
+            <div class="form-group">
+              <label for="form-pendidikan">Tingkat Pendidikan*</label>
+              <select id="form-pendidikan" required>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="form-pekerjaan">Pekerjaan Utama*</label>
+              <select id="form-pekerjaan" required>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="form-dapuan">Dapuan (Jabatan)*</label>
+              <select id="form-dapuan" required>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="form-ekonomi">Status Ekonomi*</label>
+              <select id="form-ekonomi" required>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="form-kelancaran">Kelancaran Sambung*</label>
+              <select id="form-kelancaran" required>
+              </select>
+            </div>
+
+            <div class="form-group full-width" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+              <label for="form-foto">Foto Profil (Opsional)</label>
+              <div style="display: flex; gap: 15px; align-items: center;">
+                <div id="form-foto-preview-wrapper" style="width: 70px; height: 70px; border-radius: 50%; border: 1px dashed var(--border-color); display: flex; align-items: center; justify-content: center; overflow: hidden; background: rgba(255,255,255,0.05);">
+                  <i class="fa-solid fa-user" id="form-foto-placeholder" style="color: var(--text-secondary); font-size: 1.5rem;"></i>
+                  <img id="form-foto-preview" style="display: none; width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <input type="file" id="form-foto" accept="image/*" style="font-size: 0.85rem; color: var(--text-secondary);">
+                  <input type="hidden" id="form-foto-url">
+                  <span class="form-hint">Unggah foto profil jamaah. File akan disimpan secara otomatis di Google Drive.</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="modal-cancel-btn">Batal</button>
+          <button type="submit" class="btn-primary" id="modal-save-btn"><i class="fa-solid fa-save"></i> Simpan
+            Data</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MASTER DATA MODAL (v2.1) -->
+  <div class="modal-overlay" id="master-modal">
+    <div class="modal-container" style="max-width: 450px;">
+      <div class="modal-header">
+        <h3 id="master-modal-title"><i class="fa-solid fa-folder-plus"></i> Tambah Opsi Master</h3>
+        <button class="modal-close-btn" id="master-modal-close-btn" type="button">&times;</button>
+      </div>
+      <form id="master-form">
+        <input type="hidden" id="master-form-old-name">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="master-form-input">Nama Opsi*</label>
+            <input type="text" id="master-form-input" required placeholder="Masukkan nama opsi master">
+          </div>
+          <div class="form-group" id="master-form-peserta-container" style="display:none; margin-top: 15px;">
+            <label style="margin-bottom: 8px; display: block; font-weight: 600;">Sasaran Kegiatan (Peserta)*</label>
+            <div id="master-form-peserta-checkboxes-container"
+              style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; max-height: 150px; overflow-y: auto; background: rgba(255,255,255,0.05); border: 1px solid rgba(16,185,129,0.25); border-radius: 6px; padding: 10px;">
+              <!-- Dynamic checkboxes from master_peserta_pengajian -->
+            </div>
+          </div>
+          <div class="form-group" id="master-form-gender-container" style="display:none; margin-top: 15px;">
+            <label for="master-form-gender">Batasan Gender (Jenis Kelamin)</label>
+            <select id="master-form-gender"
+              style="width: 100%; padding: 8px; background: var(--bg-secondary); border: 1px solid rgba(16,185,129,0.25); border-radius: 6px; color: white;">
+              <option value="Semua">Semua (Laki-laki & Perempuan)</option>
+              <option value="Laki-laki">Hanya Laki-laki</option>
+              <option value="Perempuan">Hanya Perempuan</option>
+            </select>
+          </div>
+          <div class="form-group" id="master-form-dapuan-container" style="display:none; margin-top: 15px;">
+            <label for="master-form-dapuan">Batasan Dapuan (Jabatan) - *Opsional</label>
+            <select id="master-form-dapuan" multiple
+              style="width: 100%; height: 100px; background: rgba(255,255,255,0.05); color: var(--text-primary); border: 1px solid rgba(16,185,129,0.25); border-radius: 6px; padding: 8px;">
+              <!-- Populated dynamically -->
+            </select>
+            <small style="color: var(--text-secondary); margin-top: 4px; display: block;">Tahan Ctrl/Cmd untuk memilih
+              beberapa jabatan. Kosongkan jika semua jabatan boleh ikut.</small>
+          </div>
+          <div class="form-group" id="master-form-grup-kustom-container" style="display:none; margin-top: 15px;">
+            <div class="form-group" style="margin-bottom: 12px;">
+              <label for="master-form-grup-kustom-desc">Deskripsi Grup</label>
+              <textarea id="master-form-grup-kustom-desc" placeholder="Deskripsi grup kustom..." rows="2"
+                style="width: 100%; background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(16,185,129,0.25); border-radius: 6px; padding: 8px;"></textarea>
+            </div>
+            <label style="margin-bottom: 8px; display: block; font-weight: 600;">Anggota Grup (Pilih Jamaah)*</label>
+            <div style="margin-bottom: 8px;">
+              <input type="text" id="master-form-grup-kustom-search" placeholder="Cari nama anggota..."
+                style="width: 100%; padding: 6px 10px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 6px; color: white; font-size: 0.82rem;"
+                oninput="filterGrupKustomAnggotaList()">
+            </div>
+            <div id="master-form-grup-kustom-list"
+              style="display: flex; flex-direction: column; gap: 6px; max-height: 150px; overflow-y: auto; background: rgba(255,255,255,0.05); border: 1px solid rgba(16,185,129,0.25); border-radius: 6px; padding: 10px;">
+              <!-- Checkboxes populated dynamically -->
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="master-modal-cancel-btn">Batal</button>
+          <button type="submit" class="btn-primary" id="master-modal-save-btn"><i class="fa-solid fa-save"></i>
+            Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- PENGAJAR MASTER MODAL (v3.0) -->
+  <div class="modal-overlay" id="pengajar-master-modal">
+    <div class="modal-container" style="max-width: 450px;">
+      <div class="modal-header">
+        <h3 id="pengajar-master-modal-title"><i class="fa-solid fa-graduation-cap"></i> Registrasi Pengajar Baru</h3>
+        <button class="modal-close-btn" id="pengajar-master-modal-close-btn" type="button"
+          onclick="closePengajarMasterModal()">&times;</button>
+      </div>
+      <form id="pengajar-master-form" onsubmit="savePengajarMasterForm(event)">
+        <input type="hidden" id="pengajar-master-id" value="">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="pengajar-master-jamaah-select">Pilih Jamaah (Calon Pengajar)*</label>
+            <input type="text" id="pengajar-master-jamaah-select" list="pengajar-master-jamaah-select-list" required
+              placeholder="Ketik nama untuk mencari..."
+              style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; background-color: var(--card-bg); color: var(--text-primary);">
+            <datalist id="pengajar-master-jamaah-select-list"></datalist>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closePengajarMasterModal()">Batal</button>
+          <button type="submit" class="btn-primary" id="pengajar-master-modal-save-btn"><i class="fa-solid fa-save"></i>
+            Simpan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- USER MANAGEMENT MODAL (v2.1) -->
+  <div class="modal-overlay" id="user-modal">
+    <div class="modal-container" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3 id="user-modal-title"><i class="fa-solid fa-user-plus"></i> Tambah Pengguna Baru</h3>
+        <button class="modal-close-btn" id="user-modal-close-btn" type="button">&times;</button>
+      </div>
+      <form id="user-form">
+        <input type="hidden" id="user-form-is-edit">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="user-form-username">Username*</label>
+            <input type="text" id="user-form-username" required placeholder="Masukkan username">
+          </div>
+          <div class="form-group">
+            <label for="user-form-email">Email*</label>
+            <input type="email" id="user-form-email" required placeholder="Masukkan email">
+          </div>
+          <div class="form-group">
+            <label for="user-form-role">Role*</label>
+            <select id="user-form-role" required>
+              <option value="" disabled selected>-- Pilih Role --</option>
+              <option value="Admin">Admin</option>
+              <option value="Operator Kelompok">Operator Kelompok</option>
+              <option value="Operator Desa">Operator Desa</option>
+              <option value="Pengurus Desa">Pengurus Desa</option>
+              <option value="Pengurus Kelompok">Pengurus Kelompok</option>
+            </select>
+          </div>
+          <div class="form-group" id="user-form-kelompok-group" style="display: none;">
+            <label for="user-form-kelompok">Kelompok Otoritas*</label>
+            <select id="user-form-kelompok">
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="user-form-password">Password*</label>
+            <input type="password" id="user-form-password" placeholder="Password minimal 6 karakter">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="user-modal-cancel-btn">Batal</button>
+          <button type="submit" class="btn-primary" id="user-modal-save-btn"><i class="fa-solid fa-save"></i> Simpan
+            User</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="pengurusModal">
+    <div class="modal-container" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3 id="pengurusModalTitle"><i class="fa-solid fa-sitemap"></i> Tambah Pengurus</h3>
+        <button class="modal-close-btn" type="button"
+          onclick="document.getElementById('pengurusModal').classList.remove('active')">&times;</button>
+      </div>
+      <form id="pengurusForm" onsubmit="event.preventDefault(); savePengurus();">
+        <input type="hidden" id="pengurus-id">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="pengurus-jamaah-id">Pilih Jamaah*</label>
+            <input type="text" id="pengurus-jamaah-id" list="pengurus-jamaah-id-list" required
+              placeholder="Ketik nama untuk mencari...">
+            <datalist id="pengurus-jamaah-id-list"></datalist>
+          </div>
+          <div class="form-group">
+            <label for="pengurus-tingkat">Tingkat Pengurus*</label>
+            <select id="pengurus-tingkat" required>
+              <option value="">-- Pilih Tingkat --</option>
+              <option value="Desa">Desa</option>
+              <option value="Kelompok">Kelompok</option>
+              <option value="Organisasi">Organisasi</option>
+              <option value="Yayasan">Yayasan</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="pengurus-dapuan">Dapuan / Jabatan*</label>
+            <select id="pengurus-dapuan" required>
+              <!-- Populated by JS -->
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary"
+            onclick="document.getElementById('pengurusModal').classList.remove('active')">Batal</button>
+          <button type="submit" class="btn-primary" id="pengurus-modal-save-btn"><i class="fa-solid fa-save"></i> Simpan
+            Pengurus</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- JADWAL PENGAJIAN MODAL -->
+  <div class="modal-overlay" id="pengajian-jadwal-modal">
+    <div class="modal-container" style="max-width: 650px;">
+      <div class="modal-header">
+        <h3 id="pengajian-jadwal-modal-title"><i class="fa-solid fa-calendar-plus"></i> Tambah Jadwal Pengajian</h3>
+        <button class="modal-close-btn" type="button" onclick="closeJadwalModal()">&times;</button>
+      </div>
+      <form id="pengajian-jadwal-form" onsubmit="event.preventDefault(); saveJadwalPengajianForm();">
+        <input type="hidden" id="jadwal-form-id">
+        <div class="modal-body" style="max-height: calc(100vh - 220px); overflow-y: auto;">
+          <div class="form-grid">
+            <div class="form-group" style="grid-column: span 6;">
+              <label for="jadwal-form-tingkat">Tingkat Pengajian*</label>
+              <select id="jadwal-form-tingkat" required onchange="onJadwalTingkatChange()">
+                <option value="Tingkat Kelompok">Tingkat Kelompok</option>
+                <option value="Tingkat Desa">Tingkat Desa</option>
+                <option value="Tingkat Daerah">Tingkat Daerah</option>
+              </select>
+            </div>
+            <div class="form-group" style="grid-column: span 6;">
+              <label for="jadwal-form-jenis">Jenis Pengajian*</label>
+              <select id="jadwal-form-jenis" required>
+                <option value="" disabled selected>-- Pilih Jenis Pengajian --</option>
+              </select>
+            </div>
+            <div class="form-group" style="grid-column: span 4;">
+              <label for="jadwal-form-tanggal">Tanggal*</label>
+              <input type="date" id="jadwal-form-tanggal" required>
+            </div>
+            <div class="form-group" style="grid-column: span 4;">
+              <label for="jadwal-form-waktu-mulai">Waktu Mulai*</label>
+              <input type="time" id="jadwal-form-waktu-mulai" value="20:00" required>
+            </div>
+            <div class="form-group" style="grid-column: span 4;">
+              <label for="jadwal-form-waktu-selesai">Waktu Selesai*</label>
+              <input type="time" id="jadwal-form-waktu-selesai" value="21:30" required>
+            </div>
+            <div class="form-group" style="grid-column: span 12;">
+              <label for="jadwal-form-kelompok">Kelompok Pembuat Jadwal*</label>
+              <select id="jadwal-form-kelompok" required onchange="onJadwalKelompokChange()">
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+            <div class="form-group" style="grid-column: span 12;">
+              <label for="jadwal-form-lokasi">Lokasi Pengajian*</label>
+              <input type="text" id="jadwal-form-lokasi" list="lokasi-datalist" placeholder="Pilih atau ketik lokasi baru..." required autocomplete="off">
+              <datalist id="lokasi-datalist"></datalist>
+            </div>
+            <div class="form-group" style="grid-column: span 12; margin-top: 10px;">
+              <label
+                style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; color: var(--primary);">
+                <input type="checkbox" id="jadwal-form-is-spesifik" onchange="toggleJadwalPesertaSpesifik()">
+                <span>Batasi Peserta Spesifik (Undangan)</span>
+              </label>
+            </div>
+            <div class="form-group" id="jadwal-form-peserta-spesifik-container"
+              style="grid-column: span 12; display: none; margin-top: 10px; border: 1px dashed rgba(16,185,129,0.3); border-radius: 8px; padding: 15px; background: rgba(255,255,255,0.02);">
+              <div style="margin-bottom: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                  <label for="jadwal-form-pilih-grup-kustom"
+                    style="font-size: 0.8rem; margin-bottom: 4px; display: block;">Pilih dari Grup Kustom</label>
+                  <select id="jadwal-form-pilih-grup-kustom"
+                    style="width: 100%; padding: 6px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 6px; color: white; font-size: 0.8rem;"
+                    onchange="applyGrupKustomToJadwal()">
+                    <option value="">-- Pilih Grup Kustom --</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size: 0.8rem; margin-bottom: 4px; display: block;">Pencarian Anggota</label>
+                  <input type="text" id="jadwal-form-peserta-search" placeholder="Cari nama jamaah..."
+                    style="width: 100%; padding: 6px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 6px; color: white; font-size: 0.8rem;"
+                    oninput="filterJadwalPesertaList()">
+                </div>
+              </div>
+              <div style="margin-bottom: 10px;">
+                <label style="font-size: 0.8rem; margin-bottom: 4px; display: block; font-weight: 600;">Shortcut Pilih
+                  Cepat (Quick-Select):</label>
+                <div id="jadwal-form-quick-select-buttons" style="display: flex; flex-wrap: wrap; gap: 6px;">
+                  <!-- Will be populated dynamically -->
+                </div>
+              </div>
+              <label style="font-size: 0.8rem; margin-bottom: 4px; display: block; font-weight: 600;">Daftar Undangan
+                Individu:</label>
+              <div id="jadwal-form-peserta-list"
+                style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; max-height: 180px; overflow-y: auto; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px;">
+                <!-- Will be populated dynamically -->
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: 20px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <span style="font-weight: 600; color: var(--primary);"><i class="fa-solid fa-book-open"></i> Rincian
+                Materi & Pengajar</span>
+              <button type="button" class="btn-secondary" id="btn-add-materi-pengajar-row"
+                style="padding: 4px 10px; font-size: 0.75rem;" onclick="addMateriPengajarRow()"><i
+                  class="fa-solid fa-plus"></i> Tambah Row</button>
+            </div>
+            <div id="jadwal-materi-pengajar-container" style="display: flex; flex-direction: column; gap: 10px;">
+              <!-- Dynamic Rows will be inserted here -->
+            </div>
+            <datalist id="pengajar-datalist"></datalist>
+            <datalist id="materi-datalist"></datalist>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeJadwalModal()">Batal</button>
+          <button type="submit" class="btn-primary" id="pengajian-jadwal-modal-save-btn"><i
+              class="fa-solid fa-save"></i> Simpan Jadwal</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- VIEW DETAILS MODAL -->
+  <div class="modal-overlay" id="jamaah-view-modal">
+    <div class="modal-container" style="max-width: 900px; width: 95%;">
+      <div class="modal-header">
+        <h2 id="view-modal-title"><i class="fa-solid fa-address-card"></i> Detail Informasi Jamaah</h2>
+        <button class="modal-close-btn" onclick="closeJamaahViewModal()">&times;</button>
+      </div>
+      <div class="modal-body"
+        style="padding: 20px; overflow-y: auto; max-height: 75vh; display: flex; flex-direction: column; gap: 20px;">
+        <!-- Profile & Family Grid -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex-wrap: wrap;">
+          <!-- Column 1: Profil Pribadi -->
+          <div class="card-panel" style="margin: 0; padding: 15px;">
+            <h3
+              style="margin-top: 0; font-size: 1.1rem; color: var(--primary); border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 15px;">
+              <i class="fa-solid fa-user"></i> Biodata Pribadi
+            </h3>
+            <div style="display: flex; justify-content: center; margin-bottom: 15px;">
+              <div id="view-j-avatar-wrapper" style="width: 90px; height: 90px; border-radius: 50%; border: 3px solid var(--primary); display: flex; align-items: center; justify-content: center; overflow: hidden; background: rgba(255,255,255,0.05); box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+                <i class="fa-solid fa-user" id="view-j-avatar-placeholder" style="color: var(--text-secondary); font-size: 2.5rem;"></i>
+                <img id="view-j-avatar-img" style="display: none; width: 100%; height: 100%; object-fit: cover;">
+              </div>
+            </div>
+            <table class="table-custom" style="font-size: 0.85rem; width: 100%;">
+              <tbody>
+                <tr>
+                  <td style="width: 40%; font-weight: 600; color: var(--text-secondary);">ID Jamaah</td>
+                  <td id="view-j-id">-</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 600; color: var(--text-secondary);">Nama Lengkap</td>
+                  <td id="view-j-nama" style="font-weight: 600;">-</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 600; color: var(--text-secondary);">Kelompok</td>
+                  <td id="view-j-kelompok">-</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 600; color: var(--text-secondary);">Jenis Kelamin</td>
+                  <td id="view-j-gender">-</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 600; color: var(--text-secondary);">Tempat, Tgl Lahir</td>
+                  <td id="view-j-birth">-</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 600; color: var(--text-secondary);">Umur</td>
+                  <td id="view-j-umur">-</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 600; color: var(--text-secondary);">Status Nikah</td>
+                  <td id="view-j-pernikahan">-</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 600; color: var(--text-secondary);">Peramutan</td>
+                  <td id="view-j-peramutan">-</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 600; color: var(--text-secondary);">Pendidikan</td>
+                  <td id="view-j-pendidikan">-</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 600; color: var(--text-secondary);">Pekerjaan</td>
+                  <td id="view-j-pekerjaan">-</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 600; color: var(--text-secondary);">Dapuan</td>
+                  <td id="view-j-dapuan">-</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 600; color: var(--text-secondary);">Status Ekonomi</td>
+                  <td id="view-j-ekonomi">-</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 600; color: var(--text-secondary);">Kelancaran</td>
+                  <td id="view-j-kelancaran">-</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 600; color: var(--text-secondary);">No HP</td>
+                  <td id="view-j-hp">-</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <!-- Column 2: Hubungan & Anggota Keluarga -->
+          <div class="card-panel" style="margin: 0; padding: 15px; display: flex; flex-direction: column;">
+            <h3
+              style="margin-top: 0; font-size: 1.1rem; color: var(--primary); border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 15px;">
+              <i class="fa-solid fa-people-roof"></i> Hubungan & Anggota Keluarga
+            </h3>
+            <div style="font-size: 0.85rem; margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px;">
+              <div><span style="color: var(--text-secondary);">Hub. Keluarga:</span> <strong
+                  id="view-j-hubungan">-</strong></div>
+              <div><span style="color: var(--text-secondary);">Kepala Keluarga:</span> <strong id="view-j-kk">-</strong>
+              </div>
+            </div>
+            <div class="table-responsive" style="flex-grow: 1; max-height: 300px; overflow-y: auto;">
+              <table class="table-custom" style="font-size: 0.8rem; width: 100%;">
+                <thead>
+                  <tr>
+                    <th>Nama Anggota</th>
+                    <th>Hubungan</th>
+                    <th>Umur</th>
+                  </tr>
+                </thead>
+                <tbody id="view-family-members-body">
+                  <!-- Dynamic rendering -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <!-- Section 3: Rekap Presensi -->
+        <div class="card-panel" style="margin: 0; padding: 15px;">
+          <h3
+            style="margin-top: 0; font-size: 1.1rem; color: var(--primary); border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 15px;">
+            <i class="fa-solid fa-chart-line"></i> Rekap Tingkat Kehadiran (Presensi)
+          </h3>
+          <div class="table-responsive">
+            <table class="table-custom" style="font-size: 0.85rem; width: 100%;">
+              <thead>
+                <tr>
+                  <th>Tingkat</th>
+                  <th>Jenis Pengajian</th>
+                  <th>Hadir</th>
+                  <th>Izin</th>
+                  <th>Alpha</th>
+                  <th>Total Sesi</th>
+                  <th>Persentase</th>
+                  <th>Keterangan</th>
+                </tr>
+              </thead>
+              <tbody id="view-presensi-recap-body">
+                <!-- Dynamic rendering -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer"
+        style="padding: 15px 25px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end;">
+        <button class="btn-secondary" onclick="closeJamaahViewModal()">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAMAAH PRESENSI / CHECK-IN MODAL [NEW] -->
+  <div class="modal-overlay" id="jamaah-presensi-modal">
+    <div class="modal-container" style="max-width: 420px;">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-clipboard-user"></i> Form Presensi Kehadiran</h3>
+        <button class="modal-close-btn" type="button" onclick="closeJamaahPresensiModal()">&times;</button>
+      </div>
+      <form id="jamaah-presensi-form" onsubmit="event.preventDefault(); submitJamaahPresensi();">
+        <input type="hidden" id="presensi-form-jadwal-id">
+        <div class="modal-body">
+          <div class="form-group">
+            <label style="font-weight: 600; display: block; margin-bottom: 10px;">Status Kehadiran*</label>
+            <div
+              style="display: flex; flex-direction: column; gap: 8px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px;">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="radio" name="presensi-status" value="Hadir Fisik" checked
+                  onchange="togglePresensiKeterangan()">
+                <span>Hadir Fisik (Di Lokasi)</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="radio" name="presensi-status" value="Online" onchange="togglePresensiKeterangan()">
+                <span>Hadir Online (Virtual)</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="radio" name="presensi-status" value="Izin" onchange="togglePresensiKeterangan()">
+                <span>Izin (Berhalangan)</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-group" id="presensi-keterangan-container" style="display: none; margin-top: 15px;">
+            <label for="presensi-form-keterangan"
+              style="font-weight: 600; display: block; margin-bottom: 6px;">Keterangan / Alasan*</label>
+            <textarea id="presensi-form-keterangan" rows="3"
+              placeholder="Masukkan alasan atau keterangan hadir online / izin..."
+              style="width:100%; border-radius:6px; background:var(--bg-card); border:1px solid var(--border-color); color:var(--text-primary); padding:8px 12px; font-size:0.88rem; outline:none; resize:none;"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeJamaahPresensiModal()">Batal</button>
+          <button type="submit" class="btn-primary"><i class="fa-solid fa-save"></i> Kirim Presensi</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- IMAGE PREVIEW MODAL -->
+  <div class="modal-overlay" id="image-preview-modal" style="z-index: 11000;">
+    <div class="modal-container" style="max-width: 500px; text-align: center;">
+      <div class="modal-header">
+        <h3>Pratinjau Foto Profil</h3>
+        <button class="modal-close-btn" onclick="closeImagePreviewModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 20px;">
+        <img id="large-profile-image" style="max-width: 100%; max-height: 400px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+      </div>
+      <div class="modal-footer" style="justify-content: center; gap: 15px; display: flex;">
+        <a id="download-profile-image" href="#" target="_blank" class="btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 5px; padding: 10px 15px; border-radius: 6px;"><i class="fa-solid fa-download"></i> Unduh Foto</a>
+        <button class="btn-secondary" onclick="closeImagePreviewModal()">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EMBEDDED CODE LOGIC -->
+  <script src="./js/state.js"></script>
+  <script src="./js/api.js"></script>
+  <script src="./js/ui.js"></script>
+  <script src="./js/dashboard.js"></script>
+  <script src="./js/jamaah.js"></script>
+  <script src="./js/master.js"></script>
+  <script src="./js/utils.js"></script>
+  <script src="./js/pengurus.js"></script>
+  <script src="./js/pengajian.js"></script>
+  <script src="./js/jamaah_portal.js"></script>
+  <!-- Local Barcode/QR scan dependencies -->
+  <script src="./lib/html5-qrcode.min.js"></script>
+  <script src="./js/mobile-absen.js"></script>
+  <!-- Capacitor Bridge -->
+  <script src="capacitor.js"></script>
+  <!-- Mobile Handlers -->
+  <script src="./js/mobile-nav.js"></script>
+  <script src="./js/mobile-native.js"></script>
+  <script src="./js/mobile-ux.js"></script>
+</body>
+
+</html>

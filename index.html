@@ -89,159 +89,137 @@
   <div id="register-screen"
     style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:radial-gradient(circle at center, #0e291f 0%, #030806 100%); display:none; justify-content:center; align-items:flex-start; z-index:9999; padding:20px; overflow-y:auto;">
     <div class="login-card" style="max-width:520px; width:100%; margin:auto;">
-      <div class="login-logo">
-        <i class="fa-solid fa-mosque"></i>
-        <h1>AJI V.1</h1>
+      <div class="login-logo" style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 5px;">
+        <i class="fa-solid fa-mosque" style="font-size: 2.5rem; color: #10b981;"></i>
+        <h1 style="font-size: 2.5rem; font-weight: 800; color: #ffffff; margin: 0; letter-spacing: 0.5px;">AJI V.1</h1>
       </div>
-      <div class="login-subtitle">Pendaftaran Akun</div>
+      <div class="login-subtitle" style="text-align: center; color: var(--text-secondary); margin-bottom: 20px;">Pendaftaran Akun</div>
 
       <div id="register-msg"></div>
 
-      <!-- STEP 1: DROPDOWN PILIH JAMAAH -->
-      <div id="register-step1">
-        <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:15px;line-height:1.5;"><i
-            class="fa-solid fa-info-circle" style="color:var(--primary);"></i> Ketikkan Nama Lengkap Anda. Jika
-          nama Anda tidak ada, klik <strong>"Saya tidak ada di daftar"</strong>.</p>
-        <div class="form-group-login" style="position: relative;">
-          <label for="reg-jamaah-select">Cari Nama </label>
-          <div class="input-icon-wrapper">
-            <i class="fa-solid fa-search"></i>
-            <input type="text" id="reg-jamaah-search" placeholder="Ketik nama untuk mencari..." autocomplete="off">
-          </div>
-          <div id="reg-jamaah-dropdown" class="custom-autocomplete-dropdown" style="display:none; position:absolute; left:0; right:0; top:100%; background:var(--bg-card); border:1px solid var(--border-color); border-radius:8px; box-shadow:0 8px 16px rgba(0,0,0,0.25); max-height:220px; overflow-y:auto; z-index:100; margin-top:4px;"></div>
-          <select id="reg-jamaah-select" size="5"
-            style="display:none;width:100%;margin-top:8px;background:rgba(0,0,0,0.25);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);padding:4px;min-height:120px;"
-            aria-label="Pilih jamaah">
-            <option value="">-- Ketik nama untuk mencari --</option>
-          </select>
-        </div>
-        <div id="reg-selected-info"
-          style="display:none;padding:12px;background:rgba(16,185,129,0.1);border:1px solid var(--border-color);border-radius:8px;margin:10px 0;font-size:0.9rem;">
-          <strong id="reg-selected-name" style="color:var(--primary);"></strong><br>
-          <span id="reg-selected-kelompok" style="color:var(--text-secondary);"></span>
+      <!-- Single-Step Form -->
+      <form id="register-form" onsubmit="return false;">
+        <div style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:8px; padding:12px; margin-bottom:20px; font-size:0.85rem; color:#f59e0b; display:flex; align-items:flex-start; gap:8px; line-height:1.4;">
+          <i class="fa-solid fa-triangle-exclamation" style="margin-top:3px;"></i>
+          <span>Pendaftaran baru memerlukan <strong>persetujuan admin/operator kelompok</strong> sebelum dapat login.</span>
         </div>
 
-        <div id="reg-credentials-area" style="display:none;">
-          <div class="form-group-login" style="margin-top:15px;">
-            <label for="reg-username">Username*</label>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <!-- Autocomplete Name Search -->
+          <div class="form-group-login" style="grid-column:span 2; position: relative;">
+            <label for="reg-jamaah-search">Nama Lengkap (Sesuai KTP)*</label>
             <div class="input-icon-wrapper">
-              <i class="fa-solid fa-at"></i>
-              <input type="text" id="reg-username" placeholder="Buat username unik" autocomplete="off">
+              <i class="fa-solid fa-user"></i>
+              <input type="text" id="reg-jamaah-search" placeholder="Nama lengkap" required autocomplete="off">
             </div>
+            <div id="reg-jamaah-dropdown" class="custom-autocomplete-dropdown" style="display:none; position:absolute; left:0; right:0; top:100%; background:var(--bg-card); border:1px solid var(--border-color); border-radius:8px; box-shadow:0 8px 16px rgba(0,0,0,0.25); max-height:200px; overflow-y:auto; z-index:100; margin-top:4px;"></div>
+            <select id="reg-jamaah-select" style="display:none;">
+              <option value="">-- Ketik nama untuk mencari --</option>
+            </select>
           </div>
-          <div class="form-group-login">
-            <label for="reg-password">Password*</label>
-            <div class="input-icon-wrapper">
-              <i class="fa-solid fa-lock"></i>
-              <input type="password" id="reg-password" placeholder="Minimal 6 karakter" autocomplete="new-password">
-            </div>
-          </div>
-          <div class="form-group-login">
-            <label for="reg-password2">Konfirmasi Password*</label>
-            <div class="input-icon-wrapper">
-              <i class="fa-solid fa-lock"></i>
-              <input type="password" id="reg-password2" placeholder="Ulangi password" autocomplete="new-password">
-            </div>
-          </div>
-          <button type="button" id="btn-register-linked" class="login-btn" style="margin-top:5px;"><i
-              class="fa-solid fa-user-plus"></i> Daftar Sekarang</button>
-        </div>
 
-        <div style="text-align:center;margin-top:15px;padding-top:15px;border-top:1px solid var(--border-color);">
-          <a href="#" id="btn-not-in-list" style="color:var(--text-secondary);font-size:0.9rem;text-decoration:none;"><i
-              class="fa-solid fa-question-circle"></i> Saya tidak ada di daftar &rarr;</a>
-        </div>
-      </div>
-
-      <!-- STEP 2: FORM JAMAAH BARU -->
-      <div id="register-step2" style="display:none;">
-        <div
-          style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:12px;margin-bottom:15px;font-size:0.85rem;color:#f59e0b;">
-          <i class="fa-solid fa-clock"></i> Pendaftaran baru memerlukan <strong>persetujuan admin/operator
-            kelompok</strong> sebelum dapat login.
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-          <div class="form-group-login" style="grid-column:span 2;">
-            <label for="reg-new-nama">Nama Lengkap (Sesuai KTP)*</label>
-            <div class="input-icon-wrapper"><i class="fa-solid fa-user"></i><input type="text" id="reg-new-nama"
-                placeholder="Nama lengkap" required></div>
-          </div>
+          <!-- Kelompok Pengajian -->
           <div class="form-group-login" style="grid-column:span 2;">
             <label for="reg-new-kelompok">Kelompok Pengajian*</label>
             <select id="reg-new-kelompok"
-              style="width:100%;padding:12px 15px;background:rgba(0,0,0,0.25);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);font-family:inherit;font-size:0.95rem;"
+              style="width:100%; padding:12px 15px; background:rgba(0,0,0,0.25); border:1px solid var(--border-color); border-radius:8px; color:var(--text-primary); font-family:inherit; font-size:0.95rem;"
               required>
               <option value="">-- Pilih Kelompok --</option>
             </select>
           </div>
+
+          <!-- Jenis Kelamin -->
           <div class="form-group-login">
             <label for="reg-new-jk">Jenis Kelamin*</label>
             <select id="reg-new-jk"
-              style="width:100%;padding:12px 15px;background:rgba(0,0,0,0.25);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);font-family:inherit;font-size:0.95rem;"
+              style="width:100%; padding:12px 15px; background:rgba(0,0,0,0.25); border:1px solid var(--border-color); border-radius:8px; color:var(--text-primary); font-family:inherit; font-size:0.95rem;"
               required>
               <option value="">--</option>
               <option value="Laki-laki">Laki-laki</option>
               <option value="Perempuan">Perempuan</option>
             </select>
           </div>
+
+          <!-- Tanggal Lahir -->
           <div class="form-group-login">
             <label for="reg-new-tgl-lahir">Tanggal Lahir</label>
-            <div class="input-icon-wrapper"><i class="fa-solid fa-calendar"></i><input type="date"
-                id="reg-new-tgl-lahir"></div>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-calendar"></i>
+              <input type="date" id="reg-new-tgl-lahir">
+            </div>
           </div>
+
+          <!-- Nomor HP -->
           <div class="form-group-login">
             <label for="reg-new-hp">Nomor HP</label>
-            <div class="input-icon-wrapper"><i class="fa-solid fa-phone"></i><input type="tel" id="reg-new-hp"
-                placeholder="08xx..."></div>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-phone"></i>
+              <input type="tel" id="reg-new-hp" placeholder="08xx...">
+            </div>
           </div>
+
+          <!-- Status Pernikahan -->
           <div class="form-group-login">
             <label for="reg-new-pernikahan">Status Pernikahan</label>
             <select id="reg-new-pernikahan"
-              style="width:100%;padding:12px 15px;background:rgba(0,0,0,0.25);border:1px solid var(--border-color);border-radius:8px;color:var(--text-primary);font-family:inherit;font-size:0.95rem;">
+              style="width:100%; padding:12px 15px; background:rgba(0,0,0,0.25); border:1px solid var(--border-color); border-radius:8px; color:var(--text-primary); font-family:inherit; font-size:0.95rem;">
               <option value="">--</option>
-              <option>Belum Menikah</option>
-              <option>Menikah</option>
-              <option>Janda</option>
-              <option>Duda</option>
+              <option value="Belum Menikah">Belum Menikah</option>
+              <option value="Menikah">Menikah</option>
+              <option value="Janda">Janda</option>
+              <option value="Duda">Duda</option>
             </select>
           </div>
+
+          <!-- Foto Profil (Opsional) -->
           <div class="form-group-login" style="grid-column:span 2;">
             <label for="reg-new-foto">Foto Profil (Opsional)</label>
             <div style="display: flex; gap: 15px; align-items: center;">
-              <div id="reg-new-foto-preview-wrapper" style="width: 60px; height: 60px; border-radius: 50%; border: 1px dashed var(--border-color); display: flex; align-items: center; justify-content: center; overflow: hidden; background: rgba(255,255,255,0.05);">
-                <i class="fa-solid fa-camera" id="reg-new-foto-placeholder" style="color: var(--text-secondary); font-size: 1.2rem;"></i>
+              <div id="reg-new-foto-preview-wrapper" style="width: 50px; height: 50px; border-radius: 50%; border: 1px dashed var(--border-color); display: flex; align-items: center; justify-content: center; overflow: hidden; background: rgba(255,255,255,0.05); flex-shrink:0;">
+                <i class="fa-solid fa-camera" id="reg-new-foto-placeholder" style="color: var(--text-secondary); font-size: 1.1rem;"></i>
                 <img id="reg-new-foto-preview" style="display: none; width: 100%; height: 100%; object-fit: cover;">
               </div>
               <input type="file" id="reg-new-foto" accept="image/*" style="font-size: 0.85rem; color: var(--text-secondary);">
             </div>
           </div>
+
+          <!-- Username -->
           <div class="form-group-login" style="grid-column:span 2;">
             <label for="reg-new-username">Username*</label>
-            <div class="input-icon-wrapper"><i class="fa-solid fa-at"></i><input type="text" id="reg-new-username"
-                placeholder="Buat username" required></div>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-at"></i>
+              <input type="text" id="reg-new-username" placeholder="Buat username" required autocomplete="off">
+            </div>
           </div>
+
+          <!-- Password -->
           <div class="form-group-login">
             <label for="reg-new-password">Password*</label>
-            <div class="input-icon-wrapper"><i class="fa-solid fa-lock"></i><input type="password" id="reg-new-password"
-                placeholder="Min. 6 karakter" required></div>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-lock"></i>
+              <input type="password" id="reg-new-password" placeholder="Min. 6 karakter" required autocomplete="new-password">
+            </div>
           </div>
+
+          <!-- Konfirmasi Password -->
           <div class="form-group-login">
             <label for="reg-new-password2">Konfirmasi Password*</label>
-            <div class="input-icon-wrapper"><i class="fa-solid fa-lock"></i><input type="password"
-                id="reg-new-password2" placeholder="Ulangi" required></div>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-lock"></i>
+              <input type="password" id="reg-new-password2" placeholder="Ulangi" required autocomplete="new-password">
+            </div>
           </div>
         </div>
-        <button type="button" id="btn-register-new" class="login-btn" style="margin-top:5px;"><i
-            class="fa-solid fa-paper-plane"></i> Kirim Pendaftaran</button>
-        <div style="text-align:center;margin-top:10px;">
-          <a href="#" id="btn-back-to-step1" style="color:var(--text-muted);font-size:0.85rem;text-decoration:none;">←
-            Kembali ke pencarian</a>
-        </div>
-      </div>
 
-      <div style="text-align:center;margin-top:15px;padding-top:15px;border-top:1px solid var(--border-color);">
-        <a href="#" id="link-to-login" style="color:var(--text-muted);font-size:0.9rem;text-decoration:none;"><i
-            class="fa-solid fa-arrow-left"></i> Sudah punya akun? Masuk</a>
+        <button type="button" id="btn-register-new" class="login-btn" style="margin-top:20px; background:#10b981; border:none; display:flex; align-items:center; justify-content:center; gap:8px;">
+          <i class="fa-solid fa-paper-plane"></i> Kirim Pendaftaran
+        </button>
+      </form>
+
+      <div style="text-align:center; margin-top:20px; padding-top:15px; border-top:1px solid var(--border-color);">
+        <a href="#" id="link-to-login" style="color:var(--text-muted); font-size:0.9rem; text-decoration:none;">
+          <i class="fa-solid fa-arrow-left"></i> Sudah punya akun? Masuk
+        </a>
       </div>
     </div>
   </div>

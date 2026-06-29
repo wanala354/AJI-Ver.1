@@ -1,0 +1,122 @@
+/* MOBILE ANIMATIONS STYLESHEET (AJI MOBILE) */
+
+/* 1. Page Slide Transitions */
+.page-slide-in {
+  animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.page-slide-out {
+  animation: slideOutLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutLeft {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+/* 2. Fade Up Card Entry */
+.fade-up-entry {
+  animation: fadeUp 0.4s cubic-bezier(0.1, 0.8, 0.2, 1) forwards;
+  opacity: 0;
+}
+
+@keyframes fadeUp {
+  from {
+    transform: translateY(15px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Delay generators for lists */
+.list-item-0 { animation-delay: 0ms; }
+.list-item-1 { animation-delay: 40ms; }
+.list-item-2 { animation-delay: 80ms; }
+.list-item-3 { animation-delay: 120ms; }
+.list-item-4 { animation-delay: 160ms; }
+.list-item-5 { animation-delay: 200ms; }
+
+/* 3. Status Badge Pulse */
+.pulse-badge {
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+/* 4. Spinner for Loading States */
+.spinner {
+  animation: rotate 0.8s linear infinite;
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--primary, #10b981);
+  border-radius: 50%;
+}
+
+@keyframes rotate {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* 5. Ripple Effect styles */
+.ripple {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  transform: scale(0);
+  animation: ripple-effect 0.4s ease-out;
+  pointer-events: none;
+}
+
+@keyframes ripple-effect {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* 6. Dashboard Gauge SVG Fill */
+.gauge-stroke-draw {
+  animation: stroke-draw 1.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes stroke-draw {
+  from {
+    stroke-dashoffset: 280;
+  }
+}
