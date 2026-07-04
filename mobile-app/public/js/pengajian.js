@@ -1131,7 +1131,7 @@ function renderPresensiTable(session) {
   const presensiDb = getPresensiKehadiranList() || [];
   const sessionPresensi = presensiDb.filter(p => p.id_pengajian == session.id);
   
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
   const isFuture = session.tanggal > todayStr;
   const defaultStatus = isFuture ? "BELUM WAKTUNYA" : "Alpha";
   
