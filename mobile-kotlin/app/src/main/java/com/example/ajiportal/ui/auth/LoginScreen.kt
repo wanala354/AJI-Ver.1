@@ -38,6 +38,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.border
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -49,6 +52,12 @@ import com.example.ajiportal.data.DataRepository
 import com.example.ajiportal.data.model.Jamaah
 import com.example.ajiportal.theme.EmeraldDark
 import com.example.ajiportal.theme.EmeraldPrimary
+import com.example.ajiportal.theme.CreamLight
+import com.example.ajiportal.theme.CreamDark
+import com.example.ajiportal.theme.NavyBlue
+import com.example.ajiportal.theme.IslamicGoldDark
+import com.example.ajiportal.theme.IslamicGold
+import androidx.compose.ui.draw.rotate
 import com.example.ajiportal.utils.BiometricHelper
 import com.example.ajiportal.utils.HashUtils
 import kotlinx.coroutines.launch
@@ -126,122 +135,163 @@ fun LoginScreen(
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(EmeraldPrimary, EmeraldDark)
+                    colors = listOf(CreamLight, CreamDark)
                 )
             )
     ) {
-        // Main content card
-        Card(
+        // Watermark ornamen islami di pojok-pojok
+        com.example.ajiportal.ui.components.IslamicCornerOrnament(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .size(160.dp),
+            color = IslamicGold.copy(alpha = 0.12f)
+        )
+        com.example.ajiportal.ui.components.IslamicCornerOrnament(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .size(160.dp)
+                .rotate(180f),
+            color = IslamicGold.copy(alpha = 0.12f)
+        )
+
+        // Medali Islami besar di tengah sebagai latar belakang samar
+        com.example.ajiportal.ui.components.IslamicMedallion(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .size(340.dp),
+            color = IslamicGold.copy(alpha = 0.04f)
+        )
+
+        // Main content column centered vertically
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .align(Alignment.Center)
-                .padding(24.dp),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                .padding(24.dp)
+                .align(Alignment.Center),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
+            Image(
+                painter = painterResource(id = com.example.ajiportal.R.drawable.app_logo),
+                contentDescription = "Logo AJI",
                 modifier = Modifier
-                    .padding(24.dp)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .size(160.dp)
+                    .clip(RoundedCornerShape(28.dp))
+                    .border(1.2.dp, IslamicGold.copy(alpha = 0.5f), RoundedCornerShape(28.dp))
+                    .padding(bottom = 12.dp)
+            )
+
+            // Input card with glassmorphism styling
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f)
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
             ) {
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Text(
-                    text = "AJI PORTAL",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = EmeraldDark
-                )
-                
-                Text(
-                    text = "Portal Digital Jamaah",
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    modifier = Modifier.padding(bottom = 24.dp)
-                )
+                Column(
+                    modifier = Modifier
+                        .padding(24.dp)
+                        .fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Selamat Datang",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    
+                    Text(
+                        text = "Silakan masuk ke akun Anda",
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(bottom = 20.dp)
+                    )
 
-                OutlinedTextField(
-                    value = username,
-                    onValueChange = { username = it },
-                    label = { Text("Username") },
-                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = EmeraldPrimary) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = EmeraldPrimary,
-                        focusedLabelColor = EmeraldPrimary
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                )
+                    OutlinedTextField(
+                        value = username,
+                        onValueChange = { username = it },
+                        label = { Text("Username") },
+                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = IslamicGold) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = IslamicGold,
+                            focusedLabelColor = IslamicGold,
+                            cursorColor = IslamicGold
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text("Password") },
-                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = EmeraldPrimary) },
-                    trailingIcon = {
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(
-                                imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                contentDescription = null,
-                                tint = EmeraldPrimary
-                            )
-                        }
-                    },
-                    singleLine = true,
-                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = EmeraldPrimary,
-                        focusedLabelColor = EmeraldPrimary
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                if (isLoading) {
-                    CircularProgressIndicator(color = EmeraldPrimary)
-                } else {
-                    Button(
-                        onClick = {
-                            if (username.isEmpty() || password.isEmpty()) {
-                                Toast.makeText(context, "Harap isi semua kolom", Toast.LENGTH_SHORT).show()
-                                return@Button
-                            }
-                            coroutineScope.launch {
-                                isLoading = true
-                                val passHash = HashUtils.sha256(password)
-                                val success = repository.login(username, passHash)
-                                isLoading = false
-                                if (success) {
-                                    // If authentication succeeds and biometrics is available but not yet enabled, offer it
-                                    if (isBiometricAvail && !isBiometricEnabled) {
-                                        showBiometricOfferDialog = true
-                                    } else {
-                                        onLoginSuccess()
-                                    }
-                                } else {
-                                    Toast.makeText(context, "Username / password salah atau akun ditolak.", Toast.LENGTH_LONG).show()
-                                }
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text("Password") },
+                        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = IslamicGold) },
+                        trailingIcon = {
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(
+                                    imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                    contentDescription = null,
+                                    tint = IslamicGold
+                                )
                             }
                         },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
+                        singleLine = true,
+                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = IslamicGold,
+                            focusedLabelColor = IslamicGold,
+                            cursorColor = IslamicGold
+                        ),
                         shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text(
-                            text = "Masuk",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    if (isLoading) {
+                        CircularProgressIndicator(color = IslamicGold)
+                    } else {
+                        Button(
+                            onClick = {
+                                if (username.isEmpty() || password.isEmpty()) {
+                                    Toast.makeText(context, "Harap isi semua kolom", Toast.LENGTH_SHORT).show()
+                                    return@Button
+                                }
+                                coroutineScope.launch {
+                                    isLoading = true
+                                    val passHash = HashUtils.sha256(password)
+                                    val success = repository.login(username, passHash)
+                                    isLoading = false
+                                    if (success) {
+                                        if (isBiometricAvail && !isBiometricEnabled) {
+                                            showBiometricOfferDialog = true
+                                        } else {
+                                            onLoginSuccess()
+                                        }
+                                    } else {
+                                        Toast.makeText(context, "Username / password salah atau akun ditolak.", Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                            shape = RoundedCornerShape(14.dp)
+                        ) {
+                            Text(
+                                text = "Masuk",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
                     }
 
                     // Biometric alternative button
@@ -567,6 +617,35 @@ fun LoginScreen(
                             }
                         } else {
                             // Form Input Nama Lengkap (Autocomplete)
+                            // Info Banner for Autofill Locked Data
+                            if (regSelectedJamaahId != null) {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 16.dp),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xFFD1FAE5))
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Info,
+                                            contentDescription = null,
+                                            tint = Color(0xFF047857),
+                                            modifier = Modifier.padding(end = 12.dp)
+                                        )
+                                        Text(
+                                            text = "Data terhubung dengan database jamaah dan dikunci untuk keamanan. Jika ada kesalahan data, silakan login terlebih dahulu dan ubah melalui menu Keluarga > Edit Biodata.",
+                                            fontSize = 11.sp,
+                                            color = Color(0xFF065F46)
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Form Input Nama Lengkap (Autocomplete)
                             Text(
                                 text = "Pencarian Anggota Jamaah",
                                 fontSize = 14.sp,
@@ -582,13 +661,34 @@ fun LoginScreen(
                                 OutlinedTextField(
                                     value = regNamaSearch,
                                     onValueChange = {
-                                        regNamaSearch = it
-                                        regSelectedJamaahId = null // Reset link if edited
-                                        isDropdownExpanded = true
+                                        if (regSelectedJamaahId == null) {
+                                            regNamaSearch = it
+                                            isDropdownExpanded = true
+                                        }
                                     },
+                                    readOnly = regSelectedJamaahId != null,
                                     label = { Text("Nama Lengkap (Sesuai KTP)*") },
                                     singleLine = true,
                                     modifier = Modifier.fillMaxWidth(),
+                                    trailingIcon = {
+                                        if (regSelectedJamaahId != null) {
+                                            IconButton(onClick = {
+                                                regSelectedJamaahId = null
+                                                regNamaSearch = ""
+                                                regKelompok = ""
+                                                regJk = ""
+                                                regTglLahir = ""
+                                                regHp = ""
+                                                regPernikahan = "Belum Menikah"
+                                            }) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Close,
+                                                    contentDescription = "Reset Pencarian",
+                                                    tint = Color.Red
+                                                )
+                                            }
+                                        }
+                                    },
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedBorderColor = EmeraldPrimary,
                                         focusedLabelColor = EmeraldPrimary
@@ -596,7 +696,7 @@ fun LoginScreen(
                                     shape = RoundedCornerShape(12.dp)
                                 )
 
-                                if (isDropdownExpanded && filteredJamaah.isNotEmpty()) {
+                                if (isDropdownExpanded && filteredJamaah.isNotEmpty() && regSelectedJamaahId == null) {
                                     Card(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -648,30 +748,34 @@ fun LoginScreen(
                                     readOnly = true,
                                     label = { Text("Kelompok Pengajian*") },
                                     trailingIcon = {
-                                        IconButton(onClick = { isKelompokDropdownExpanded = true }) {
-                                            Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = EmeraldPrimary)
+                                        if (regSelectedJamaahId == null) {
+                                            IconButton(onClick = { isKelompokDropdownExpanded = true }) {
+                                                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = EmeraldPrimary)
+                                            }
                                         }
                                     },
-                                    modifier = Modifier.fillMaxWidth().clickable { isKelompokDropdownExpanded = true },
+                                    modifier = Modifier.fillMaxWidth().clickable { if (regSelectedJamaahId == null) isKelompokDropdownExpanded = true },
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedBorderColor = EmeraldPrimary,
                                         focusedLabelColor = EmeraldPrimary
                                     ),
                                     shape = RoundedCornerShape(12.dp)
                                 )
-                                DropdownMenu(
-                                    expanded = isKelompokDropdownExpanded,
-                                    onDismissRequest = { isKelompokDropdownExpanded = false },
-                                    modifier = Modifier.fillMaxWidth(0.85f)
-                                ) {
-                                    kelompokList.forEach { name ->
-                                        DropdownMenuItem(
-                                            text = { Text(name) },
-                                            onClick = {
-                                                regKelompok = name
-                                                isKelompokDropdownExpanded = false
-                                            }
-                                        )
+                                if (regSelectedJamaahId == null) {
+                                    DropdownMenu(
+                                        expanded = isKelompokDropdownExpanded,
+                                        onDismissRequest = { isKelompokDropdownExpanded = false },
+                                        modifier = Modifier.fillMaxWidth(0.85f)
+                                    ) {
+                                        kelompokList.forEach { name ->
+                                            DropdownMenuItem(
+                                                text = { Text(name) },
+                                                onClick = {
+                                                    regKelompok = name
+                                                    isKelompokDropdownExpanded = false
+                                                }
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -693,29 +797,33 @@ fun LoginScreen(
                                         readOnly = true,
                                         label = { Text("Jenis Kelamin*") },
                                         trailingIcon = {
-                                            IconButton(onClick = { isJkDropdownExpanded = true }) {
-                                                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = EmeraldPrimary)
+                                            if (regSelectedJamaahId == null) {
+                                                IconButton(onClick = { isJkDropdownExpanded = true }) {
+                                                    Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = EmeraldPrimary)
+                                                }
                                             }
                                         },
-                                        modifier = Modifier.fillMaxWidth().clickable { isJkDropdownExpanded = true },
+                                        modifier = Modifier.fillMaxWidth().clickable { if (regSelectedJamaahId == null) isJkDropdownExpanded = true },
                                         colors = OutlinedTextFieldDefaults.colors(
                                             focusedBorderColor = EmeraldPrimary,
                                             focusedLabelColor = EmeraldPrimary
                                         ),
                                         shape = RoundedCornerShape(12.dp)
                                     )
-                                    DropdownMenu(
-                                        expanded = isJkDropdownExpanded,
-                                        onDismissRequest = { isJkDropdownExpanded = false }
-                                    ) {
-                                        listOf("Laki-laki", "Perempuan").forEach { item ->
-                                            DropdownMenuItem(
-                                                text = { Text(item) },
-                                                onClick = {
-                                                    regJk = item
-                                                    isJkDropdownExpanded = false
-                                                }
-                                            )
+                                    if (regSelectedJamaahId == null) {
+                                        DropdownMenu(
+                                            expanded = isJkDropdownExpanded,
+                                            onDismissRequest = { isJkDropdownExpanded = false }
+                                        ) {
+                                            listOf("Laki-laki", "Perempuan").forEach { item ->
+                                                DropdownMenuItem(
+                                                    text = { Text(item) },
+                                                    onClick = {
+                                                        regJk = item
+                                                        isJkDropdownExpanded = false
+                                                    }
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -723,7 +831,12 @@ fun LoginScreen(
                                 // Tanggal Lahir
                                 OutlinedTextField(
                                     value = regTglLahir,
-                                    onValueChange = { regTglLahir = it },
+                                    onValueChange = {
+                                        if (regSelectedJamaahId == null) {
+                                            regTglLahir = it
+                                        }
+                                    },
+                                    readOnly = regSelectedJamaahId != null,
                                     label = { Text("Tgl Lahir (YYYY-MM-DD)") },
                                     placeholder = { Text("2000-01-31") },
                                     singleLine = true,
@@ -746,7 +859,12 @@ fun LoginScreen(
                                 // Nomor HP
                                 OutlinedTextField(
                                     value = regHp,
-                                    onValueChange = { regHp = it },
+                                    onValueChange = {
+                                        if (regSelectedJamaahId == null) {
+                                            regHp = it
+                                        }
+                                    },
+                                    readOnly = regSelectedJamaahId != null,
                                     label = { Text("Nomor HP") },
                                     placeholder = { Text("08123...") },
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
@@ -769,29 +887,33 @@ fun LoginScreen(
                                         readOnly = true,
                                         label = { Text("Pernikahan") },
                                         trailingIcon = {
-                                            IconButton(onClick = { isPernikahanDropdownExpanded = true }) {
-                                                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = EmeraldPrimary)
+                                            if (regSelectedJamaahId == null) {
+                                                IconButton(onClick = { isPernikahanDropdownExpanded = true }) {
+                                                    Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = EmeraldPrimary)
+                                                }
                                             }
                                         },
-                                        modifier = Modifier.fillMaxWidth().clickable { isPernikahanDropdownExpanded = true },
+                                        modifier = Modifier.fillMaxWidth().clickable { if (regSelectedJamaahId == null) isPernikahanDropdownExpanded = true },
                                         colors = OutlinedTextFieldDefaults.colors(
                                             focusedBorderColor = EmeraldPrimary,
                                             focusedLabelColor = EmeraldPrimary
                                         ),
                                         shape = RoundedCornerShape(12.dp)
                                     )
-                                    DropdownMenu(
-                                        expanded = isPernikahanDropdownExpanded,
-                                        onDismissRequest = { isPernikahanDropdownExpanded = false }
-                                    ) {
-                                        listOf("Belum Menikah", "Menikah", "Cerai Hidup", "Cerai Mati").forEach { item ->
-                                            DropdownMenuItem(
-                                                text = { Text(item) },
-                                                onClick = {
-                                                    regPernikahan = item
-                                                    isPernikahanDropdownExpanded = false
-                                                }
-                                            )
+                                    if (regSelectedJamaahId == null) {
+                                        DropdownMenu(
+                                            expanded = isPernikahanDropdownExpanded,
+                                            onDismissRequest = { isPernikahanDropdownExpanded = false }
+                                        ) {
+                                            listOf("Belum Menikah", "Menikah", "Cerai Hidup", "Cerai Mati").forEach { item ->
+                                                DropdownMenuItem(
+                                                    text = { Text(item) },
+                                                    onClick = {
+                                                        regPernikahan = item
+                                                        isPernikahanDropdownExpanded = false
+                                                    }
+                                                )
+                                            }
                                         }
                                     }
                                 }

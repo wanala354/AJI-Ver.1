@@ -69,7 +69,7 @@ object DateUtils {
 
     fun getKelompokPeramutan(age: Int, maritalStatus: String?, tingkatPendidikan: String?): String {
         val edu = tingkatPendidikan?.trim()?.uppercase() ?: ""
-        if ((age in 13..18) || edu == "SMP" || edu == "SLTA/SMK") {
+        if ((age in 13..18) || (age <= 18 && (edu == "SMP" || edu == "SLTA/SMK"))) {
             return "GUS"
         }
         if (age <= 3) return "Balita"

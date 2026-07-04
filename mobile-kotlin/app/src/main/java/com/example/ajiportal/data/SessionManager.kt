@@ -67,4 +67,9 @@ class SessionManager(context: Context) {
             apply()
         }
     }
+
+    fun getDeviceToken(): String? = prefs.getString("device_token", null)
+    fun saveDeviceToken(token: String) {
+        prefs.edit().putString("device_token", token).apply()
+    }
 }

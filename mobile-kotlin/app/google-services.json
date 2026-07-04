@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "111686870483",
+    "project_id": "ajiportal-7ff81",
+    "storage_bucket": "ajiportal-7ff81.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:111686870483:android:6b1492e34b456a8468bb26",
+        "android_client_info": {
+          "package_name": "com.example.ajiportal"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwqtZ3lEl2iVbvuU-maVGksk9jvUxzrGk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

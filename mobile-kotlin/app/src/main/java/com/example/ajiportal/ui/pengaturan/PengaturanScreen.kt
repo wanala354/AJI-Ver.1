@@ -129,6 +129,47 @@ fun PengaturanScreen(
             }
         }
 
+        // Test Notification Card
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Tes Notifikasi Pengingat",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    Text(
+                        text = "Gunakan tombol di bawah untuk menguji apakah notifikasi pengingat pengajian dapat muncul secara instan di HP Anda.",
+                        fontSize = 12.sp,
+                        color = TextMuted,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+                    Button(
+                        onClick = {
+                            val intent = android.content.Intent(context, com.example.ajiportal.utils.JadwalReminderReceiver::class.java).apply {
+                                putExtra("schedule_id", 9999)
+                                putExtra("jenis_pengajian", "Tes Simulasi Notifikasi")
+                                putExtra("waktu_mulai", "15:45")
+                            }
+                            context.sendBroadcast(intent)
+                            Toast.makeText(context, "Sinyal notifikasi dikirim!", Toast.LENGTH_SHORT).show()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Kirim Notifikasi Uji Coba", color = Color.White)
+                    }
+                }
+            }
+        }
+
         // Change Password Card
         item {
             Card(

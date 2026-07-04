@@ -23,6 +23,8 @@ interface DataRepository {
     suspend fun getSchedules(): List<Jadwal>
     suspend fun getMyPresensi(): List<Presensi>
     suspend fun selfCheckIn(idPengajian: Int, status: String, keterangan: String?): Boolean
+    suspend fun getPresensiForSession(idPengajian: Int): List<Presensi>
+    suspend fun submitPresensi(idPengajian: Int, jamaahId: String, status: String, keterangan: String?): Boolean
     
     // Security
     suspend fun updatePassword(newPasswordHash: String): Boolean
@@ -51,6 +53,8 @@ interface DataRepository {
         statusPernikahan: String?,
         fotoUrl: String?
     ): Boolean
+
+    suspend fun saveDeviceToken(username: String, deviceToken: String): Boolean
 }
 
 class DefaultDataRepository(private val context: Context) : DataRepository {
@@ -102,6 +106,15 @@ class DefaultDataRepository(private val context: Context) : DataRepository {
         val jamaahId = sessionManager.getJamaahId() ?: return@withContext false
         val username = sessionManager.getUsername() ?: jamaahId
         api.selfCheckIn(idPengajian, jamaahId, status, keterangan, username)
+    }
+
+    override suspend fun getPresensiForSession(idPengajian: Int): List<Presensi> = withContext(Dispatchers.IO) {
+        api.getPresensiListForSession(idPengajian)
+    }
+
+    override suspend fun submitPresensi(idPengajian: Int, jamaahId: String, status: String, keterangan: String?): Boolean = withContext(Dispatchers.IO) {
+        val operatorUsername = sessionManager.getUsername() ?: "unknown"
+        api.selfCheckIn(idPengajian, jamaahId, status, keterangan, operatorUsername)
     }
 
     override suspend fun updatePassword(newPasswordHash: String): Boolean = withContext(Dispatchers.IO) {
@@ -170,5 +183,13 @@ class DefaultDataRepository(private val context: Context) : DataRepository {
         fotoUrl: String?
     ): Boolean = withContext(Dispatchers.IO) {
         api.registerNewUser(username, passwordHash, namaLengkap, kelompok, jenisKelamin, tanggalLahir, nomorHp, statusPernikahan, fotoUrl)
+    }
+
+    override suspend fun saveDeviceToken(username: String, deviceToken: String): Boolean = withContext(Dispatchers.IO) {
+        val success = api.saveDeviceToken(username, deviceToken)
+        if (success) {
+            sessionManager.saveDeviceToken(deviceToken)
+        }
+        success
     }
 }

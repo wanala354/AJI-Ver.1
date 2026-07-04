@@ -47,6 +47,10 @@ import java.time.YearMonth
 import java.time.LocalTime
 import java.time.format.TextStyle
 import java.util.*
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 sealed interface JadwalUiState {
     object Loading : JadwalUiState
@@ -126,6 +130,8 @@ fun JadwalScreen(
         viewModel.loadJadwalData()
     }
 
+    val context = LocalContext.current
+
     when (val state = uiState) {
         is JadwalUiState.Loading -> {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -138,6 +144,9 @@ fun JadwalScreen(
             }
         }
         is JadwalUiState.Success -> {
+            LaunchedEffect(state.allSchedules) {
+                com.example.ajiportal.utils.JadwalReminderScheduler.scheduleAlarms(context, state.allSchedules)
+            }
             JadwalContent(
                 state = state,
                 onCheckIn = { id, status, reason, callback ->
@@ -487,6 +496,17 @@ fun ScheduleDetailCard(
                 fontSize = 13.sp,
                 color = TextMuted
             )
+ 
+            val formattedMateri = remember(schedule.materiPengajar) { formatJadwalMateriPengajar(schedule.materiPengajar) }
+            if (formattedMateri.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Materi: $formattedMateri",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
+                )
+            }
 
             if (!presensi?.keterangan.isNullOrEmpty()) {
                 Spacer(modifier = Modifier.height(6.dp))
@@ -637,4 +657,26 @@ fun CheckInDialog(
             }
         }
     )
+}
+
+fun formatJadwalMateriPengajar(jsonStr: String?): String {
+    if (jsonStr.isNullOrEmpty()) return ""
+    return try {
+        val jsonArray = Json.parseToJsonElement(jsonStr).jsonArray
+        if (jsonArray.isEmpty()) return ""
+        jsonArray.map { element ->
+            val obj = element.jsonObject
+            val materi = obj["materi"]?.jsonPrimitive?.content ?: ""
+            val pengajar = obj["pengajar_nama"]?.jsonPrimitive?.content ?: ""
+            if (materi.isNotEmpty() && pengajar.isNotEmpty()) {
+                "$materi (Ustadz: $pengajar)"
+            } else if (materi.isNotEmpty()) {
+                materi
+            } else {
+                pengajar
+            }
+        }.joinToString(", ")
+    } catch (e: Exception) {
+        if (jsonStr == "null") "" else jsonStr
+    }
 }

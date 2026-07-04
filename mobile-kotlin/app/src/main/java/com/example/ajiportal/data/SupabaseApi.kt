@@ -126,6 +126,19 @@ class SupabaseApi {
         }
     }
 
+    suspend fun getPresensiListForSession(idPengajian: Int): List<Presensi> {
+        return try {
+            client.get("$supabaseUrl/rest/v1/pengajian_presensi") {
+                supabaseHeaders()
+                parameter("id_pengajian", "eq.$idPengajian")
+                parameter("select", "*")
+            }.body()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
+
     suspend fun logAction(username: String, action: String, description: String) {
         try {
             val log = AuditLog(
@@ -418,6 +431,26 @@ class SupabaseApi {
             } else {
                 false
             }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    suspend fun saveDeviceToken(username: String, deviceToken: String): Boolean {
+        return try {
+            val payload = buildJsonObject {
+                put("username", username)
+                put("device_token", deviceToken)
+                put("updated_at", LocalDate.now().toString() + "T" + java.time.LocalTime.now().toString().substring(0, 8))
+            }
+            val response = client.post("$supabaseUrl/rest/v1/user_device_tokens") {
+                supabaseHeaders()
+                header("Prefer", "resolution=merge-over-write")
+                contentType(ContentType.Application.Json)
+                setBody(payload)
+            }
+            response.status.value in 200..299
         } catch (e: Exception) {
             e.printStackTrace()
             false
