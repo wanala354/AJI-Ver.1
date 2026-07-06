@@ -55,7 +55,7 @@
 
     function getKelompokPeramutan(age, maritalStatus, tingkatPendidikan) {
       const edu = tingkatPendidikan ? tingkatPendidikan.trim().toUpperCase() : "";
-      if (age >= 13 && age <= 18) {
+      if ((age >= 13 && age <= 18) || (age <= 18 && (edu === "SMP" || edu === "SLTA/SMK"))) {
         return "GUS";
       }
       if (age <= 3) return "Balita";
@@ -283,15 +283,23 @@
         accessNote.style.color = "#10b981";
       } else if (userRoleClean === "operator kelompok" || userRoleClean === "operator desa") {
         if (menuMaster) menuMaster.style.display = "none";
-        if (menuUsers) menuUsers.style.display = "block";
         if (menuDatabaseSettings) menuDatabaseSettings.style.display = "none";
         if (menuAudit) menuAudit.style.display = "block";
         if (btnAdd) btnAdd.style.display = "inline-flex";
         if (btnAddJadwal) btnAddJadwal.style.display = "inline-flex";
+
+        const menuOpUserMgmt = document.getElementById("menu-operator-user-mgmt");
+
         if (userRoleClean === "operator kelompok") {
+          // Operator Kelompok: gunakan halaman khusus (profil + approve jamaah)
+          if (menuUsers) menuUsers.style.display = "none";
+          if (menuOpUserMgmt) menuOpUserMgmt.style.display = "block";
           accessNote.textContent = `Hak Akses: Operator Kelompok ${user.kelompok} (CRUD Terbatas Kelompok)`;
           accessNote.style.color = "#3b82f6";
         } else {
+          // Operator Desa: gunakan halaman manajemen user penuh
+          if (menuUsers) menuUsers.style.display = "block";
+          if (menuOpUserMgmt) menuOpUserMgmt.style.display = "none";
           accessNote.textContent = `Hak Akses: Operator Desa (CRUD Semua Tingkat)`;
           accessNote.style.color = "#10b981";
         }
@@ -322,7 +330,8 @@
       // Hide parent Pengaturan menu if no submenus are visible
       const menuPengaturanParent = document.getElementById("menu-pengaturan-parent");
       if (menuPengaturanParent) {
-        const submenus = [menuMaster, menuUsers, menuDatabaseSettings, menuAudit];
+        const menuOpUserMgmt2 = document.getElementById("menu-operator-user-mgmt");
+        const submenus = [menuMaster, menuUsers, menuOpUserMgmt2, menuDatabaseSettings, menuAudit];
         const hasVisible = submenus.some(m => m && m.style.display !== "none");
         menuPengaturanParent.style.display = hasVisible ? "block" : "none";
       }
@@ -1504,14 +1513,12 @@
           return;
         }
 
-        const existingUser = getUsersList().find(u => u.username.toLowerCase() === username.toLowerCase());
         const userData = {
           username,
           email,
           role,
           kelompok,
-          passwordHash: password ? sha256(password) : "",
-          jamaahId: existingUser ? (existingUser.jamaahId || existingUser.jamaah_id || null) : null
+          passwordHash: password ? sha256(password) : ""
         };
 
         const saveBtn = document.getElementById("user-modal-save-btn");
@@ -1718,7 +1725,7 @@
       const currentUser = getCurrentUser();
       const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
       const isRestrictedTab = ["section-database-settings", "section-users", "section-master"].includes(sectionId);
-      if (isRestrictedTab && curRoleClean !== "admin") {
+      if (isRestrictedTab && curRoleClean !== "admin" && curRoleClean !== "operator desa") {
         sectionId = "section-dashboard";
       }
 
@@ -1734,6 +1741,7 @@
         "section-report": { title: "Rekapitulasi & Laporan", icon: "fa-file-contract" },
         "section-master": { title: "Pengaturan Data Master", icon: "fa-folder-tree" },
         "section-users": { title: "Manajemen Akun Pengguna", icon: "fa-users-gear" },
+        "section-operator-user-mgmt": { title: "Manajemen User & Profil", icon: "fa-users-gear" },
         "section-pengurus": { title: "Manajemen Data Pengurus", icon: "fa-sitemap" },
         "section-pengajian": { title: "Manajemen Pengajian", icon: "fa-book-open-reader" },
         "section-profile": { title: "Profil Saya & Keamanan", icon: "fa-user-circle" },
@@ -1767,6 +1775,8 @@
         if (typeof initPengajianModule === 'function') initPengajianModule();
       } else if (sectionId === "section-users") {
         renderUsersTable();
+      } else if (sectionId === "section-operator-user-mgmt") {
+        initOperatorUserMgmt();
       } else if (sectionId === "section-database-settings") {
         document.getElementById("settings-url").value = localStorage.getItem("aji_supabase_url") || "";
         document.getElementById("settings-key").value = localStorage.getItem("aji_supabase_key") || "";
@@ -1853,3 +1863,219 @@
     }, 1000);
 
     // ----------------------------------------------------
+
+    // ============================================================
+    // OPERATOR KELOMPOK: USER MANAGEMENT PAGE (Profile + Approve)
+    // ============================================================
+
+    function initOperatorUserMgmt() {
+      const user = getCurrentUser();
+      if (!user) return;
+
+      // Populate profile cards & form fields
+      const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ""; };
+      const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || "-"; };
+
+      setVal("op-profile-username", user.username);
+      setVal("op-profile-email", user.email || "");
+      setVal("op-profile-role", user.role || "");
+      setVal("op-profile-kelompok", user.kelompok || "Semua");
+
+      setText("op-profile-card-username", user.username);
+      setText("op-profile-card-email", user.email || "-");
+      setText("op-profile-card-kelompok", user.kelompok || "Semua");
+
+      const avatarEl = document.getElementById("op-profile-avatar");
+      if (avatarEl) {
+        // Check if there's a profile image
+        if (user.profileImageUrl) {
+          avatarEl.innerHTML = `<img src="${user.profileImageUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+        } else {
+          avatarEl.textContent = (user.username || "U").charAt(0).toUpperCase();
+        }
+      }
+
+      const roleEl = document.getElementById("op-profile-card-role");
+      if (roleEl) {
+        const r = (user.role || "").trim().toLowerCase();
+        roleEl.textContent = r === "operator kelompok" ? "Operator Kelompok" : (user.role || "User");
+        roleEl.className = r === "operator kelompok" ? "badge badge-warning" : "badge badge-blue";
+      }
+
+      // Tab switching
+      document.querySelectorAll(".op-user-tab-btn").forEach(btn => {
+        btn.onclick = function() { opSwitchUserTab(this.dataset.optab); };
+      });
+
+      // Form submit handler (attach once)
+      const form = document.getElementById("op-profile-form");
+      if (form && !form.dataset.handlerAttached) {
+        form.dataset.handlerAttached = "true";
+        form.addEventListener("submit", function(e) {
+          e.preventDefault();
+          opSaveProfile();
+        });
+      }
+
+      // Default to profile tab
+      opSwitchUserTab("profile");
+
+      // Load pending count in background for badge
+      opLoadPendingUsers(true); // true = badge-only mode
+    }
+
+    function opSwitchUserTab(tab) {
+      const profilePanel = document.getElementById("op-panel-profile");
+      const approvePanel = document.getElementById("op-panel-approve");
+      document.querySelectorAll(".op-user-tab-btn").forEach(btn => {
+        const isActive = btn.dataset.optab === tab;
+        btn.style.borderBottom = isActive ? "3px solid var(--primary)" : "3px solid transparent";
+        btn.style.color = isActive ? "var(--primary)" : "var(--text-secondary)";
+        btn.style.fontWeight = isActive ? "600" : "500";
+      });
+      if (profilePanel) profilePanel.style.display = tab === "profile" ? "block" : "none";
+      if (approvePanel) {
+        approvePanel.style.display = tab === "approve" ? "block" : "none";
+        if (tab === "approve") opLoadPendingUsers(false);
+      }
+    }
+
+    window.opLoadPendingUsers = function(badgeOnly) {
+      const user = getCurrentUser();
+      if (!user) return;
+      const container = document.getElementById("op-pending-users-container");
+      if (!badgeOnly && container) {
+        container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Memuat...</div>';
+      }
+      const opKelompok = user.kelompok || "Semua";
+
+      if (typeof google !== "undefined" && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(function(list) {
+            const badge = document.getElementById("op-pending-badge");
+            if (!list || !list.length) {
+              if (badge) badge.style.display = "none";
+              if (!badgeOnly && container) {
+                container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);"><i class="fa-solid fa-check-circle" style="font-size:2rem;color:#10b981;display:block;margin-bottom:10px;"></i>Tidak ada pendaftaran yang menunggu persetujuan.</div>';
+              }
+              return;
+            }
+            if (badge) { badge.textContent = list.length; badge.style.display = "inline"; }
+            if (badgeOnly) return;
+            if (container) {
+              container.innerHTML = '<div class="table-responsive"><table class="table-custom"><thead><tr><th>Username</th><th>Nama Jamaah</th><th>Kelompok</th><th>Tgl Daftar</th><th style="text-align:center;">Aksi</th></tr></thead><tbody>' +
+                list.map(u => {
+                  const jamaah = (typeof localJamaahList !== "undefined" ? localJamaahList : []).find(j => j.id === u.jamaah_id);
+                  const namaJamaah = jamaah ? jamaah.namaLengkap : (u.jamaah_id || "-");
+                  const tgl = u.created_at ? new Date(u.created_at).toLocaleDateString("id-ID") : "-";
+                  return `<tr>
+                    <td><strong>${u.username}</strong></td>
+                    <td>${namaJamaah}</td>
+                    <td><span class="badge badge-blue">${u.kelompok || "-"}</span></td>
+                    <td>${tgl}</td>
+                    <td style="text-align:center;">
+                      <button class="btn-primary" style="padding:5px 12px;font-size:0.8rem;margin-right:5px;" onclick="opApproveUser('${u.username}')"><i class="fa-solid fa-check"></i> Setujui</button>
+                      <button style="padding:5px 12px;font-size:0.8rem;background:#ef4444;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:600;" onclick="opRejectUser('${u.username}')"><i class="fa-solid fa-times"></i> Tolak</button>
+                    </td>
+                  </tr>`;
+                }).join("") +
+                "</tbody></table></div>";
+            }
+          })
+          .withFailureHandler(function(err) {
+            if (!badgeOnly && container) {
+              container.innerHTML = '<div style="color:#ef4444;padding:15px;">Gagal memuat: ' + (err.message || err) + "</div>";
+            }
+          })
+          .getPendingUsersGAS(opKelompok);
+      } else {
+        // Supabase mode fallback
+        if (!badgeOnly && container) {
+          container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted);">Fitur pending approval hanya tersedia dalam mode Google Apps Script.</div>';
+        }
+      }
+    };
+
+    window.opApproveUser = function(username) {
+      if (!confirm('Setujui pendaftaran akun "' + username + '"?')) return;
+      const user = getCurrentUser();
+      google.script.run
+        .withSuccessHandler(function() {
+          showToast("Akun " + username + " berhasil disetujui!", "success");
+          opLoadPendingUsers(false);
+        })
+        .withFailureHandler(function(err) { showToast("Gagal: " + (err.message || err), "error"); })
+        .approveUserGAS(username, user ? user.username : "admin");
+    };
+
+    window.opRejectUser = function(username) {
+      if (!confirm('Tolak dan hapus pendaftaran "' + username + '"?')) return;
+      const user = getCurrentUser();
+      google.script.run
+        .withSuccessHandler(function() {
+          showToast("Pendaftaran " + username + " ditolak.", "info");
+          opLoadPendingUsers(false);
+        })
+        .withFailureHandler(function(err) { showToast("Gagal: " + (err.message || err), "error"); })
+        .rejectUserGAS(username, user ? user.username : "admin");
+    };
+
+    function opSaveProfile() {
+      const user = getCurrentUser();
+      if (!user) return;
+
+      const newUsername = (document.getElementById("op-profile-username")?.value || "").trim();
+      const newEmail = (document.getElementById("op-profile-email")?.value || "").trim();
+      const oldPassword = (document.getElementById("op-profile-old-password")?.value || "").trim();
+      const newPassword = (document.getElementById("op-profile-new-password")?.value || "").trim();
+      const confirmPassword = (document.getElementById("op-profile-confirm-password")?.value || "").trim();
+
+      const msgEl = document.getElementById("op-profile-msg");
+      const showMsg = (type, text) => {
+        if (!msgEl) return;
+        const colors = { success: "#10b981", error: "#ef4444", info: "#3b82f6" };
+        const rgba = type === "success" ? "16,185,129" : type === "error" ? "239,68,68" : "59,130,246";
+        msgEl.innerHTML = `<div style="padding:10px;border-radius:8px;font-size:0.88rem;background:rgba(${rgba},0.1);border:1px solid ${colors[type]};color:${colors[type]};"><i class="fa-solid fa-circle-info"></i> ${text}</div>`;
+      };
+
+      if (!newUsername || !newEmail) { showMsg("error", "Username dan email wajib diisi."); return; }
+      if (!oldPassword) { showMsg("error", "Password saat ini wajib diisi untuk menyimpan perubahan."); return; }
+      if (newPassword && newPassword !== confirmPassword) { showMsg("error", "Konfirmasi password baru tidak cocok."); return; }
+
+      const btn = document.getElementById("op-profile-save-btn");
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...'; }
+
+      if (typeof google !== "undefined" && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan'; }
+            if (res && res.success) {
+              showMsg("success", "Profil berhasil diperbarui!");
+              // Update local user data
+              if (typeof setCurrentUser === "function") {
+                setCurrentUser({ ...user, username: newUsername, email: newEmail });
+              } else if (typeof getCurrentUser === "function") {
+                const u = getCurrentUser();
+                if (u) { u.username = newUsername; u.email = newEmail; }
+              }
+              // Refresh display
+              document.getElementById("op-profile-card-username")?.setAttribute && (document.getElementById("op-profile-card-username").textContent = newUsername);
+              document.getElementById("op-profile-card-email")?.setAttribute && (document.getElementById("op-profile-card-email").textContent = newEmail);
+              document.getElementById("op-profile-old-password") && (document.getElementById("op-profile-old-password").value = "");
+              document.getElementById("op-profile-new-password") && (document.getElementById("op-profile-new-password").value = "");
+              document.getElementById("op-profile-confirm-password") && (document.getElementById("op-profile-confirm-password").value = "");
+            } else {
+              showMsg("error", (res && res.message) || "Gagal menyimpan profil.");
+            }
+          })
+          .withFailureHandler(function(err) {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan'; }
+            showMsg("error", "Gagal: " + (err.message || err));
+          })
+          .updateProfileGAS(user.username, newUsername, newEmail, oldPassword, newPassword || null);
+      } else {
+        // Supabase mode: reuse existing profile save logic if available
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan'; }
+        showMsg("info", "Silakan gunakan menu Profil Saya untuk mengubah profil di mode Supabase.");
+      }
+    }

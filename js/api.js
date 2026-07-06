@@ -182,7 +182,12 @@
         if (isKelompokRestricted) {
           const targetKelompok = userObj.kelompok;
           filteredJamaah = jamaahList.filter(j => j.kelompokPengajian === targetKelompok);
-          filteredJadwal = jadwalList.filter(j => j.kelompok_pengajian === targetKelompok);
+          filteredJadwal = jadwalList.filter(j => {
+            const tk = String(j.tingkat_pengajian || "").toLowerCase();
+            return j.kelompok_pengajian === targetKelompok ||
+                   tk.includes("desa") ||
+                   tk.includes("daerah");
+          });
           const sIds = filteredJadwal.map(s => s.id);
           filteredPresensi = presensiList.filter(p => sIds.indexOf(p.id_pengajian) !== -1);
           
@@ -1102,7 +1107,12 @@
                     const subKKIds = new Set(filteredKK.map(kk => kk.id));
                     filteredMappings = kartuKeluargaMappings.filter(m => subKKIds.has(m.kepalaKeluargaId));
                     
-                    filteredJadwal = rawJ.filter(j => j.kelompok_pengajian === targetKelompok).map(x => ({ ...x, peserta_spesifik: x.peserta_spesifik || "", lokasi: x.lokasi || "" }));
+                    filteredJadwal = rawJ.filter(j => {
+                      const tk = String(j.tingkat_pengajian || "").toLowerCase();
+                      return j.kelompok_pengajian === targetKelompok ||
+                             tk.includes("desa") ||
+                             tk.includes("daerah");
+                    }).map(x => ({ ...x, peserta_spesifik: x.peserta_spesifik || "", lokasi: x.lokasi || "" }));
                     const jIds = new Set(filteredJadwal.map(j => j.id));
                     filteredPresensi = rawPr.filter(p => jIds.has(p.id_pengajian));
                     

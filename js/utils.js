@@ -219,8 +219,12 @@ window.isJamaahEligibleForSchedule = function(j, s) {
   
   const tk = String(s.tingkat_pengajian || '').toLowerCase();
   const isKelompok = tk.includes('kelompok') || (!tk.includes('desa') && !tk.includes('daerah'));
-  if (isKelompok && s.kelompok_pengajian !== j.kelompokPengajian) {
-    return false;
+  if (isKelompok) {
+    const sk = String(s.kelompok_pengajian || '').trim().toLowerCase();
+    const jk = String(j.kelompokPengajian || '').trim().toLowerCase();
+    if (sk !== jk) {
+      return false;
+    }
   }
   
   if (s.peserta_spesifik) {

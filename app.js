@@ -199,7 +199,12 @@
         if (isKelompokRestricted) {
           const targetKelompok = userObj.kelompok;
           filteredJamaah = jamaahList.filter(j => j.kelompokPengajian === targetKelompok);
-          filteredJadwal = jadwalList.filter(j => j.kelompok_pengajian === targetKelompok);
+          filteredJadwal = jadwalList.filter(j => {
+            const tk = String(j.tingkat_pengajian || "").toLowerCase();
+            return j.kelompok_pengajian === targetKelompok ||
+                   tk.includes("desa") ||
+                   tk.includes("daerah");
+          });
           const sIds = filteredJadwal.map(s => s.id);
           filteredPresensi = presensiList.filter(p => sIds.indexOf(p.id_pengajian) !== -1);
           
@@ -790,7 +795,12 @@
                     const subKKIds = new Set(filteredKK.map(kk => kk.id));
                     filteredMappings = kartuKeluargaMappings.filter(m => subKKIds.has(m.kepalaKeluargaId));
                     
-                    filteredJadwal = rawJ.filter(j => j.kelompok_pengajian === targetKelompok);
+                    filteredJadwal = rawJ.filter(j => {
+                      const tk = String(j.tingkat_pengajian || "").toLowerCase();
+                      return j.kelompok_pengajian === targetKelompok ||
+                             tk.includes("desa") ||
+                             tk.includes("daerah");
+                    });
                     const jIds = new Set(filteredJadwal.map(j => j.id));
                     filteredPresensi = rawPr.filter(p => jIds.has(p.id_pengajian));
                     
@@ -1564,7 +1574,7 @@
 
     function getKelompokPeramutan(age, maritalStatus, tingkatPendidikan) {
       const edu = tingkatPendidikan ? tingkatPendidikan.trim().toUpperCase() : "";
-      if ((age >= 13 && age <= 18) || edu === "SMP" || edu === "SLTA/SMK") {
+      if ((age >= 13 && age <= 18) || (age <= 18 && (edu === "SMP" || edu === "SLTA/SMK"))) {
         return "GUS";
       }
       if (age <= 3) return "Balita";
@@ -5184,7 +5194,9 @@ window.openEditJadwalModal = function(id) {
   
   // Check ownership/access
   if (isKelompokRestricted) {
-    if (sched.kelompok_pengajian !== currentUser.kelompok) {
+    const tk = String(sched.tingkat_pengajian || "").toLowerCase();
+    const isDesaOrDaerah = tk.includes("desa") || tk.includes("daerah");
+    if (!isDesaOrDaerah && sched.kelompok_pengajian !== currentUser.kelompok) {
       showToast("Anda tidak memiliki akses untuk melihat/mengedit jadwal kelompok lain!", "error");
       return;
     }
@@ -5222,8 +5234,9 @@ window.openEditJadwalModal = function(id) {
   kelompokSel.value = sched.kelompok_pengajian;
   
   // Determine read-only view
+  const tk = String(sched.tingkat_pengajian || "").toLowerCase();
   const isReadOnly = ["user", "pengurus desa", "pengurus kelompok"].includes(curRoleClean) || 
-                     (isOperator && (sched.tingkat_pengajian === "Tingkat Desa" || sched.tingkat_pengajian === "Tingkat Daerah"));
+                     (isOperator && (tk.includes("desa") || tk.includes("daerah")));
   setJadwalFormReadOnly(isReadOnly);
   
   // Populate the shared datalist before adding rows
@@ -5982,9 +5995,13 @@ window.submitPresensiKehadiran = function() {
   const schedules = getJadwalPengajianList() || [];
   const session = schedules.find(s => s.id == id_pengajian);
   if (curRoleClean === "operator kelompok") {
-    if (session && session.kelompok_pengajian !== currentUser.kelompok) {
-      showToast("Operator Kelompok hanya bisa menyimpan presensi kelompok sendiri!", "error");
-      return;
+    if (session) {
+      const tk = String(session.tingkat_pengajian || "").toLowerCase();
+      const isDesaOrDaerah = tk.includes("desa") || tk.includes("daerah");
+      if (!isDesaOrDaerah && session.kelompok_pengajian !== currentUser.kelompok) {
+        showToast("Operator Kelompok hanya bisa menyimpan presensi kelompok sendiri!", "error");
+        return;
+      }
     }
   }
   if (!id_pengajian) return;
@@ -6087,10 +6104,18 @@ window.calculateAndRenderMonitoring = function(isSesiChange = false) {
   
   const currentUser = getCurrentUser();
   const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
-  const isOperator = curRoleClean === "operator kelompok";
+  const isRestricted = ["operator kelompok", "pengurus kelompok", "user", "jamaah"].includes(curRoleClean);
   
   // Filter schedules by tingkat, jenis, period
   let periodSchedules = schedules;
+  if (isRestricted && currentUser && currentUser.kelompok) {
+    periodSchedules = periodSchedules.filter(s => {
+      const tk = String(s.tingkat_pengajian || "").toLowerCase();
+      return s.kelompok_pengajian === currentUser.kelompok ||
+             tk.includes("desa") ||
+             tk.includes("daerah");
+    });
+  }
   if (filterTingkat) {
     periodSchedules = periodSchedules.filter(s => s.tingkat_pengajian === filterTingkat);
   }
@@ -6175,7 +6200,7 @@ window.calculateAndRenderMonitoring = function(isSesiChange = false) {
   }
   
   // Gather active presensi records and compute overall statistics
-  const targetJamaahForStats = isOperator ? jamaah.filter(j => j.kelompokPengajian === currentUser.kelompok) : jamaah;
+  const targetJamaahForStats = isRestricted && currentUser && currentUser.kelompok ? jamaah.filter(j => j.kelompokPengajian === currentUser.kelompok) : jamaah;
 
   // Build a lookup map for presensi
   const presensiMap = {};
@@ -6269,11 +6294,16 @@ window.updateAttendanceTrendChart = function() {
   const jamaah = getJamaahList() || [];
   const currentUser = getCurrentUser();
   const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
-  const isOperator = curRoleClean === "operator kelompok";
+  const isRestricted = ["operator kelompok", "pengurus kelompok", "user", "jamaah"].includes(curRoleClean);
   
   let targetSchedules = [...schedules];
-  if (isOperator) {
-    targetSchedules = targetSchedules.filter(s => s.kelompok_pengajian === currentUser.kelompok);
+  if (isRestricted && currentUser && currentUser.kelompok) {
+    targetSchedules = targetSchedules.filter(s => {
+      const tk = String(s.tingkat_pengajian || "").toLowerCase();
+      return s.kelompok_pengajian === currentUser.kelompok ||
+             tk.includes("desa") ||
+             tk.includes("daerah");
+    });
   } else {
     const filterTingkat = document.getElementById("monitor-tingkat").value;
     if (filterTingkat) {
@@ -6289,7 +6319,7 @@ window.updateAttendanceTrendChart = function() {
   // Sort schedules by date ascending for chronological order
   targetSchedules.sort((a, b) => a.tanggal.localeCompare(b.tanggal));
   
-  const targetJamaahForStats = isOperator ? jamaah.filter(j => j.kelompokPengajian === currentUser.kelompok) : jamaah;
+  const targetJamaahForStats = isRestricted && currentUser && currentUser.kelompok ? jamaah.filter(j => j.kelompokPengajian === currentUser.kelompok) : jamaah;
   
   const presensiMap = {};
   presensiDb.forEach(p => {

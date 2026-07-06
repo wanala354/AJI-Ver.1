@@ -141,9 +141,25 @@ async function stopAbsenScanner() {
  */
 function handleScanSuccess(decodedText) {
   console.log("QR decoded text:", decodedText);
+  const rawValue = decodedText.trim();
   
+  if (rawValue === "AJI_PRESENSI_UMUM" || rawValue === "AJI_PRESENSI:UMUM:UMUM") {
+    handleGeneralScan();
+    return;
+  }
+
+  if (rawValue.startsWith("AJI_PRESENSI:")) {
+    const parts = rawValue.split(":");
+    if (parts.length >= 3) {
+      const tingkat = parts[1].trim();
+      const jenis = parts[2].trim();
+      handleOldFormatScan(tingkat, jenis);
+      return;
+    }
+  }
+
   // Look for any integer digits in the decoded text (matches "25", "jadwal:25", etc)
-  const match = decodedText.match(/\d+/);
+  const match = rawValue.match(/\d+/);
   if (match) {
     const jadwalId = parseInt(match[0], 10);
     stopAbsenScanner();
@@ -153,18 +169,23 @@ function handleScanSuccess(decodedText) {
     const sched = allJadwal.find(s => s && s.id === jadwalId);
 
     if (sched) {
-      const statusEl = document.getElementById("scanner-status");
-      if (statusEl) {
-        statusEl.style.display = "block";
-        statusEl.style.color = "var(--primary, #10b981)";
-        statusEl.textContent = `Barcode Valid: ${sched.jenis_pengajian}! Mengirim presensi...`;
-      }
-      
-      // Execute self check-in
-      if (typeof window.doSelfCheckIn === "function") {
-        window.doSelfCheckIn(jadwalId, 'Hadir Fisik', 'Presensi via Scan Barcode');
+      const confirmMsg = `Isi Presensi pada Kegiatan ${sched.jenis_pengajian} (${sched.tingkat_pengajian || 'Umum'})?`;
+      if (confirm(confirmMsg)) {
+        const statusEl = document.getElementById("scanner-status");
+        if (statusEl) {
+          statusEl.style.display = "block";
+          statusEl.style.color = "var(--primary, #10b981)";
+          statusEl.textContent = `Barcode Valid: ${sched.jenis_pengajian}! Mengirim presensi...`;
+        }
+        
+        // Execute self check-in
+        if (typeof window.doSelfCheckIn === "function") {
+          window.doSelfCheckIn(jadwalId, 'Hadir Fisik', 'Presensi via Scan Barcode');
+        } else {
+          alert("Fungsi presensi mandiri tidak tersedia.");
+        }
       } else {
-        alert("Fungsi presensi mandiri tidak tersedia.");
+        startAbsenScanner(); // Resume
       }
     } else {
       alert(`Jadwal pengajian dengan ID ${jadwalId} tidak ditemukan di database AJI.`);
@@ -174,6 +195,223 @@ function handleScanSuccess(decodedText) {
     alert("Barcode tidak valid! Harap arahkan pada QR Code resmi jadwal pengajian.");
     startAbsenScanner(); // Resume
   }
+}
+
+function handleOldFormatScan(tingkat, jenis) {
+  stopAbsenScanner();
+  
+  const jamaahId = typeof localCurrentJamaahId !== "undefined" ? localCurrentJamaahId : null;
+  if (!jamaahId) {
+    alert("Silakan login terlebih dahulu untuk melakukan presensi.");
+    startAbsenScanner();
+    return;
+  }
+
+  const jamaahList = typeof getJamaahList === "function" ? getJamaahList() : [];
+  const jamaah = jamaahList.find(j => j.id === jamaahId);
+  if (!jamaah) {
+    alert("Gagal memuat profil Jamaah.");
+    startAbsenScanner();
+    return;
+  }
+
+  const allJadwal = typeof getJadwalPengajianList === "function" ? getJadwalPengajianList() : [];
+  const todayStr = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
+  
+  const scanTingkatClean = tingkat.toLowerCase().replace("tingkat", "").replace(" ", "").trim();
+  const scanJenisClean = jenis.toLowerCase().replace(" ", "").trim();
+
+  const match = allJadwal.find(s => {
+    if (!s) return false;
+    const isToday = s.tanggal === todayStr;
+
+    const dbTingkatClean = (s.tingkat_pengajian || "").toLowerCase().replace("tingkat", "").replace(" ", "").trim();
+    const isTingkatMatch = dbTingkatClean === scanTingkatClean || dbTingkatClean.includes(scanTingkatClean) || scanTingkatClean.includes(dbTingkatClean);
+
+    const dbJenisClean = (s.jenis_pengajian || "").toLowerCase().replace(" ", "").trim();
+    const isJenisMatch = dbJenisClean === scanJenisClean || dbJenisClean.includes(scanJenisClean) || scanJenisClean.includes(dbJenisClean);
+
+    const isKelompokValid = (scanTingkatClean === "kelompok")
+      ? (s.kelompok_pengajian || "").toLowerCase() === (jamaah.kelompokPengajian || "").toLowerCase()
+      : true;
+
+    return isToday && isTingkatMatch && isJenisMatch && isKelompokValid;
+  });
+
+  if (match) {
+    const confirmMsg = `Isi Presensi pada Kegiatan ${match.jenis_pengajian} (${match.tingkat_pengajian || 'Umum'})?`;
+    if (confirm(confirmMsg)) {
+      const statusEl = document.getElementById("scanner-status");
+      if (statusEl) {
+        statusEl.style.display = "block";
+        statusEl.style.color = "var(--primary, #10b981)";
+        statusEl.textContent = `Barcode Valid: ${match.jenis_pengajian}! Mengirim presensi...`;
+      }
+      
+      if (typeof window.doSelfCheckIn === "function") {
+        window.doSelfCheckIn(match.id, 'Hadir Fisik', 'Presensi via Scan QR Dinding');
+      } else {
+        alert("Fungsi presensi mandiri tidak tersedia.");
+      }
+    } else {
+      startAbsenScanner();
+    }
+  } else {
+    alert(`Tidak ada jadwal aktif pengajian ${tingkat} - ${jenis} hari ini.`);
+    startAbsenScanner();
+  }
+}
+
+function getCurrentJakartaTime() {
+  const options = { timeZone: "Asia/Jakarta", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false };
+  const timeParts = new Intl.DateTimeFormat("en-US", options).format(new Date()).split(":");
+  return `${timeParts[0]}:${timeParts[1]}:00`;
+}
+
+function isTimeInsideWindow(current, start, end) {
+  const toSeconds = (tStr) => {
+    if (!tStr) return 0;
+    const parts = tStr.split(":").map(Number);
+    return parts[0] * 3600 + (parts[1] || 0) * 60 + (parts[2] || 0);
+  };
+  
+  const curSec = toSeconds(current);
+  const startSec = toSeconds(start || "20:00:00");
+  const endSec = toSeconds(end || "21:30:00");
+  
+  return curSec >= startSec && curSec <= endSec;
+}
+
+function handleGeneralScan() {
+  stopAbsenScanner();
+  
+  const jamaahId = typeof localCurrentJamaahId !== "undefined" ? localCurrentJamaahId : null;
+  if (!jamaahId) {
+    alert("Silakan login terlebih dahulu untuk melakukan presensi.");
+    startAbsenScanner();
+    return;
+  }
+
+  const jamaahList = typeof getJamaahList === "function" ? getJamaahList() : [];
+  const jamaah = jamaahList.find(j => j.id === jamaahId);
+  if (!jamaah) {
+    alert("Gagal memuat profil Jamaah.");
+    startAbsenScanner();
+    return;
+  }
+
+  const allJadwal = typeof getJadwalPengajianList === "function" ? getJadwalPengajianList() : [];
+  const todayStr = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
+  
+  // Filter schedules that are today AND where the jamaah is eligible
+  const eligibleToday = allJadwal.filter(s => {
+    if (!s) return false;
+    const isToday = s.tanggal === todayStr;
+    const isEligible = typeof window.isJamaahEligibleForSchedule === "function" 
+      ? window.isJamaahEligibleForSchedule(jamaah, s) 
+      : false;
+    return isToday && isEligible;
+  });
+
+  if (eligibleToday.length === 0) {
+    alert("Tidak ada jadwal pengajian aktif untuk Anda hari ini.");
+    startAbsenScanner();
+    return;
+  }
+
+  // Filter which ones are currently open based on time
+  const currentTime = getCurrentJakartaTime();
+  const activeSchedules = eligibleToday.filter(s => {
+    return isTimeInsideWindow(currentTime, s.waktu_mulai, s.waktu_selesai);
+  });
+
+  if (activeSchedules.length === 0) {
+    alert("Presensi belum dibuka atau sudah ditutup untuk jadwal pengajian hari ini.");
+    startAbsenScanner();
+    return;
+  }
+
+  if (activeSchedules.length === 1) {
+    const sched = activeSchedules[0];
+    const confirmMsg = `Isi Presensi pada Kegiatan ${sched.jenis_pengajian} (${sched.tingkat_pengajian || 'Umum'})?`;
+    if (confirm(confirmMsg)) {
+      const statusEl = document.getElementById("scanner-status");
+      if (statusEl) {
+        statusEl.style.display = "block";
+        statusEl.style.color = "var(--primary, #10b981)";
+        statusEl.textContent = `Barcode Valid: ${sched.jenis_pengajian}! Mengirim presensi...`;
+      }
+      
+      if (typeof window.doSelfCheckIn === "function") {
+        window.doSelfCheckIn(sched.id, 'Hadir Fisik', 'Presensi via Scan Barcode Umum');
+      } else {
+        alert("Fungsi presensi mandiri tidak tersedia.");
+      }
+    } else {
+      startAbsenScanner();
+    }
+  } else {
+    // Show selection modal
+    showScheduleSelectionPrompt(activeSchedules, (selectedId) => {
+      const sched = activeSchedules.find(s => s.id === selectedId);
+      if (sched) {
+        const confirmMsg = `Isi Presensi pada Kegiatan ${sched.jenis_pengajian} (${sched.tingkat_pengajian || 'Umum'})?`;
+        if (confirm(confirmMsg)) {
+          const statusEl = document.getElementById("scanner-status");
+          if (statusEl) {
+            statusEl.style.display = "block";
+            statusEl.style.color = "var(--primary, #10b981)";
+            statusEl.textContent = `Barcode Valid: ${sched.jenis_pengajian}! Mengirim presensi...`;
+          }
+          if (typeof window.doSelfCheckIn === "function") {
+            window.doSelfCheckIn(sched.id, 'Hadir Fisik', 'Presensi via Scan Barcode Umum');
+          }
+        } else {
+          startAbsenScanner();
+        }
+      }
+    });
+  }
+}
+
+function showScheduleSelectionPrompt(schedules, callback) {
+  const modalId = "schedule-selection-modal";
+  let modal = document.getElementById(modalId);
+  if (modal) modal.remove();
+
+  modal = document.createElement("div");
+  modal.id = modalId;
+  modal.className = "modal-overlay active";
+  modal.style.zIndex = "9999";
+  
+  const optionsHtml = schedules.map(s => `
+    <button class="btn-primary" style="width: 100%; margin-bottom: 8px; justify-content: flex-start; text-align: left; padding: 12px; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;" onclick="window.confirmScheduleSelection(${s.id})">
+      <i class="fa-solid fa-graduation-cap"></i> 
+      <span>${s.jenis_pengajian} (${s.tingkat_pengajian || 'Umum'})</span>
+    </button>
+  `).join("");
+
+  modal.innerHTML = `
+    <div class="modal-container" style="max-width: 360px; background: var(--bg-card, #1e293b); color: var(--text-primary, #f8fafc); border-radius: 12px; padding: 20px; border: 1px solid var(--border-color, #334155);">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="margin: 0; font-size: 1.1rem;"><i class="fa-solid fa-list-check"></i> Pilih Pengajian</h3>
+        <button class="modal-close-btn" onclick="document.getElementById('${modalId}').remove(); if(typeof startAbsenScanner === 'function') startAbsenScanner();" style="background: transparent; border: none; color: var(--text-secondary); font-size: 1.5rem; cursor: pointer;">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 0;">
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 15px;">Ditemukan beberapa pengajian aktif hari ini. Silakan pilih salah satu untuk presensi:</p>
+        ${optionsHtml}
+      </div>
+      <div class="modal-footer" style="margin-top: 15px; display: flex; justify-content: flex-end; padding-top: 10px; border-top: 1px solid var(--border-color);">
+        <button class="btn-secondary" onclick="document.getElementById('${modalId}').remove(); if(typeof startAbsenScanner === 'function') startAbsenScanner();">Batal</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  window.confirmScheduleSelection = function(id) {
+    document.getElementById(modalId).remove();
+    callback(id);
+  };
 }
 
 /**

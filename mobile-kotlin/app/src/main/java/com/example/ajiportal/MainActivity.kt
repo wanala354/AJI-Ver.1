@@ -15,7 +15,10 @@ import androidx.compose.ui.Modifier
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.lifecycleScope
 import com.example.ajiportal.theme.AJIPortalTheme
+import com.example.ajiportal.utils.UpdateChecker
+import kotlinx.coroutines.launch
 
 class MainActivity : FragmentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -23,6 +26,10 @@ class MainActivity : FragmentActivity() {
 
     createNotificationChannel()
     requestNotificationPermission()
+
+    lifecycleScope.launch {
+      UpdateChecker.checkForUpdates(this@MainActivity)
+    }
 
     enableEdgeToEdge()
     setContent {

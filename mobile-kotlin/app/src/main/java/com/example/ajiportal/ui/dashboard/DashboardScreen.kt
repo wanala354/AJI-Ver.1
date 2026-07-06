@@ -183,8 +183,14 @@ class DashboardViewModel(private val repository: DataRepository) : ViewModel() {
         val timeNow = DateUtils.getCurrentTimeShort()
 
         val passedSchedules = filteredSchedules.filter { s ->
-            if (s.tanggal < todayStr) true
-            else if (s.tanggal == todayStr) {
+            val hasPresensi = presensiList.any { p ->
+                p.idPengajian == s.id && (p.status == "Hadir Fisik" || p.status == "Online" || p.status == "Izin")
+            }
+            if (hasPresensi) {
+                true
+            } else if (s.tanggal < todayStr) {
+                true
+            } else if (s.tanggal == todayStr) {
                 val endTime = s.waktuSelesai?.substring(0, 5) ?: "23:59"
                 timeNow >= endTime
             } else {

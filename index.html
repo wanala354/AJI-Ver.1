@@ -285,6 +285,9 @@
             <li class="submenu-item" data-target="section-users" id="menu-users" style="display: none;">
               <a href="#"><i class="fa-solid fa-users-gear"></i> Manajemen User</a>
             </li>
+            <li class="submenu-item" data-target="section-operator-user-mgmt" id="menu-operator-user-mgmt" style="display: none;">
+              <a href="#"><i class="fa-solid fa-users-gear"></i> Manajemen User</a>
+            </li>
             <li class="submenu-item" data-target="section-database-settings" id="menu-database-settings" style="display: none;">
               <a href="#"><i class="fa-solid fa-database"></i> Koneksi Database</a>
             </li>
@@ -1540,7 +1543,10 @@
                     </select>
                   </div>
                 </div>
-                <button class="btn-primary" onclick="generateStaticQRCode()" style="padding: 10px; font-weight: 600; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;"><i class="fa-solid fa-sync"></i> Generate QR Code</button>
+                <div style="display: flex; gap: 10px;">
+                  <button class="btn-primary" onclick="generateStaticQRCode()" style="flex: 1; padding: 10px; font-weight: 600; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;"><i class="fa-solid fa-sync"></i> Generate QR Spesifik</button>
+                  <button class="btn-secondary" onclick="generateGeneralQRCode()" style="flex: 1; padding: 10px; font-weight: 600; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--border-color); background: transparent; color: var(--text-primary);"><i class="fa-solid fa-qrcode"></i> Generate QR Umum</button>
+                </div>
                 
                 <div id="qr-print-area" style="display: none; flex-direction: column; align-items: center; padding: 25px; background: white; color: black; border-radius: 8px; border: 2px dashed #ccc; text-align: center; margin-top: 15px; margin-bottom: 15px;">
                   <h2 style="margin: 0 0 10px 0; color: #111827; font-family: sans-serif; font-size: 1.6rem; font-weight: 800; letter-spacing: 0.5px;">ABSENSI MANDIRI AJI</h2>
@@ -1609,6 +1615,108 @@
               <div id="pending-users-container">
                 <div style="text-align:center;padding:30px;color:var(--text-muted);"><i
                     class="fa-solid fa-spinner fa-spin"></i> Memuat...</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- PAGE 8B: MANAJEMEN USER - OPERATOR KELOMPOK (Profile + Approve Jamaah) -->
+        <section id="section-operator-user-mgmt" class="page-section">
+          <!-- TAB HEADER -->
+          <div style="display:flex;gap:8px;margin-bottom:24px;border-bottom:1px solid var(--border-color);padding-bottom:0;">
+            <button class="op-user-tab-btn active" id="op-tab-btn-profile" data-optab="profile"
+              style="padding:10px 20px;background:transparent;border:none;border-bottom:3px solid var(--primary);color:var(--primary);font-weight:600;cursor:pointer;font-size:0.9rem;font-family:inherit;transition:all 0.2s;">
+              <i class="fa-solid fa-user-gear"></i> Profil & Keamanan
+            </button>
+            <button class="op-user-tab-btn" id="op-tab-btn-approve" data-optab="approve"
+              style="padding:10px 20px;background:transparent;border:none;border-bottom:3px solid transparent;color:var(--text-secondary);font-weight:500;cursor:pointer;font-size:0.9rem;font-family:inherit;transition:all 0.2s;">
+              <i class="fa-solid fa-user-check"></i> Approve Pendaftaran Jamaah
+              <span id="op-pending-badge" style="display:none;background:#ef4444;color:#fff;border-radius:99px;padding:1px 7px;font-size:0.75rem;margin-left:4px;">0</span>
+            </button>
+          </div>
+
+          <!-- PANEL: PROFIL & KEAMANAN -->
+          <div id="op-panel-profile">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;">
+
+              <!-- Kartu Identitas Pengguna -->
+              <div class="card-panel" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px;">
+                <div id="op-profile-avatar"
+                  style="width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,var(--primary),#6366f1);color:#fff;font-size:2.5rem;font-weight:800;display:flex;align-items:center;justify-content:center;margin-bottom:18px;box-shadow:0 6px 20px rgba(16,185,129,0.35);">A</div>
+                <h2 id="op-profile-card-username" style="margin:0;font-size:1.5rem;font-weight:700;color:var(--text-primary);">-</h2>
+                <span id="op-profile-card-role" class="badge badge-warning" style="margin:8px 0 16px 0;">Operator Kelompok</span>
+                <div style="width:100%;text-align:left;background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:10px;padding:14px;">
+                  <div style="margin-bottom:10px;font-size:0.85rem;"><span style="color:var(--text-muted);">Email:</span>
+                    <strong id="op-profile-card-email" style="display:block;color:var(--text-primary);margin-top:2px;">-</strong>
+                  </div>
+                  <div style="font-size:0.85rem;"><span style="color:var(--text-muted);">Kelompok Pengajian:</span>
+                    <strong id="op-profile-card-kelompok" style="display:block;color:var(--primary);margin-top:2px;">-</strong>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Form Edit Profil & Password -->
+              <div class="card-panel">
+                <div class="card-panel-header" style="margin-bottom:20px;padding-bottom:10px;border-bottom:1px solid var(--border-color);">
+                  <span class="card-panel-title"><i class="fa-solid fa-user-pen"></i> Pengaturan Profil</span>
+                </div>
+                <form id="op-profile-form" autocomplete="off">
+                  <div class="form-group" style="margin-bottom:14px;">
+                    <label for="op-profile-username">Username*</label>
+                    <input type="text" id="op-profile-username" required placeholder="Nama pengguna">
+                  </div>
+                  <div class="form-group" style="margin-bottom:14px;">
+                    <label for="op-profile-email">Email*</label>
+                    <input type="email" id="op-profile-email" required placeholder="Alamat email">
+                  </div>
+                  <div class="form-group" style="margin-bottom:14px;">
+                    <label for="op-profile-role">Hak Akses (Role)</label>
+                    <input type="text" id="op-profile-role" readonly disabled
+                      style="background:rgba(255,255,255,0.02);color:var(--text-muted);border-color:rgba(255,255,255,0.08);">
+                  </div>
+                  <div class="form-group" style="margin-bottom:20px;">
+                    <label for="op-profile-kelompok">Kelompok Pengajian</label>
+                    <input type="text" id="op-profile-kelompok" readonly disabled
+                      style="background:rgba(255,255,255,0.02);color:var(--text-muted);border-color:rgba(255,255,255,0.08);">
+                  </div>
+
+                  <hr style="border:0;border-top:1px solid var(--border-color);margin:18px 0;">
+                  <div class="card-panel-header" style="margin-bottom:18px;">
+                    <span class="card-panel-title" style="font-size:0.95rem;"><i class="fa-solid fa-lock"></i> Ubah Password</span>
+                  </div>
+                  <div class="form-group" style="margin-bottom:14px;">
+                    <label for="op-profile-old-password">Password Saat Ini* <span style="font-size:0.78rem;color:var(--text-muted);">(wajib diisi)</span></label>
+                    <input type="password" id="op-profile-old-password" placeholder="Password saat ini">
+                  </div>
+                  <div class="form-group" style="margin-bottom:14px;">
+                    <label for="op-profile-new-password">Password Baru <span style="font-size:0.78rem;color:var(--text-muted);">(opsional)</span></label>
+                    <input type="password" id="op-profile-new-password" placeholder="Kosongkan jika tidak ingin ubah">
+                  </div>
+                  <div class="form-group" style="margin-bottom:20px;">
+                    <label for="op-profile-confirm-password">Konfirmasi Password Baru</label>
+                    <input type="password" id="op-profile-confirm-password" placeholder="Ulangi password baru">
+                  </div>
+                  <div id="op-profile-msg" style="min-height:20px;margin-bottom:10px;"></div>
+                  <button type="submit" class="btn-primary" id="op-profile-save-btn"
+                    style="width:100%;justify-content:center;padding:12px;margin-top:6px;">
+                    <i class="fa-solid fa-save"></i> Simpan Perubahan
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <!-- PANEL: APPROVE JAMAAH -->
+          <div id="op-panel-approve" style="display:none;">
+            <div class="card-panel">
+              <div class="card-panel-header" style="margin-bottom:15px;">
+                <span class="card-panel-title"><i class="fa-solid fa-user-clock"></i> Pendaftaran Menunggu Persetujuan</span>
+                <button class="btn-secondary" style="padding:8px 15px;font-size:0.85rem;" onclick="opLoadPendingUsers()">
+                  <i class="fa-solid fa-sync"></i> Refresh
+                </button>
+              </div>
+              <div id="op-pending-users-container">
+                <div style="text-align:center;padding:30px;color:var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Memuat...</div>
               </div>
             </div>
           </div>
@@ -2537,16 +2645,16 @@
   </div>
 
   <!-- EMBEDDED CODE LOGIC -->
-  <script src="./js/state.js?v=3.1.5"></script>
-  <script src="./js/api.js?v=3.1.5"></script>
-  <script src="./js/ui.js?v=3.1.5"></script>
-  <script src="./js/dashboard.js?v=3.1.5"></script>
-  <script src="./js/jamaah.js?v=3.1.5"></script>
-  <script src="./js/master.js?v=3.1.5"></script>
-  <script src="./js/utils.js?v=3.1.5"></script>
-  <script src="./js/pengurus.js?v=3.1.5"></script>
-  <script src="./js/pengajian.js?v=3.1.5"></script>
-  <script src="./js/jamaah_portal.js?v=3.1.5"></script>
+  <script src="./js/state.js?v=3.1.6"></script>
+  <script src="./js/api.js?v=3.1.6"></script>
+  <script src="./js/ui.js?v=3.1.6"></script>
+  <script src="./js/dashboard.js?v=3.1.6"></script>
+  <script src="./js/jamaah.js?v=3.1.6"></script>
+  <script src="./js/master.js?v=3.1.6"></script>
+  <script src="./js/utils.js?v=3.1.6"></script>
+  <script src="./js/pengurus.js?v=3.1.6"></script>
+  <script src="./js/pengajian.js?v=3.1.6"></script>
+  <script src="./js/jamaah_portal.js?v=3.1.6"></script>
 </body>
 
 </html>

@@ -53,7 +53,8 @@ sealed interface AbsensiUiState {
         val schedules: List<Jadwal>,
         val allJamaah: List<Jamaah>,
         val pengurusRoles: List<Pengurus>,
-        val myRole: String
+        val myRole: String,
+        val userKelompok: String
     ) : AbsensiUiState
     data class Error(val message: String) : AbsensiUiState
 }
@@ -76,15 +77,36 @@ class AbsensiViewModel(private val repository: DataRepository) : ViewModel() {
                 val jamaahList = repository.getAllJamaah()
                 val pengurus = repository.getMyPengurusRoles()
                 val role = repository.sessionManager.getRole() ?: "jamaah"
+                val userKelompok = repository.sessionManager.getKelompok() ?: ""
                 
-                // Find today's active schedule
-                activeSchedule = findActiveSchedule(schedules)
+                val roleLower = role.lowercase().trim()
+                val isRestricted = roleLower == "operator kelompok" || roleLower == "pengurus kelompok" || roleLower == "jamaah" || roleLower == "user"
+                
+                val filteredSchedules = if (isRestricted && userKelompok.isNotBlank()) {
+                    schedules.filter { s ->
+                        val tk = (s.tingkatPengajian ?: "").lowercase()
+                        val isKelompok = tk.contains("kelompok") || (!tk.contains("desa") && !tk.contains("daerah"))
+                        if (isKelompok) {
+                            val sk = (s.kelompokPengajian ?: "").trim().lowercase()
+                            val jk = userKelompok.trim().lowercase()
+                            sk == jk
+                        } else {
+                            true
+                        }
+                    }
+                } else {
+                    schedules
+                }
+                
+                // Find today's active schedule from the filtered list
+                activeSchedule = findActiveSchedule(filteredSchedules)
                 
                 _uiState.value = AbsensiUiState.Success(
-                    schedules = schedules,
+                    schedules = filteredSchedules,
                     allJamaah = jamaahList,
                     pengurusRoles = pengurus,
-                    myRole = role
+                    myRole = role,
+                    userKelompok = userKelompok
                 )
 
                 activeSchedule?.let {
@@ -401,11 +423,29 @@ fun AbsensiScreen(
                         }
                     } else {
                         val session = selectedSession!!
-                        val filteredJamaah = remember(searchQuery, state.allJamaah) {
+                        val filteredJamaah = remember(searchQuery, state.allJamaah, state.myRole, state.userKelompok, session) {
+                            val roleLower = state.myRole.lowercase().trim()
+                            val isRestricted = roleLower == "operator kelompok" || roleLower == "pengurus kelompok" || roleLower == "jamaah" || roleLower == "user"
+                            
+                            val baseList = if (isRestricted && state.userKelompok.isNotBlank()) {
+                                state.allJamaah.filter { j ->
+                                    j.kelompokPengajian.trim().lowercase() == state.userKelompok.trim().lowercase()
+                                }
+                            } else {
+                                val sessionKelompok = (session.kelompokPengajian ?: "").trim()
+                                if (sessionKelompok.isNotEmpty() && sessionKelompok != "Semua" && sessionKelompok != "Desa" && sessionKelompok != "Daerah") {
+                                    state.allJamaah.filter { j ->
+                                        j.kelompokPengajian.trim().lowercase() == sessionKelompok.lowercase()
+                                    }
+                                } else {
+                                    state.allJamaah
+                                }
+                            }
+
                             if (searchQuery.trim().isEmpty()) {
                                 emptyList()
                             } else {
-                                state.allJamaah.filter {
+                                baseList.filter {
                                     it.namaLengkap.contains(searchQuery, ignoreCase = true)
                                 }
                             }

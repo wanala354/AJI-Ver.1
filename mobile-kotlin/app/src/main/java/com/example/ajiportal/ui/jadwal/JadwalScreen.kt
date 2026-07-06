@@ -144,8 +144,11 @@ fun JadwalScreen(
             }
         }
         is JadwalUiState.Success -> {
-            LaunchedEffect(state.allSchedules) {
-                com.example.ajiportal.utils.JadwalReminderScheduler.scheduleAlarms(context, state.allSchedules)
+            LaunchedEffect(state.allSchedules, state.jamaah, state.masterJenisList, state.pengurusRoles) {
+                val eligibleSchedules = state.allSchedules.filter {
+                    com.example.ajiportal.utils.EligibilityHelper.isJamaahEligible(state.jamaah, it, state.masterJenisList, state.pengurusRoles)
+                }
+                com.example.ajiportal.utils.JadwalReminderScheduler.scheduleAlarms(context, eligibleSchedules)
             }
             JadwalContent(
                 state = state,
@@ -164,6 +167,7 @@ fun JadwalContent(
     onCheckIn: (Int, String, String?, (Boolean) -> Unit) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     val today = LocalDate.now()
@@ -222,9 +226,20 @@ fun JadwalContent(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
 
-        // Filter schedules for the selected day (shows ALL schedules)
-        val daySchedules = remember(selectedDate, state.allSchedules) {
-            state.allSchedules.filter { it.tanggal == selectedDate.toString() }
+        // Filter schedules for the selected day (shows ALL schedules matching user kelompok or Desa/Daerah)
+        val daySchedules = remember(selectedDate, state.allSchedules, state.jamaah) {
+            state.allSchedules.filter { s ->
+                if (s.tanggal != selectedDate.toString()) return@filter false
+                val tk = (s.tingkatPengajian ?: "").lowercase()
+                val isKelompok = tk.contains("kelompok") || (!tk.contains("desa") && !tk.contains("daerah"))
+                if (isKelompok) {
+                    val sk = (s.kelompokPengajian ?: "").trim().lowercase()
+                    val jk = (state.jamaah.kelompokPengajian ?: "").trim().lowercase()
+                    sk == jk
+                } else {
+                    true
+                }
+            }
         }
 
         if (daySchedules.isEmpty()) {
@@ -286,6 +301,14 @@ fun JadwalContent(
                 onCheckIn(showCheckInDialog!!.id, status, reason) { success ->
                     if (success) {
                         showCheckInDialog = null
+                        android.app.AlertDialog.Builder(context)
+                            .setTitle("Presensi Berhasil")
+                            .setMessage("Alhamdulillah Jazakumullahu khoiro, Anda sudah mengisi Presensi")
+                            .setPositiveButton("OK", null)
+                            .setCancelable(false)
+                            .show()
+                    } else {
+                        Toast.makeText(context, "Gagal mengirim presensi.", Toast.LENGTH_SHORT).show()
                     }
                 }
             }

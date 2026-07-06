@@ -158,7 +158,8 @@ window.renderCalendar = function() {
   let schedules = getJadwalPengajianList() || [];
   const currentUser = getCurrentUser();
   const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
-  if (curRoleClean === "operator kelompok") {
+  const isRestricted = ["operator kelompok", "pengurus kelompok", "user", "jamaah"].includes(curRoleClean);
+  if (isRestricted && currentUser && currentUser.kelompok) {
     schedules = schedules.filter(s => {
       const tk = String(s.tingkat_pengajian || "").toLowerCase();
       return s.kelompok_pengajian === currentUser.kelompok ||
@@ -235,15 +236,32 @@ window.renderCalendar = function() {
       badge.className = "calendar-event-badge";
       
       const tingkat = (sched.tingkat_pengajian || "").trim().toLowerCase();
+      const kelompok = (sched.kelompok_pengajian || "").trim().toLowerCase();
       let bgColor = "rgba(59, 130, 246, 0.15)";
       let borderCol = "#3b82f6";
       let textCol = "#60a5fa";
       
-      if (tingkat === "tingkat desa") {
+      if (kelompok.includes("chandra")) {
+        bgColor = "rgba(59, 130, 246, 0.15)";
+        borderCol = "#3b82f6";
+        textCol = "#60a5fa";
+      } else if (kelompok.includes("pondok melati selatan")) {
+        bgColor = "rgba(236, 72, 153, 0.15)";
+        borderCol = "#ec4899";
+        textCol = "#f472b6";
+      } else if (kelompok.includes("pondok melati")) {
+        bgColor = "rgba(139, 92, 246, 0.15)";
+        borderCol = "#8b5cf6";
+        textCol = "#a78bfa";
+      } else if (kelompok.includes("jatiranggon")) {
+        bgColor = "rgba(120, 53, 4, 0.15)";
+        borderCol = "#78350f";
+        textCol = "#d97706";
+      } else if (tingkat.includes("desa")) {
         bgColor = "rgba(16, 185, 129, 0.15)";
         borderCol = "#10b981";
         textCol = "#34d399";
-      } else if (tingkat === "tingkat daerah") {
+      } else if (tingkat.includes("daerah")) {
         bgColor = "rgba(245, 158, 11, 0.15)";
         borderCol = "#f59e0b";
         textCol = "#fbbf24";
@@ -400,7 +418,9 @@ window.openEditJadwalModal = function(id) {
   
   // Check ownership/access
   if (isKelompokRestricted) {
-    if (sched.kelompok_pengajian !== currentUser.kelompok) {
+    const tk = String(sched.tingkat_pengajian || "").toLowerCase();
+    const isDesaOrDaerah = tk.includes("desa") || tk.includes("daerah");
+    if (!isDesaOrDaerah && sched.kelompok_pengajian !== currentUser.kelompok) {
       showToast("Anda tidak memiliki akses untuk melihat/mengedit jadwal kelompok lain!", "error");
       return;
     }
@@ -443,8 +463,9 @@ window.openEditJadwalModal = function(id) {
   kelompokSel.value = sched.kelompok_pengajian;
   
   // Determine read-only view
+  const tk = String(sched.tingkat_pengajian || "").toLowerCase();
   const isReadOnly = ["user", "pengurus desa", "pengurus kelompok"].includes(curRoleClean) || 
-                     (isOperator && (sched.tingkat_pengajian === "Tingkat Desa" || sched.tingkat_pengajian === "Tingkat Daerah"));
+                     (isOperator && (tk.includes("desa") || tk.includes("daerah")));
   setJadwalFormReadOnly(isReadOnly);
   
   // Populate the shared datalist before adding rows
@@ -943,14 +964,15 @@ window.loadPresensiSesiDropdown = function() {
   
   const currentUser = getCurrentUser();
   const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
-  const isOperator = curRoleClean === "operator kelompok";
+  const isRestricted = ["operator kelompok", "pengurus kelompok", "user", "jamaah"].includes(curRoleClean);
   
   let filtered = schedules;
-  if (isOperator) {
+  if (isRestricted && currentUser && currentUser.kelompok) {
     filtered = schedules.filter(s => {
+      const tk = String(s.tingkat_pengajian || "").toLowerCase();
       return s.kelompok_pengajian === currentUser.kelompok ||
-             s.tingkat_pengajian === "Tingkat Desa" ||
-             s.tingkat_pengajian === "Tingkat Daerah";
+             tk.includes("desa") ||
+             tk.includes("daerah");
     });
   }
   
@@ -1244,9 +1266,13 @@ window.submitPresensiKehadiran = function() {
   const schedules = getJadwalPengajianList() || [];
   const session = schedules.find(s => s.id == id_pengajian);
   if (curRoleClean === "operator kelompok") {
-    if (session && session.kelompok_pengajian !== currentUser.kelompok) {
-      showToast("Operator Kelompok hanya bisa menyimpan presensi kelompok sendiri!", "error");
-      return;
+    if (session) {
+      const tk = String(session.tingkat_pengajian || "").toLowerCase();
+      const isDesaOrDaerah = tk.includes("desa") || tk.includes("daerah");
+      if (!isDesaOrDaerah && session.kelompok_pengajian !== currentUser.kelompok) {
+        showToast("Operator Kelompok hanya bisa menyimpan presensi kelompok sendiri!", "error");
+        return;
+      }
     }
   }
   if (!id_pengajian) return;
@@ -1349,11 +1375,11 @@ window.calculateAndRenderMonitoring = function(isSesiChange = false) {
   
   const currentUser = getCurrentUser();
   const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
-  const isOperator = curRoleClean === "operator kelompok";
+  const isRestricted = ["operator kelompok", "pengurus kelompok", "user", "jamaah"].includes(curRoleClean);
   
   // Filter schedules by tingkat, jenis, period
   let periodSchedules = schedules;
-  if (isOperator) {
+  if (isRestricted && currentUser && currentUser.kelompok) {
     periodSchedules = periodSchedules.filter(s => {
       const tk = String(s.tingkat_pengajian || "").toLowerCase();
       return s.kelompok_pengajian === currentUser.kelompok ||
@@ -1445,7 +1471,7 @@ window.calculateAndRenderMonitoring = function(isSesiChange = false) {
   }
   
   // Gather active presensi records and compute overall statistics
-  const targetJamaahForStats = isOperator ? jamaah.filter(j => j.kelompokPengajian === currentUser.kelompok) : jamaah;
+  const targetJamaahForStats = isRestricted && currentUser && currentUser.kelompok ? jamaah.filter(j => j.kelompokPengajian === currentUser.kelompok) : jamaah;
 
   // Build a lookup map for presensi
   const presensiMap = {};
@@ -1533,11 +1559,16 @@ window.updateAttendanceTrendChart = function() {
   const jamaah = getJamaahList() || [];
   const currentUser = getCurrentUser();
   const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
-  const isOperator = curRoleClean === "operator kelompok";
+  const isRestricted = ["operator kelompok", "pengurus kelompok", "user", "jamaah"].includes(curRoleClean);
   
   let targetSchedules = [...schedules];
-  if (isOperator) {
-    targetSchedules = targetSchedules.filter(s => s.kelompok_pengajian === currentUser.kelompok);
+  if (isRestricted && currentUser && currentUser.kelompok) {
+    targetSchedules = targetSchedules.filter(s => {
+      const tk = String(s.tingkat_pengajian || "").toLowerCase();
+      return s.kelompok_pengajian === currentUser.kelompok ||
+             tk.includes("desa") ||
+             tk.includes("daerah");
+    });
   } else {
     const filterTingkat = document.getElementById("monitor-tingkat").value;
     if (filterTingkat) {
@@ -1553,7 +1584,7 @@ window.updateAttendanceTrendChart = function() {
   // Sort schedules by date ascending for chronological order
   targetSchedules.sort((a, b) => a.tanggal.localeCompare(b.tanggal));
   
-  const targetJamaahForStats = isOperator ? jamaah.filter(j => j.kelompokPengajian === currentUser.kelompok) : jamaah;
+  const targetJamaahForStats = isRestricted && currentUser && currentUser.kelompok ? jamaah.filter(j => j.kelompokPengajian === currentUser.kelompok) : jamaah;
   
   const presensiMap = {};
   presensiDb.forEach(p => {

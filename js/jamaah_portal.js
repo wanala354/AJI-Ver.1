@@ -111,6 +111,9 @@ window.loadJamaahDashboard = function() {
   });
 
   const sudahLewat = filteredJadwal.filter(j => {
+    const pr = allPresensi.find(p => p && p.id_pengajian == j.id && p.id_jamaah === jamaahId);
+    const hasPresensi = pr && (pr.status === 'Hadir Fisik' || pr.status === 'Online' || pr.status === 'Izin');
+    if (hasPresensi) return true;
     if (j.tanggal < todayStr) return true;
     if (j.tanggal === todayStr) {
       const endTime = j.waktu_selesai || "23:59";
@@ -412,7 +415,17 @@ window.renderJamaahCalendarGrid = function() {
   const allJadwal = getJadwalPengajianList() || [];
   const allPresensi = getPresensiKehadiranList() || [];
   
-  const relevantSessions = allJadwal;
+  const relevantSessions = allJadwal.filter(s => {
+    if (!kelompok) return true;
+    const tk = String(s.tingkat_pengajian || "").toLowerCase();
+    const isKelompok = tk.includes("kelompok") || (!tk.includes("desa") && !tk.includes("daerah"));
+    if (isKelompok) {
+      const sk = String(s.kelompok_pengajian || "").trim().toLowerCase();
+      const jk = String(kelompok).trim().toLowerCase();
+      return sk === jk;
+    }
+    return true;
+  });
   
   const todayStr = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
   const now = new Date();
@@ -764,9 +777,7 @@ window.doSelfCheckIn = function(jadwalId, status, keterangan) {
   google.script.run
     .withSuccessHandler(function() {
       fetchDatabaseFromServer(function() {
-        if (status === 'Hadir Fisik') {
-          alert("Alhamdulilah jazakumullahu khoiro, sudah hadir !, Semoga Allah memberikan Aman, Slamat, Lancar dan Barokah!");
-        }
+        alert("Alhamdulillah Jazakumullahu khoiro, Anda sudah mengisi Presensi");
         loadJamaahJadwal();
         loadJamaahDashboard();
         if (typeof showToast === 'function') showToast('Check-in berhasil: ' + status, 'success');

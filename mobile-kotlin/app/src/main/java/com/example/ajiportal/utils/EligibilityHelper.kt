@@ -15,8 +15,12 @@ object EligibilityHelper {
         // 1. Kelompok check
         val tk = (s.tingkatPengajian ?: "").lowercase()
         val isKelompok = tk.contains("kelompok") || (!tk.contains("desa") && !tk.contains("daerah"))
-        if (isKelompok && s.kelompokPengajian != j.kelompokPengajian) {
-            return false
+        if (isKelompok) {
+            val sk = (s.kelompokPengajian ?: "").trim().lowercase()
+            val jk = (j.kelompokPengajian ?: "").trim().lowercase()
+            if (sk != jk) {
+                return false
+            }
         }
         
         // 2. Specific attendees check
