@@ -940,6 +940,12 @@ window.loadPresensiSesiDropdown = function() {
   const select = document.getElementById("presensi-jadwal-select");
   if (!select) return;
   
+  if (typeof populateMonthFilterOptions === "function") {
+    populateMonthFilterOptions("presensi-filter-periode", () => {
+      loadPresensiSesiDropdown();
+    }, "presensi");
+  }
+  
   select.innerHTML = '<option value="">-- Pilih Sesi Pengajian --</option>';
   select.value = "";
   if (typeof loadPresensiSheet === "function") {
@@ -979,7 +985,7 @@ window.loadPresensiSesiDropdown = function() {
   }
   
   const filterTingkat = document.getElementById("presensi-filter-tingkat") ? document.getElementById("presensi-filter-tingkat").value : "";
-  const filterPeriode = document.getElementById("presensi-filter-periode") ? document.getElementById("presensi-filter-periode").value : "";
+  const filterPeriode = document.getElementById("presensi-filter-periode") ? document.getElementById("presensi-filter-periode").value : "today";
   
   if (filterTingkat) {
     filtered = filtered.filter(s => s.tingkat_pengajian === filterTingkat);
@@ -999,6 +1005,11 @@ window.loadPresensiSesiDropdown = function() {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(today.getDate() - 7);
     filtered = filtered.filter(s => new Date(s.tanggal) >= oneWeekAgo);
+  } else if (filterPeriode === "" || filterPeriode === "all") {
+    // Semua Periode
+  } else {
+    // YYYY-MM or YYYY
+    filtered = filtered.filter(s => s.tanggal && s.tanggal.startsWith(filterPeriode));
   }
   
   filtered.forEach(s => {
@@ -1365,6 +1376,12 @@ function initMonitoringFilters() {
 }
 
 window.calculateAndRenderMonitoring = function(isSesiChange = false) {
+  if (typeof populateMonthFilterOptions === "function") {
+    populateMonthFilterOptions("monitor-periode", () => {
+      calculateAndRenderMonitoring(false);
+    }, "monitor");
+  }
+  
   initMonitoringFilters();
   
   const filterTingkat = document.getElementById("monitor-tingkat").value;
@@ -1395,18 +1412,16 @@ window.calculateAndRenderMonitoring = function(isSesiChange = false) {
   if (filterJenis) {
     periodSchedules = periodSchedules.filter(s => s.jenis_pengajian === filterJenis);
   }
-    // Time period filter
-  const tzDate = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
-  const year = tzDate.getFullYear();
-  const month = tzDate.getMonth();
   
+  // Time period filter
+  const tzDate = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
   const formatDateForCompare = (d) => {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     return y + '-' + m + '-' + day;
   };
-
+  
   if (filterPeriod === "weekly") {
     const monday = new Date(tzDate);
     monday.setDate(tzDate.getDate() + (tzDate.getDay() === 0 ? -6 : 1 - tzDate.getDay()));
@@ -1417,12 +1432,9 @@ window.calculateAndRenderMonitoring = function(isSesiChange = false) {
     const sundayStr = formatDateForCompare(sunday);
     
     periodSchedules = periodSchedules.filter(s => s.tanggal >= mondayStr && s.tanggal <= sundayStr);
-  } else if (filterPeriod === "monthly") {
-    const startOfMonthStr = year + '-' + String(month + 1).padStart(2, '0') + '-01';
-    const lastDay = new Date(year, month + 1, 0).getDate();
-    const endOfMonthStr = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(lastDay).padStart(2, '0');
-    
-    periodSchedules = periodSchedules.filter(s => s.tanggal >= startOfMonthStr && s.tanggal <= endOfMonthStr);
+  } else if (filterPeriod) {
+    // Specific month (YYYY-MM) or year (YYYY)
+    periodSchedules = periodSchedules.filter(s => s.tanggal && s.tanggal.startsWith(filterPeriod));
   }
   
   // Update session filter select options if not triggered by it

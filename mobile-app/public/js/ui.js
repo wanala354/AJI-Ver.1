@@ -1255,6 +1255,7 @@
       // Household & Report filters
       document.getElementById("kk-filter-kelompok").addEventListener("change", populateKKList);
       document.getElementById("report-filter-kelompok").addEventListener("change", calculateAndRenderReport);
+      document.getElementById("report-filter-bulan").addEventListener("change", calculateAndRenderReport);
       document.getElementById("btn-export-report-csv").addEventListener("click", exportReportToCSV);
 
       // Jamaah Save Form Modal

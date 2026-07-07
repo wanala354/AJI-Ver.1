@@ -1,6 +1,94 @@
     // DASHBOARD KPI STATS & CHARTS
     // ----------------------------------------------------
+    function populateMonthFilterOptions(selectId, onChangeCallback, type = "dashboard") {
+      const monthSelect = document.getElementById(selectId);
+      if (!monthSelect) return;
+      
+      const allJadwal = getJadwalPengajianList() || [];
+      
+      // Get current year
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const todayStr = `${currentYear}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      
+      // Determine which years to populate (always include current year)
+      const years = new Set([currentYear]);
+      allJadwal.forEach(j => {
+        if (j.tanggal && j.tanggal.length >= 4) {
+          const y = parseInt(j.tanggal.substring(0, 4), 10);
+          if (!isNaN(y)) {
+            years.add(y);
+          }
+        }
+      });
+      
+      // Sort years descending
+      const sortedYears = Array.from(years).sort((a, b) => b - a);
+      
+      // Generate options
+      let htmlContent = "";
+      const optionKeysParts = [];
+      
+      const monthNames = [
+        "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+        "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+      ];
+      
+      if (type === "presensi") {
+        htmlContent += `<option value="today">Hari Ini</option>`;
+        htmlContent += `<option value="1week">1 Minggu Terakhir</option>`;
+        htmlContent += `<option value="all">Semua Periode</option>`;
+        optionKeysParts.push("today", "1week", "all");
+      } else if (type === "monitor") {
+        htmlContent += `<option value="weekly">Periode Mingguan</option>`;
+        htmlContent += `<option value="">Semua Periode</option>`;
+        optionKeysParts.push("weekly", "");
+      }
+      
+      sortedYears.forEach(yr => {
+        // Add "Semua Bulan [Year]" option
+        htmlContent += `<option value="${yr}">Semua Bulan ${yr}</option>`;
+        optionKeysParts.push(String(yr));
+        
+        // Add 12 months descending (Desember to Januari)
+        for (let mVal = 12; mVal >= 1; mVal--) {
+          const mCode = `${yr}-${String(mVal).padStart(2, '0')}`;
+          const mName = monthNames[mVal - 1];
+          htmlContent += `<option value="${mCode}">${mName} ${yr}</option>`;
+          optionKeysParts.push(mCode);
+        }
+      });
+      
+      const optionKeys = optionKeysParts.join('|');
+      
+      if (monthSelect.dataset.optionKeys !== optionKeys) {
+        let defaultValue = todayStr;
+        if (type === "presensi") defaultValue = "today";
+        
+        const savedValue = monthSelect.value || defaultValue;
+        
+        monthSelect.innerHTML = htmlContent;
+        monthSelect.dataset.optionKeys = optionKeys;
+        
+        if (optionKeysParts.includes(savedValue)) {
+          monthSelect.value = savedValue;
+        } else {
+          monthSelect.value = defaultValue;
+        }
+        
+        if (!monthSelect.dataset.listenerAdded) {
+          monthSelect.addEventListener('change', onChangeCallback);
+          monthSelect.dataset.listenerAdded = "true";
+        }
+      }
+    }
+
     function loadDashboardKPIs() {
+      populateMonthFilterOptions("dashboard-bulan-filter", () => {
+        loadDashboardKPIs();
+        renderDashboardCharts();
+      });
+
       const jamaah = getJamaahList();
       const kkList = getKepalaKeluargaList();
       
@@ -20,12 +108,13 @@
       document.getElementById("kpi-total-paud").textContent = jamaah.filter(j => j.kelompokPeramutan === "PAUD").length;
       document.getElementById("kpi-total-janda").textContent = jamaah.filter(j => j.statusPernikahan === "Janda").length;
 
-      // Calculate presence in "Teks" sessions for current month
+      // Calculate presence in "Teks" sessions for selected month
       try {
         const allJadwal = getJadwalPengajianList() || [];
         const allPresensi = getPresensiKehadiranList() || [];
+        const monthFilterEl = document.getElementById("dashboard-bulan-filter");
         const todayStr = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
-        const currentYearMonth = todayStr.substring(0, 7); // "YYYY-MM"
+        const currentYearMonth = monthFilterEl && monthFilterEl.value ? monthFilterEl.value : todayStr.substring(0, 7);
         
         const currentUser = getCurrentUser();
         const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
@@ -99,6 +188,10 @@
     }
 
     function renderDashboardCharts() {
+      populateMonthFilterOptions("dashboard-bulan-filter", () => {
+        loadDashboardKPIs();
+        renderDashboardCharts();
+      });
       let jamaah = getJamaahList();
       
       const filterDashboardEl = document.getElementById("dashboard-kelompok-filter");
@@ -321,9 +414,16 @@
         repFilter.value = savedVal;
         repFilter.disabled = false;
       }
+      
+      populateMonthFilterOptions("report-filter-bulan", () => {
+        calculateAndRenderReport();
+      });
     }
 
     function calculateAndRenderReport() {
+      populateMonthFilterOptions("report-filter-bulan", () => {
+        calculateAndRenderReport();
+      });
       const selectedKelompok = document.getElementById("report-filter-kelompok").value;
       const jamaah = getJamaahList();
       const filtered = selectedKelompok === "" ? jamaah : jamaah.filter(j => j.kelompokPengajian === selectedKelompok);
