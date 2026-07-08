@@ -154,6 +154,13 @@
         if (kpiTeks) {
           kpiTeks.textContent = `${attendeeIds.size} (${pct}%)`;
         }
+        const kpiTeksLabel = document.getElementById("kpi-label-kehadiran-teks");
+        if (kpiTeksLabel) {
+          const selectedOptionText = monthFilterEl && monthFilterEl.options[monthFilterEl.selectedIndex] 
+            ? monthFilterEl.options[monthFilterEl.selectedIndex].text 
+            : "Bulan Ini";
+          kpiTeksLabel.textContent = `Kehadiran Teks (${selectedOptionText})`;
+        }
       } catch (err) {
         console.error("Error calculating Teks KPI:", err);
       }
