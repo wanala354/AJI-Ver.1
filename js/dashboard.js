@@ -14,6 +14,52 @@
       return list;
     }
 
+    function localIsJamaahEligibleForJenis(j, jenis) {
+      const jClean = (jenis || "").trim().toLowerCase().replace(/\s+/g, '');
+      const list = typeof getMasterJenisPengajianList === 'function' ? getMasterJenisPengajianList() : (typeof localMasterJenisPengajian !== 'undefined' ? localMasterJenisPengajian : []);
+      const match = list.find(item => {
+        const name = typeof item === 'object' ? item.nama : item;
+        return (name || "").trim().toLowerCase().replace(/\s+/g, '') === jClean;
+      });
+      
+      if (match && typeof match === 'object') {
+        const genderLimit = (match.batasan_gender || "Semua").trim().toLowerCase();
+        const jamaahGender = (j.jenisKelamin || "").trim().toLowerCase();
+        if (genderLimit === "laki-laki" && jamaahGender !== "laki-laki") return false;
+        if (genderLimit === "perempuan" && jamaahGender !== "perempuan") return false;
+        
+        const targetDapuanStr = (match.target_dapuan || "").trim();
+        if (targetDapuanStr) {
+          const allowedDapuans = targetDapuanStr.split(",").map(d => d.trim().toLowerCase()).filter(Boolean);
+          if (allowedDapuans.length > 0) {
+            const jamaahDapuans = [j.dapuan];
+            if (typeof getPengurusList === 'function') {
+              const pList = getPengurusList() || [];
+              pList.forEach(p => {
+                if (p.jamaah_id === j.id && p.dapuan) {
+                  jamaahDapuans.push(p.dapuan);
+                }
+              });
+            }
+            const lowerJamaahDapuans = jamaahDapuans.filter(Boolean).map(d => d.trim().toLowerCase());
+            const hasMatchingDapuan = allowedDapuans.some(ad => lowerJamaahDapuans.includes(ad));
+            if (!hasMatchingDapuan) return false;
+          }
+        }
+      } else {
+        const isFemaleOnly = jClean.includes("ibu") || jClean.includes("wanita") || jClean.includes("kewanitaan") || jClean.includes("akhwat");
+        if (isFemaleOnly && (j.jenisKelamin || "").trim().toLowerCase() !== "perempuan") return false;
+      }
+
+      const allowedPeramutan = typeof getEligiblePeramutanForJenis === 'function' ? getEligiblePeramutanForJenis(jenis) : null;
+      if (allowedPeramutan && allowedPeramutan.length > 0) {
+        const peramutan = (j.kelompokPeramutan || "").trim().toLowerCase();
+        return allowedPeramutan.some(p => p.toLowerCase() === peramutan);
+      }
+
+      return true;
+    }
+
     function populateMonthFilterOptions(selectId, onChangeCallback, type = "dashboard") {
       const monthSelect = document.getElementById(selectId);
       if (!monthSelect) return;
@@ -141,11 +187,11 @@
         const filterDashboardEl = document.getElementById("dashboard-kelompok-filter");
         const activeKelompok = isKelompokRestricted ? currentUser.kelompok : (filterDashboardEl ? filterDashboardEl.value : "");
         
-        const allowedJamaahIds = new Set(
-          jamaah
-            .filter(j => !activeKelompok || j.kelompokPengajian === activeKelompok)
-            .map(j => j.id)
-        );
+        const eligibleTeksJamaah = jamaah.filter(j => {
+          const matchesKelompok = !activeKelompok || j.kelompokPengajian === activeKelompok;
+          return matchesKelompok && localIsJamaahEligibleForJenis(j, "Teks");
+        });
+        const eligibleTeksIds = new Set(eligibleTeksJamaah.map(j => j.id));
         
         const teksSessions = allJadwal.filter(s => {
           if (!s || !s.tanggal) return false;
@@ -161,14 +207,14 @@
           if (p && teksSessionIds.has(p.id_pengajian)) {
             const statusLower = (p.status || "").trim().toLowerCase();
             const isHadir = statusLower === "hadir fisik" || statusLower === "online";
-            if (isHadir && p.id_jamaah && allowedJamaahIds.has(p.id_jamaah)) {
+            if (isHadir && p.id_jamaah && eligibleTeksIds.has(p.id_jamaah)) {
               attendeeIds.add(p.id_jamaah);
             }
           }
         });
         
-        const totalActiveJamaah = allowedJamaahIds.size;
-        const pct = totalActiveJamaah > 0 ? Math.round((attendeeIds.size / totalActiveJamaah) * 100) : 0;
+        const totalTeksEligible = eligibleTeksJamaah.length;
+        const pct = totalTeksEligible > 0 ? Math.round((attendeeIds.size / totalTeksEligible) * 100) : 0;
         const kpiTeks = document.getElementById("kpi-total-kehadiran-teks");
         if (kpiTeks) {
           kpiTeks.textContent = `${attendeeIds.size} (${pct}%)`;
@@ -655,46 +701,6 @@
         
         const allJadwal = getJadwalPengajianList() || [];
         const allPresensi = getPresensiKehadiranList() || [];
-        
-        // Local self-contained copy of isJamaahEligibleForJenis to avoid ReferenceError from script order
-        const localIsJamaahEligibleForJenis = (j, jenis) => {
-          const jClean = (jenis || "").trim().toLowerCase().replace(/\s+/g, '');
-          const list = typeof getMasterJenisPengajianList === 'function' ? getMasterJenisPengajianList() : (typeof localMasterJenisPengajian !== 'undefined' ? localMasterJenisPengajian : []);
-          const match = list.find(item => {
-            const name = typeof item === 'object' ? item.nama : item;
-            return (name || "").trim().toLowerCase().replace(/\s+/g, '') === jClean;
-          });
-          
-          if (match && typeof match === 'object') {
-            const genderLimit = (match.batasan_gender || "Semua").trim().toLowerCase();
-            const jamaahGender = (j.jenisKelamin || "").trim().toLowerCase();
-            if (genderLimit === "laki-laki" && jamaahGender !== "laki-laki") return false;
-            if (genderLimit === "perempuan" && jamaahGender !== "perempuan") return false;
-            
-            const targetDapuanStr = (match.target_dapuan || "").trim();
-            if (targetDapuanStr) {
-              const allowedDapuans = targetDapuanStr.split(",").map(d => d.trim().toLowerCase()).filter(Boolean);
-              if (allowedDapuans.length > 0) {
-                const jamaahDapuans = [j.dapuan];
-                if (typeof getPengurusList === 'function') {
-                  const pList = getPengurusList() || [];
-                  pList.forEach(p => {
-                    if (p.jamaah_id === j.id && p.dapuan) {
-                      jamaahDapuans.push(p.dapuan);
-                    }
-                  });
-                }
-                const lowerJamaahDapuans = jamaahDapuans.filter(Boolean).map(d => d.trim().toLowerCase());
-                const hasMatchingDapuan = allowedDapuans.some(ad => lowerJamaahDapuans.includes(ad));
-                if (!hasMatchingDapuan) return false;
-              }
-            }
-          } else {
-            const isFemaleOnly = jClean.includes("ibu") || jClean.includes("wanita") || jClean.includes("kewanitaan") || jClean.includes("akhwat");
-            if (isFemaleOnly && (j.jenisKelamin || "").trim().toLowerCase() !== "perempuan") return false;
-          }
-          return true;
-        };
         
         // --- 1. Pengajian Sambung (Tingkat Daerah, Desa, Kelompok) ---
         const calculateSambungForTingkat = (tingkatKey) => {

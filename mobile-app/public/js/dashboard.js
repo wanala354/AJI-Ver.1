@@ -1,5 +1,51 @@
     // DASHBOARD KPI STATS & CHARTS
     // ----------------------------------------------------
+    function localIsJamaahEligibleForJenis(j, jenis) {
+      const jClean = (jenis || "").trim().toLowerCase().replace(/\s+/g, '');
+      const list = typeof getMasterJenisPengajianList === 'function' ? getMasterJenisPengajianList() : (typeof localMasterJenisPengajian !== 'undefined' ? localMasterJenisPengajian : []);
+      const match = list.find(item => {
+        const name = typeof item === 'object' ? item.nama : item;
+        return (name || "").trim().toLowerCase().replace(/\s+/g, '') === jClean;
+      });
+      
+      if (match && typeof match === 'object') {
+        const genderLimit = (match.batasan_gender || "Semua").trim().toLowerCase();
+        const jamaahGender = (j.jenisKelamin || "").trim().toLowerCase();
+        if (genderLimit === "laki-laki" && jamaahGender !== "laki-laki") return false;
+        if (genderLimit === "perempuan" && jamaahGender !== "perempuan") return false;
+        
+        const targetDapuanStr = (match.target_dapuan || "").trim();
+        if (targetDapuanStr) {
+          const allowedDapuans = targetDapuanStr.split(",").map(d => d.trim().toLowerCase()).filter(Boolean);
+          if (allowedDapuans.length > 0) {
+            const jamaahDapuans = [j.dapuan];
+            if (typeof getPengurusList === 'function') {
+              const pList = getPengurusList() || [];
+              pList.forEach(p => {
+                if (p.jamaah_id === j.id && p.dapuan) {
+                  jamaahDapuans.push(p.dapuan);
+                }
+              });
+            }
+            const lowerJamaahDapuans = jamaahDapuans.filter(Boolean).map(d => d.trim().toLowerCase());
+            const hasMatchingDapuan = allowedDapuans.some(ad => lowerJamaahDapuans.includes(ad));
+            if (!hasMatchingDapuan) return false;
+          }
+        }
+      } else {
+        const isFemaleOnly = jClean.includes("ibu") || jClean.includes("wanita") || jClean.includes("kewanitaan") || jClean.includes("akhwat");
+        if (isFemaleOnly && (j.jenisKelamin || "").trim().toLowerCase() !== "perempuan") return false;
+      }
+
+      const allowedPeramutan = typeof getEligiblePeramutanForJenis === 'function' ? getEligiblePeramutanForJenis(jenis) : null;
+      if (allowedPeramutan && allowedPeramutan.length > 0) {
+        const peramutan = (j.kelompokPeramutan || "").trim().toLowerCase();
+        return allowedPeramutan.some(p => p.toLowerCase() === peramutan);
+      }
+
+      return true;
+    }
+
     function populateMonthFilterOptions(selectId, onChangeCallback, type = "dashboard") {
       const monthSelect = document.getElementById(selectId);
       if (!monthSelect) return;
@@ -122,11 +168,11 @@
         const filterDashboardEl = document.getElementById("dashboard-kelompok-filter");
         const activeKelompok = isKelompokRestricted ? currentUser.kelompok : (filterDashboardEl ? filterDashboardEl.value : "");
         
-        const allowedJamaahIds = new Set(
-          jamaah
-            .filter(j => !activeKelompok || j.kelompokPengajian === activeKelompok)
-            .map(j => j.id)
-        );
+        const eligibleTeksJamaah = jamaah.filter(j => {
+          const matchesKelompok = !activeKelompok || j.kelompokPengajian === activeKelompok;
+          return matchesKelompok && localIsJamaahEligibleForJenis(j, "Teks");
+        });
+        const eligibleTeksIds = new Set(eligibleTeksJamaah.map(j => j.id));
         
         const teksSessions = allJadwal.filter(s => {
           if (!s || !s.tanggal) return false;
@@ -142,14 +188,14 @@
           if (p && teksSessionIds.has(p.id_pengajian)) {
             const statusLower = (p.status || "").trim().toLowerCase();
             const isHadir = statusLower === "hadir fisik" || statusLower === "online";
-            if (isHadir && p.id_jamaah && allowedJamaahIds.has(p.id_jamaah)) {
+            if (isHadir && p.id_jamaah && eligibleTeksIds.has(p.id_jamaah)) {
               attendeeIds.add(p.id_jamaah);
             }
           }
         });
         
-        const totalActiveJamaah = allowedJamaahIds.size;
-        const pct = totalActiveJamaah > 0 ? Math.round((attendeeIds.size / totalActiveJamaah) * 100) : 0;
+        const totalTeksEligible = eligibleTeksJamaah.length;
+        const pct = totalTeksEligible > 0 ? Math.round((attendeeIds.size / totalTeksEligible) * 100) : 0;
         const kpiTeks = document.getElementById("kpi-total-kehadiran-teks");
         if (kpiTeks) {
           kpiTeks.textContent = `${attendeeIds.size} (${pct}%)`;
@@ -598,6 +644,148 @@
         `;
         tbodyDapuan.appendChild(tr);
       });
+
+      // --- KEHADIRAN PENGAJIAN GAUGES (Bulan Ini) - (v2.2) ---
+      try {
+        const monthFilterEl = document.getElementById("report-filter-bulan");
+        const todayStr = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
+        const currentYearMonth = monthFilterEl && monthFilterEl.value ? monthFilterEl.value : todayStr.substring(0, 7);
+        
+        const allJadwal = getJadwalPengajianList() || [];
+        const allPresensi = getPresensiKehadiranList() || [];
+        
+        // --- 1. Pengajian Sambung (Tingkat Daerah, Desa, Kelompok) ---
+        const calculateSambungForTingkat = (tingkatKey) => {
+          const sessions = allJadwal.filter(s => {
+            if (!s || !s.tanggal || !s.jenis_pengajian || !s.tingkat_pengajian) return false;
+            const isCurrentMonth = s.tanggal.startsWith(currentYearMonth);
+            const isSambung = s.jenis_pengajian.trim().toLowerCase() === "sambung";
+            const tkLower = s.tingkat_pengajian.toLowerCase();
+            const isTargetTingkat = tkLower.includes(tingkatKey);
+            
+            if (selectedKelompok) {
+              const isDaerahOrDesa = tkLower.includes("daerah") || tkLower.includes("desa");
+              const matchesKelompok = s.kelompok_pengajian === selectedKelompok || s.kelompok_pengajian === "Semua";
+              return isCurrentMonth && isSambung && isTargetTingkat && (isDaerahOrDesa || matchesKelompok);
+            }
+            return isCurrentMonth && isSambung && isTargetTingkat;
+          });
+          
+          let totalSlots = 0;
+          let totalHadir = 0;
+          
+          sessions.forEach(session => {
+            let sessionTargets = jamaah.filter(j => localIsJamaahEligibleForJenis(j, session.jenis_pengajian));
+            
+            if (session.kelompok_pengajian && session.kelompok_pengajian !== "Semua" && session.kelompok_pengajian !== "Desa" && session.kelompok_pengajian !== "Daerah") {
+              sessionTargets = sessionTargets.filter(j => j.kelompokPengajian === session.kelompok_pengajian);
+            }
+            
+            if (selectedKelompok) {
+              sessionTargets = sessionTargets.filter(j => j.kelompokPengajian === selectedKelompok);
+            }
+            
+            if (sessionTargets.length === 0) return;
+            
+            const sessionPresensi = allPresensi.filter(p => p.id_pengajian == session.id);
+            const targetIds = new Set(sessionTargets.map(j => j.id));
+            
+            let hadirCount = 0;
+            sessionPresensi.forEach(p => {
+              if (p.id_jamaah && targetIds.has(p.id_jamaah)) {
+                const statusLower = (p.status || "").trim().toLowerCase();
+                if (statusLower === "hadir fisik" || statusLower === "online") {
+                  hadirCount++;
+                }
+              }
+            });
+            
+            totalSlots += sessionTargets.length;
+            totalHadir += hadirCount;
+          });
+          
+          return {
+            percentage: totalSlots > 0 ? Math.round((totalHadir / totalSlots) * 100) : 0,
+            hadir: totalHadir,
+            total: totalSlots
+          };
+        };
+
+        const resDaerah = calculateSambungForTingkat("daerah");
+        const resDesa = calculateSambungForTingkat("desa");
+        const resKelompok = calculateSambungForTingkat("kelompok");
+        
+        // --- 2. Pengajian Teks (Unique Attendee per Month) ---
+        const teksSessions = allJadwal.filter(s => {
+          if (!s || !s.tanggal || !s.jenis_pengajian) return false;
+          const isCurrentMonth = s.tanggal.startsWith(currentYearMonth);
+          const isTeks = s.jenis_pengajian.trim().toLowerCase() === "teks";
+          
+          if (selectedKelompok) {
+            const tkLower = (s.tingkat_pengajian || "").toLowerCase();
+            const isDaerahOrDesa = tkLower.includes("daerah") || tkLower.includes("desa");
+            const matchesKelompok = s.kelompok_pengajian === selectedKelompok || s.kelompok_pengajian === "Semua";
+            return isCurrentMonth && isTeks && (isDaerahOrDesa || matchesKelompok);
+          }
+          return isCurrentMonth && isTeks;
+        });
+        
+        const teksSessionIds = new Set(teksSessions.map(s => s.id));
+        const attendedTeksJamaahIds = new Set();
+        
+        let eligibleTeksJamaah = jamaah.filter(j => localIsJamaahEligibleForJenis(j, "Teks"));
+        if (selectedKelompok) {
+          eligibleTeksJamaah = eligibleTeksJamaah.filter(j => j.kelompokPengajian === selectedKelompok);
+        }
+        
+        const eligibleTeksIds = new Set(eligibleTeksJamaah.map(j => j.id));
+        
+        allPresensi.forEach(p => {
+          if (p && p.id_jamaah && teksSessionIds.has(p.id_pengajian) && eligibleTeksIds.has(p.id_jamaah)) {
+            const statusLower = (p.status || "").trim().toLowerCase();
+            if (statusLower === "hadir fisik" || statusLower === "online") {
+              attendedTeksJamaahIds.add(p.id_jamaah);
+            }
+          }
+        });
+        
+        const totalTeksEligible = eligibleTeksJamaah.length;
+        const totalTeksHadir = attendedTeksJamaahIds.size;
+        const pctTeks = totalTeksEligible > 0 ? Math.round((totalTeksHadir / totalTeksEligible) * 100) : 0;
+        
+        // --- 3. Render Gauges ---
+        const renderGauge = (containerId, value, count, total, label, color) => {
+          const container = document.getElementById(containerId);
+          if (!container) return;
+          
+          container.innerHTML = `
+            <div class="gauge-card" style="text-align: center; background: var(--bg-card); padding: 15px 20px; border-radius: 12px; border: 1px solid var(--border-color); width: 220px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);">
+              <h4 style="margin-top: 0; margin-bottom: 12px; font-size: 0.92rem; font-weight: 600; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.03em;">${label}</h4>
+              <div style="position: relative; width: 150px; height: 80px; margin: 0 auto 5px;">
+                <svg width="150" height="80" viewBox="0 0 100 50">
+                  <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="var(--border-color)" stroke-width="8" stroke-linecap="round"/>
+                  <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="${color}" stroke-width="8" stroke-linecap="round"
+                        stroke-dasharray="125.6" stroke-dashoffset="${125.6 - (125.6 * value / 100)}" style="transition: stroke-dashoffset 1s ease-out;"/>
+                </svg>
+                <div style="position: absolute; bottom: 0; left: 0; right: 0; text-align: center;">
+                  <span style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">${value}%</span>
+                </div>
+              </div>
+              <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 5px;">
+                Hadir: <strong>${count}</strong> / ${total}
+              </div>
+            </div>
+          `;
+        };
+        
+        renderGauge("gauge-sambung-daerah-container", resDaerah.percentage, resDaerah.hadir, resDaerah.total, "Sambung Daerah", "#0ea5e9");
+        renderGauge("gauge-sambung-desa-container", resDesa.percentage, resDesa.hadir, resDesa.total, "Sambung Desa", "#10b981");
+        renderGauge("gauge-sambung-kelompok-container", resKelompok.percentage, resKelompok.hadir, resKelompok.total, "Sambung Kelompok", "#f59e0b");
+        renderGauge("gauge-teks-container", pctTeks, totalTeksHadir, totalTeksEligible, "Pengajian Teks", "#8b5cf6");
+        
+      } catch (err) {
+        console.error("Error calculating reports gauges:", err);
+      }
     }
 
     function exportReportToCSV() {
