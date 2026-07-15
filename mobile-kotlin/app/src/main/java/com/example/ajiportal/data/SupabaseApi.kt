@@ -172,7 +172,7 @@ class SupabaseApi {
                     put("status", status)
                     put("keterangan", keterangan ?: "")
                 }
-                val res = client.post("$supabaseUrl/rest/v1/pengajian_presensi") {
+                val res = client.post("$supabaseUrl/rest/v1/pengajian_presensi?on_conflict=id_pengajian,id_jamaah") {
                     supabaseHeaders()
                     header("Prefer", "resolution=merge-duplicates")
                     contentType(ContentType.Application.Json)

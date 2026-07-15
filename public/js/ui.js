@@ -5,7 +5,39 @@
       setupDatabaseMockOrSupabase();
       setupEventListeners();
       checkSession();
+      initAutoRefresh();
     });
+
+    function initAutoRefresh() {
+      setInterval(() => {
+        const user = getCurrentUser();
+        if (user && useSupabase && typeof fetchDatabaseFromServer === 'function') {
+          // Skip auto-refresh if the user is actively editing a presensi sheet
+          const isEditingPresensi = document.getElementById("presensi-sheet-area") && 
+                                    document.getElementById("presensi-sheet-area").style.display === "block";
+          if (isEditingPresensi) return;
+
+          fetchDatabaseFromServer(function() {
+            // Re-render active subtab if applicable
+            const activeSubtab = document.querySelector(".subtab-button.active");
+            if (activeSubtab) {
+              const subtabName = activeSubtab.getAttribute("data-subtab");
+              if (typeof refreshSubtabData === 'function') {
+                refreshSubtabData(subtabName);
+              }
+            }
+            // Re-render active main tab if dashboard
+            const activeTab = document.querySelector(".tab-button.active");
+            if (activeTab) {
+              const tabName = activeTab.getAttribute("data-tab");
+              if (tabName === "dashboard" && typeof initDashboardData === 'function') {
+                initDashboardData();
+              }
+            }
+          });
+        }
+      }, 30000); // Polling every 30 seconds
+    }
 
 
     // ----------------------------------------------------

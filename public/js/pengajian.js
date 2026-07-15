@@ -164,7 +164,9 @@ window.renderCalendar = function() {
   if (isRestricted && currentUser && currentUser.kelompok) {
     schedules = schedules.filter(s => {
       const tk = String(s.tingkat_pengajian || "").toLowerCase();
-      return s.kelompok_pengajian === currentUser.kelompok ||
+      const sk = String(s.kelompok_pengajian || "").trim().toLowerCase();
+      const uk = String(currentUser.kelompok || "").trim().toLowerCase();
+      return sk === uk ||
              tk.includes("desa") ||
              tk.includes("daerah");
     });
@@ -421,8 +423,9 @@ window.openEditJadwalModal = function(id) {
   // Check ownership/access
   if (isKelompokRestricted) {
     const tk = String(sched.tingkat_pengajian || "").toLowerCase();
-    const isDesaOrDaerah = tk.includes("desa") || tk.includes("daerah");
-    if (!isDesaOrDaerah && sched.kelompok_pengajian !== currentUser.kelompok) {
+    const sk = String(sched.kelompok_pengajian || "").trim().toLowerCase();
+    const uk = String(currentUser.kelompok || "").trim().toLowerCase();
+    if (!isDesaOrDaerah && sk !== uk) {
       showToast("Anda tidak memiliki akses untuk melihat/mengedit jadwal kelompok lain!", "error");
       return;
     }
@@ -815,7 +818,9 @@ window.saveJadwalPengajianForm = function() {
     return;
   }
   
-  if (curRoleClean === "operator kelompok" && kelompok_pengajian !== currentUser.kelompok) {
+  const sk = String(kelompok_pengajian || "").trim().toLowerCase();
+  const uk = String(currentUser.kelompok || "").trim().toLowerCase();
+  if (curRoleClean === "operator kelompok" && sk !== uk) {
     showToast("Operator Kelompok hanya bisa menyimpan jadwal kelompok sendiri!", "error");
     return;
   }
@@ -978,7 +983,9 @@ window.loadPresensiSesiDropdown = function() {
   if (isRestricted && currentUser && currentUser.kelompok) {
     filtered = schedules.filter(s => {
       const tk = String(s.tingkat_pengajian || "").toLowerCase();
-      return s.kelompok_pengajian === currentUser.kelompok ||
+      const sk = String(s.kelompok_pengajian || "").trim().toLowerCase();
+      const uk = String(currentUser.kelompok || "").trim().toLowerCase();
+      return sk === uk ||
              tk.includes("desa") ||
              tk.includes("daerah");
     });
@@ -1282,7 +1289,9 @@ window.submitPresensiKehadiran = function() {
     if (session) {
       const tk = String(session.tingkat_pengajian || "").toLowerCase();
       const isDesaOrDaerah = tk.includes("desa") || tk.includes("daerah");
-      if (!isDesaOrDaerah && session.kelompok_pengajian !== currentUser.kelompok) {
+      const sk = String(session.kelompok_pengajian || "").trim().toLowerCase();
+      const uk = String(currentUser.kelompok || "").trim().toLowerCase();
+      if (!isDesaOrDaerah && sk !== uk) {
         showToast("Operator Kelompok hanya bisa menyimpan presensi kelompok sendiri!", "error");
         return;
       }
@@ -1401,7 +1410,9 @@ window.calculateAndRenderMonitoring = function(isSesiChange = false) {
   if (isRestricted && currentUser && currentUser.kelompok) {
     periodSchedules = periodSchedules.filter(s => {
       const tk = String(s.tingkat_pengajian || "").toLowerCase();
-      return s.kelompok_pengajian === currentUser.kelompok ||
+      const sk = String(s.kelompok_pengajian || "").trim().toLowerCase();
+      const uk = String(currentUser.kelompok || "").trim().toLowerCase();
+      return sk === uk ||
              tk.includes("desa") ||
              tk.includes("daerah");
     });
@@ -1579,7 +1590,9 @@ window.updateAttendanceTrendChart = function() {
   if (isRestricted && currentUser && currentUser.kelompok) {
     targetSchedules = targetSchedules.filter(s => {
       const tk = String(s.tingkat_pengajian || "").toLowerCase();
-      return s.kelompok_pengajian === currentUser.kelompok ||
+      const sk = String(s.kelompok_pengajian || "").trim().toLowerCase();
+      const uk = String(currentUser.kelompok || "").trim().toLowerCase();
+      return sk === uk ||
              tk.includes("desa") ||
              tk.includes("daerah");
     });

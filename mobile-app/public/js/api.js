@@ -16,7 +16,14 @@
       
       if (supabaseUrl && supabaseKey) {
         try {
-          supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+          supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey, {
+            global: {
+              headers: {
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+              }
+            }
+          });
           useSupabase = true;
           updateDbStatusUI(true);
         } catch (e) {
@@ -395,7 +402,7 @@
 
     // --- PORTAL JAMAAH: SELF CHECK-IN ---
     function supabaseSelfCheckIn(idPengajian, idJamaah, status, keterangan, jamaahUsername) {
-      if (!status || status === 'Alpha') {
+      if (!status || status === 'Alpha' || status === 'BELUM WAKTUNYA' || status === 'Belum Absen') {
         return supabaseClient.from("pengajian_presensi")
           .delete().eq("id_pengajian", parseInt(idPengajian)).eq("id_jamaah", idJamaah)
           .then(({ error }) => {
@@ -717,7 +724,7 @@
 
     function supabaseSavePresensiKehadiran(idPengajian, presensiList, operatorUsername) {
       const promises = presensiList.map(p => {
-        if (!p.status || p.status === "Alpha") {
+        if (!p.status || p.status === "Alpha" || p.status === "BELUM WAKTUNYA" || p.status === "Belum Absen") {
           return supabaseClient.from("pengajian_presensi")
             .delete()
             .eq("id_pengajian", parseInt(idPengajian))

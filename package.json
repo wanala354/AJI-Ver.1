@@ -12,6 +12,7 @@
     "vite": "^5.2.11"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.110.5",
     "puppeteer": "^25.1.0"
   }
 }
