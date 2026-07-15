@@ -73,7 +73,27 @@ object EligibilityHelper {
                 val allowedPeramutan = participantsStr.split(",").map { it.trim().lowercase() }.filter { it.isNotEmpty() }
                 if (allowedPeramutan.isNotEmpty()) {
                     val currentPeramutanLower = peramutan.trim().lowercase()
-                    val hasMatchingPeramutan = allowedPeramutan.any { ap -> ap == currentPeramutanLower }
+                    val hasMatchingPeramutan = allowedPeramutan.any { ap ->
+                        val pClean = ap.trim()
+                        if (pClean.contains("pengurus")) {
+                            if (pClean == "pengurus") {
+                                pengurusRoles.any { pr -> pr.jamaahId == j.id }
+                            } else {
+                                val tingkat = pClean.replace("pengurus", "").trim()
+                                pengurusRoles.any { pr -> pr.jamaahId == j.id && (pr.tingkatPengurus ?: "").lowercase().trim() == tingkat }
+                            }
+                        } else {
+                            val isFemale = gender == "perempuan"
+                            val peramutanLower = currentPeramutanLower.trim()
+                            if (pClean == "ibu-ibu" || pClean == "ibuibu") {
+                                isFemale && (peramutanLower == "dewasa" || peramutanLower == "manula")
+                            } else if (pClean == "kewanitaan") {
+                                isFemale && listOf("dewasa", "manula", "gus", "gum").contains(peramutanLower)
+                            } else {
+                                pClean == peramutanLower
+                            }
+                        }
+                    }
                     if (!hasMatchingPeramutan) {
                         return false
                     }

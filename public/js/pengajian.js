@@ -1851,7 +1851,29 @@ function isJamaahEligibleForJenis(j, jenis) {
   if (allowedPeramutan === null || allowedPeramutan.length === 0) return true; // no restriction
   
   const peramutan = (j.kelompokPeramutan || "").trim().toLowerCase();
-  return allowedPeramutan.some(p => p.toLowerCase() === peramutan);
+  return allowedPeramutan.some(p => {
+    const pClean = p.toLowerCase().trim();
+    if (pClean.includes("pengurus")) {
+      if (typeof getPengurusList === 'function') {
+        const pList = getPengurusList() || [];
+        if (pClean === "pengurus") {
+          return pList.some(pr => pr.jamaah_id === j.id);
+        } else {
+          const tingkat = pClean.replace("pengurus", "").trim();
+          return pList.some(pr => pr.jamaah_id === j.id && (pr.tingkat_pengurus || "").toLowerCase() === tingkat);
+        }
+      }
+      return false;
+    }
+    const isFemale = (j.jenisKelamin || "").trim().toLowerCase() === "perempuan";
+    if (pClean === "ibu-ibu" || pClean === "ibuibu") {
+      return isFemale && (peramutan === "dewasa" || peramutan === "manula");
+    }
+    if (pClean === "kewanitaan") {
+      return isFemale && ["dewasa", "manula", "gus", "gum"].includes(peramutan);
+    }
+    return pClean === peramutan;
+  });
 }
 
 function renderIndividualMonitoringTable(filteredSchedules, presensiMap) {
