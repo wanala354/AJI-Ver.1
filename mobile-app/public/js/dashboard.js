@@ -729,7 +729,8 @@
           return {
             percentage: totalSlots > 0 ? Math.round((totalHadir / totalSlots) * 100) : 0,
             hadir: totalHadir,
-            total: totalSlots
+            total: totalSlots,
+            sessionsCount: sessions.length
           };
         };
 
@@ -786,7 +787,8 @@
           return {
             percentage: totalSlots > 0 ? Math.round((totalHadir / totalSlots) * 100) : 0,
             hadir: totalHadir,
-            total: totalSlots
+            total: totalSlots,
+            sessionsCount: sessions.length
           };
         };
 
@@ -833,7 +835,7 @@
         const pctTeks = totalTeksEligible > 0 ? Math.round((totalTeksHadir / totalTeksEligible) * 100) : 0;
         
         // --- 3. Render Gauges ---
-        const renderGauge = (containerId, value, count, total, label, color) => {
+        const renderGauge = (containerId, value, count, total, label, color, sessionsCount) => {
           const container = document.getElementById(containerId);
           if (!container) return;
           
@@ -852,6 +854,9 @@
               </div>
               <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 5px;">
                 Hadir: <strong>${count}</strong> / ${total}
+              </div>
+              <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">
+                Sesi: <strong>${sessionsCount || 0} Sesi</strong>
               </div>
             </div>
           `;
@@ -872,16 +877,16 @@
           kpiTitleRekapKehadiran.innerHTML = `<i class="fa-solid fa-calendar-check"></i> Rekap Kehadiran Pengajian (${selectedOptionText})`;
         }
 
-        renderGauge("gauge-sambung-daerah-container", resDaerah.percentage, resDaerah.hadir, resDaerah.total, "Sambung Daerah", "#0ea5e9");
-        renderGauge("gauge-sambung-desa-container", resDesa.percentage, resDesa.hadir, resDesa.total, "Sambung Desa", "#10b981");
-        renderGauge("gauge-sambung-kelompok-container", resKelompok.percentage, resKelompok.hadir, resKelompok.total, "Sambung Kelompok", "#f59e0b");
-        renderGauge("gauge-teks-container", pctTeks, totalTeksHadir, totalTeksEligible, "Pengajian Teks", "#8b5cf6");
-        renderGauge("gauge-gum-container", resGUM.percentage, resGUM.hadir, resGUM.total, "Pengajian GUM", "#ec4899");
-        renderGauge("gauge-caberawit-container", resCaberawit.percentage, resCaberawit.hadir, resCaberawit.total, "Pengajian Caberawit", "#14b8a6");
-        renderGauge("gauge-gus-container", resGUS.percentage, resGUS.hadir, resGUS.total, "Pengajian GUS", "#f43f5e");
-        renderGauge("gauge-ibu-ibu-container", resIbuIbu.percentage, resIbuIbu.hadir, resIbuIbu.total, "Pengajian Ibu-Ibu", "#a855f7");
-        renderGauge("gauge-pengurus-container", resPengurus.percentage, resPengurus.hadir, resPengurus.total, "Pengajian Pengurus", "#3b82f6");
-        renderGauge("gauge-5-unsur-container", res5Unsur.percentage, res5Unsur.hadir, res5Unsur.total, "Pengajian 5 Unsur", "#ef4444");
+        renderGauge("gauge-sambung-daerah-container", resDaerah.percentage, resDaerah.hadir, resDaerah.total, "Sambung Daerah", "#0ea5e9", resDaerah.sessionsCount);
+        renderGauge("gauge-sambung-desa-container", resDesa.percentage, resDesa.hadir, resDesa.total, "Sambung Desa", "#10b981", resDesa.sessionsCount);
+        renderGauge("gauge-sambung-kelompok-container", resKelompok.percentage, resKelompok.hadir, resKelompok.total, "Sambung Kelompok", "#f59e0b", resKelompok.sessionsCount);
+        renderGauge("gauge-teks-container", pctTeks, totalTeksHadir, totalTeksEligible, "Pengajian Teks", "#8b5cf6", teksSessions.length);
+        renderGauge("gauge-gum-container", resGUM.percentage, resGUM.hadir, resGUM.total, "Pengajian GUM", "#ec4899", resGUM.sessionsCount);
+        renderGauge("gauge-caberawit-container", resCaberawit.percentage, resCaberawit.hadir, resCaberawit.total, "Pengajian Caberawit", "#14b8a6", resCaberawit.sessionsCount);
+        renderGauge("gauge-gus-container", resGUS.percentage, resGUS.hadir, resGUS.total, "Pengajian GUS", "#f43f5e", resGUS.sessionsCount);
+        renderGauge("gauge-ibu-ibu-container", resIbuIbu.percentage, resIbuIbu.hadir, resIbuIbu.total, "Pengajian Ibu-Ibu", "#a855f7", resIbuIbu.sessionsCount);
+        renderGauge("gauge-pengurus-container", resPengurus.percentage, resPengurus.hadir, resPengurus.total, "Pengajian Pengurus", "#3b82f6", resPengurus.sessionsCount);
+        renderGauge("gauge-5-unsur-container", res5Unsur.percentage, res5Unsur.hadir, res5Unsur.total, "Pengajian 5 Unsur", "#ef4444", res5Unsur.sessionsCount);
         
       } catch (err) {
         console.error("Error calculating reports gauges:", err);
