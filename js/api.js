@@ -81,21 +81,21 @@
 
     function supabaseGetAllData(operatorUsername) {
       return Promise.all([
-        supabaseClient.from("jamaah").select("*").order("created_at", { ascending: false }),
-        supabaseClient.from("app_users").select("*"),
-        supabaseClient.from("master_kelompok").select("*"),
-        supabaseClient.from("master_pendidikan").select("*"),
-        supabaseClient.from("master_pekerjaan").select("*"),
-        supabaseClient.from("master_dapuan").select("*"),
+        supabaseClient.from("jamaah").select("*").order("created_at", { ascending: false }).limit(50000),
+        supabaseClient.from("app_users").select("*").limit(50000),
+        supabaseClient.from("master_kelompok").select("*").limit(1000),
+        supabaseClient.from("master_pendidikan").select("*").limit(1000),
+        supabaseClient.from("master_pekerjaan").select("*").limit(1000),
+        supabaseClient.from("master_dapuan").select("*").limit(1000),
         supabaseClient.from("audit_logs").select("*").order("timestamp", { ascending: false }).limit(200),
-        supabaseClient.from("master_materi_pengajian").select("*"),
-        supabaseClient.from("pengajian_jadwal").select("*").order("tanggal", { ascending: false }),
-        supabaseClient.from("pengajian_presensi").select("*"),
-        supabaseClient.from("master_pengajar").select("*"),
-        supabaseClient.from("master_jenis_pengajian").select("*").then(res => res, err => ({ data: [], error: err })),
-        supabaseClient.from("master_peserta_pengajian").select("*").then(res => res, err => ({ data: [], error: err })),
-        supabaseClient.from("master_grup_kustom").select("*").then(res => res, err => ({ data: [], error: err })),
-        supabaseClient.from("master_tempat_kegiatan").select("*").then(res => res, err => ({ data: [], error: err }))
+        supabaseClient.from("master_materi_pengajian").select("*").limit(1000),
+        supabaseClient.from("pengajian_jadwal").select("*").order("tanggal", { ascending: false }).limit(50000),
+        supabaseClient.from("pengajian_presensi").select("*").limit(50000),
+        supabaseClient.from("master_pengajar").select("*").limit(50000),
+        supabaseClient.from("master_jenis_pengajian").select("*").limit(1000).then(res => res, err => ({ data: [], error: err })),
+        supabaseClient.from("master_peserta_pengajian").select("*").limit(1000).then(res => res, err => ({ data: [], error: err })),
+        supabaseClient.from("master_grup_kustom").select("*").limit(1000).then(res => res, err => ({ data: [], error: err })),
+        supabaseClient.from("master_tempat_kegiatan").select("*").limit(1000).then(res => res, err => ({ data: [], error: err }))
       ]).then(([resJamaah, resUsers, resKelompok, resPendidikan, resPekerjaan, resDapuan, resLogs, resMateri, resJadwal, resPresensi, resMasterPengajar, resJenisPengajian, resPesertaPengajian, resGrupKustom, resTempatKegiatan]) => {
         if (resJamaah.error) throw resJamaah.error;
         if (resUsers.error) throw resUsers.error;
@@ -1788,7 +1788,7 @@
 
       // Load Pengurus
       if (typeof supabaseClient !== 'undefined' && supabaseClient) {
-        supabaseClient.from("pengurus").select("*").then(({ data }) => { 
+        supabaseClient.from("pengurus").select("*").limit(50000).then(({ data }) => { 
             if(data) localPengurusList = data; 
             if (document.getElementById("section-pengurus") && document.getElementById("section-pengurus").style.display !== "none") {
               if (typeof renderPengurusTable === 'function') renderPengurusTable();
