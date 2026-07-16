@@ -79,9 +79,44 @@
       });
     }
 
+    function fetchTablePaginated(tableName, orderCol = null, ascending = false) {
+      return new Promise((resolve) => {
+        let allData = [];
+        function fetchPage(from) {
+          if (typeof supabaseClient === 'undefined' || !supabaseClient) {
+            resolve({ data: [], error: new Error("Supabase client not initialized") });
+            return;
+          }
+          let query = supabaseClient.from(tableName).select("*").range(from, from + 999);
+          if (orderCol) {
+            query = query.order(orderCol, { ascending });
+          }
+          query.then(({ data, error }) => {
+            if (error) {
+              resolve({ data: [], error });
+              return;
+            }
+            if (!data || data.length === 0) {
+              resolve({ data: allData, error: null });
+              return;
+            }
+            allData = allData.concat(data);
+            if (data.length < 1000) {
+              resolve({ data: allData, error: null });
+            } else {
+              fetchPage(from + 1000);
+            }
+          }).catch(err => {
+            resolve({ data: [], error: err });
+          });
+        }
+        fetchPage(0);
+      });
+    }
+
     function supabaseGetAllData(operatorUsername) {
       return Promise.all([
-        supabaseClient.from("jamaah").select("*").order("created_at", { ascending: false }).limit(50000),
+        fetchTablePaginated("jamaah", "created_at", false),
         supabaseClient.from("app_users").select("*").limit(50000),
         supabaseClient.from("master_kelompok").select("*").limit(1000),
         supabaseClient.from("master_pendidikan").select("*").limit(1000),
@@ -89,8 +124,8 @@
         supabaseClient.from("master_dapuan").select("*").limit(1000),
         supabaseClient.from("audit_logs").select("*").order("timestamp", { ascending: false }).limit(200),
         supabaseClient.from("master_materi_pengajian").select("*").limit(1000),
-        supabaseClient.from("pengajian_jadwal").select("*").order("tanggal", { ascending: false }).limit(50000),
-        supabaseClient.from("pengajian_presensi").select("*").limit(50000),
+        fetchTablePaginated("pengajian_jadwal", "tanggal", false),
+        fetchTablePaginated("pengajian_presensi"),
         supabaseClient.from("master_pengajar").select("*").limit(50000),
         supabaseClient.from("master_jenis_pengajian").select("*").limit(1000).then(res => res, err => ({ data: [], error: err })),
         supabaseClient.from("master_peserta_pengajian").select("*").limit(1000).then(res => res, err => ({ data: [], error: err })),
@@ -1788,7 +1823,7 @@
 
       // Load Pengurus
       if (typeof supabaseClient !== 'undefined' && supabaseClient) {
-        supabaseClient.from("pengurus").select("*").limit(50000).then(({ data }) => { 
+        fetchTablePaginated("pengurus").then(({ data }) => { 
             if(data) localPengurusList = data; 
             if (document.getElementById("section-pengurus") && document.getElementById("section-pengurus").style.display !== "none") {
               if (typeof renderPengurusTable === 'function') renderPengurusTable();
