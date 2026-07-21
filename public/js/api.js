@@ -195,6 +195,8 @@
           dapuan: j.dapuan,
           statusEkonomi: j.status_ekonomi,
           kelancaranSambung: j.kelancaran_sambung,
+          statusKeaktifan: j.status_keaktifan || "Aktif",
+          keteranganStatus: j.keterangan_status || "",
           fotoUrl: j.foto_url || ""
         }));
         
@@ -495,6 +497,8 @@
           dapuan: jamaahData.dapuan,
           status_ekonomi: jamaahData.statusEkonomi,
           kelancaran_sambung: jamaahData.kelancaranSambung,
+          status_keaktifan: jamaahData.statusKeaktifan || "Aktif",
+          keterangan_status: jamaahData.keteranganStatus || null,
           foto_url: jamaahData.fotoUrl || null
         };
         

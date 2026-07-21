@@ -20,5 +20,7 @@ data class Jamaah(
     val dapuan: String? = null,
     @SerialName("status_ekonomi") val statusEkonomi: String? = null,
     @SerialName("kelancaran_sambung") val kelancaranSambung: String? = null,
-    @SerialName("foto_url") val fotoUrl: String? = null
+    @SerialName("foto_url") val fotoUrl: String? = null,
+    @SerialName("status_keaktifan") val statusKeaktifan: String? = "Aktif",
+    @SerialName("keterangan_status") val keteranganStatus: String? = null
 )

@@ -360,7 +360,7 @@
       list.innerHTML = "";
       
       const teacherJamaahIds = new Set((getMasterPengajarList() || []).map(p => p.id_jamaah));
-      const candidates = (getJamaahList() || []).filter(j => !teacherJamaahIds.has(j.id));
+      const candidates = (getJamaahList() || []).filter(j => (!j.statusKeaktifan || j.statusKeaktifan === "Aktif") && !teacherJamaahIds.has(j.id));
       
       candidates.forEach(j => {
         const opt = document.createElement("option");

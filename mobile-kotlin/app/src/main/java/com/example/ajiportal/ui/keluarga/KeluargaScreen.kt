@@ -424,6 +424,29 @@ fun FamilyMemberCard(
                         }
                     }
 
+                    if (member.statusKeaktifan != null && member.statusKeaktifan != "Aktif") {
+                        val statusText = member.statusKeaktifan + if (!member.keteranganStatus.isNullOrEmpty()) " (${member.keteranganStatus})" else ""
+                        val badgeColor = when (member.statusKeaktifan) {
+                            "Meninggal" -> ColorError
+                            "Pindah Sambung" -> ColorWarning
+                            else -> TextMuted
+                        }
+                        Box(
+                            modifier = Modifier
+                                .padding(top = 2.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(badgeColor.copy(alpha = 0.15f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = statusText,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = badgeColor
+                            )
+                        }
+                    }
+
                     Text(
                         text = "${member.jenisKelamin} • ${DateUtils.calculateAge(member.tanggalLahir)} Tahun",
                         fontSize = 13.sp,

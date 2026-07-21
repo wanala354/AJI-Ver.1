@@ -101,7 +101,7 @@
         const currentUser = getCurrentUser();
         const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
         const isOperator = curRoleClean.includes("operator");
-        let availableJamaah = getJamaahList();
+        let availableJamaah = getJamaahList().filter(j => !j.statusKeaktifan || j.statusKeaktifan === "Aktif");
         if (currentUser && isOperator) {
            availableJamaah = availableJamaah.filter(j => j.kelompokPengajian === currentUser.kelompok);
         }

@@ -195,6 +195,8 @@
           dapuan: j.dapuan,
           statusEkonomi: j.status_ekonomi,
           kelancaranSambung: j.kelancaran_sambung,
+          statusKeaktifan: j.status_keaktifan || "Aktif",
+          keteranganStatus: j.keterangan_status || "",
           fotoUrl: j.foto_url || ""
         }));
         
@@ -495,6 +497,8 @@
           dapuan: jamaahData.dapuan,
           status_ekonomi: jamaahData.statusEkonomi,
           kelancaran_sambung: jamaahData.kelancaranSambung,
+          status_keaktifan: jamaahData.statusKeaktifan || "Aktif",
+          keterangan_status: jamaahData.keteranganStatus || null,
           foto_url: jamaahData.fotoUrl || null
         };
         
@@ -1872,14 +1876,7 @@
     function getPresensiKehadiranList() { return localPresensiKehadiran; }
 
     function getCurrentUser() {
-      let session = sessionStorage.getItem("aji_session_user");
-      if (!session) {
-        session = localStorage.getItem("aji_session_user");
-        if (session) {
-          // Sync back to sessionStorage for runtime consistency
-          sessionStorage.setItem("aji_session_user", session);
-        }
-      }
+      const session = sessionStorage.getItem("aji_session_user");
       return session ? JSON.parse(session) : null;
     }
 
@@ -1895,7 +1892,6 @@
         }
       }
       sessionStorage.removeItem("aji_session_user");
-      localStorage.removeItem("aji_session_user");
     }
 
     function saveJamaah(jamaahData, operatorUsername) {

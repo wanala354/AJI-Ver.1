@@ -1971,6 +1971,7 @@ function fillMonitoringDOM() {
   const filterKelompok = document.getElementById("monitor-kelompok") ? document.getElementById("monitor-kelompok").value : "";
   const filterPeramutan = document.getElementById("monitor-filter-peramutan") ? document.getElementById("monitor-filter-peramutan").value : "";
   const filterGender = document.getElementById("monitor-filter-gender") ? document.getElementById("monitor-filter-gender").value : "";
+  const filterStatus = document.getElementById("monitor-filter-status") ? document.getElementById("monitor-filter-status").value : "";
   
   let filtered = currentMonitoringTableData;
   if (search) {
@@ -1984,6 +1985,17 @@ function fillMonitoringDOM() {
   }
   if (filterGender) {
     filtered = filtered.filter(p => p.gender === filterGender);
+  }
+  if (filterStatus) {
+    if (filterStatus === "Hadir Fisik") {
+      filtered = filtered.filter(p => p.fisik > 0);
+    } else if (filterStatus === "Online") {
+      filtered = filtered.filter(p => p.online > 0);
+    } else if (filterStatus === "Izin") {
+      filtered = filtered.filter(p => p.izin > 0);
+    } else if (filterStatus === "Alpha") {
+      filtered = filtered.filter(p => p.alpha > 0);
+    }
   }
   
   if (filtered.length === 0) {

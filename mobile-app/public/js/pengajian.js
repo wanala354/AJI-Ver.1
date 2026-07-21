@@ -108,6 +108,8 @@ function refreshSubtabData(subtabName) {
     calculateAndRenderMonitoring();
   } else if (subtabName === "pengajian-kehadiran-teks") {
     loadKehadiranTeksTable();
+  } else if (subtabName === "pengajian-cetak-qr") {
+    loadQRCetakDropdowns();
   }
 }
 
@@ -162,7 +164,9 @@ window.renderCalendar = function() {
   if (isRestricted && currentUser && currentUser.kelompok) {
     schedules = schedules.filter(s => {
       const tk = String(s.tingkat_pengajian || "").toLowerCase();
-      return s.kelompok_pengajian === currentUser.kelompok ||
+      const sk = String(s.kelompok_pengajian || "").trim().toLowerCase();
+      const uk = String(currentUser.kelompok || "").trim().toLowerCase();
+      return sk === uk ||
              tk.includes("desa") ||
              tk.includes("daerah");
     });
@@ -419,8 +423,9 @@ window.openEditJadwalModal = function(id) {
   // Check ownership/access
   if (isKelompokRestricted) {
     const tk = String(sched.tingkat_pengajian || "").toLowerCase();
-    const isDesaOrDaerah = tk.includes("desa") || tk.includes("daerah");
-    if (!isDesaOrDaerah && sched.kelompok_pengajian !== currentUser.kelompok) {
+    const sk = String(sched.kelompok_pengajian || "").trim().toLowerCase();
+    const uk = String(currentUser.kelompok || "").trim().toLowerCase();
+    if (!isDesaOrDaerah && sk !== uk) {
       showToast("Anda tidak memiliki akses untuk melihat/mengedit jadwal kelompok lain!", "error");
       return;
     }
@@ -813,7 +818,9 @@ window.saveJadwalPengajianForm = function() {
     return;
   }
   
-  if (curRoleClean === "operator kelompok" && kelompok_pengajian !== currentUser.kelompok) {
+  const sk = String(kelompok_pengajian || "").trim().toLowerCase();
+  const uk = String(currentUser.kelompok || "").trim().toLowerCase();
+  if (curRoleClean === "operator kelompok" && sk !== uk) {
     showToast("Operator Kelompok hanya bisa menyimpan jadwal kelompok sendiri!", "error");
     return;
   }
@@ -976,7 +983,9 @@ window.loadPresensiSesiDropdown = function() {
   if (isRestricted && currentUser && currentUser.kelompok) {
     filtered = schedules.filter(s => {
       const tk = String(s.tingkat_pengajian || "").toLowerCase();
-      return s.kelompok_pengajian === currentUser.kelompok ||
+      const sk = String(s.kelompok_pengajian || "").trim().toLowerCase();
+      const uk = String(currentUser.kelompok || "").trim().toLowerCase();
+      return sk === uk ||
              tk.includes("desa") ||
              tk.includes("daerah");
     });
@@ -1124,7 +1133,7 @@ function renderPresensiTable(session) {
   
   tbody.innerHTML = "";
   
-  const allJamaah = getJamaahList() || [];
+  const allJamaah = (getJamaahList() || []).filter(j => !j.statusKeaktifan || j.statusKeaktifan === "Aktif");
   const currentUser = getCurrentUser();
   const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
   const isKelompokRestricted = curRoleClean === "operator kelompok" || curRoleClean === "pengurus kelompok";
@@ -1280,7 +1289,9 @@ window.submitPresensiKehadiran = function() {
     if (session) {
       const tk = String(session.tingkat_pengajian || "").toLowerCase();
       const isDesaOrDaerah = tk.includes("desa") || tk.includes("daerah");
-      if (!isDesaOrDaerah && session.kelompok_pengajian !== currentUser.kelompok) {
+      const sk = String(session.kelompok_pengajian || "").trim().toLowerCase();
+      const uk = String(currentUser.kelompok || "").trim().toLowerCase();
+      if (!isDesaOrDaerah && sk !== uk) {
         showToast("Operator Kelompok hanya bisa menyimpan presensi kelompok sendiri!", "error");
         return;
       }
@@ -1388,7 +1399,7 @@ window.calculateAndRenderMonitoring = function(isSesiChange = false) {
   
   const schedules = getJadwalPengajianList() || [];
   const presensiDb = getPresensiKehadiranList() || [];
-  const jamaah = getJamaahList() || [];
+  const jamaah = (getJamaahList() || []).filter(j => !j.statusKeaktifan || j.statusKeaktifan === "Aktif");
   
   const currentUser = getCurrentUser();
   const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
@@ -1399,7 +1410,9 @@ window.calculateAndRenderMonitoring = function(isSesiChange = false) {
   if (isRestricted && currentUser && currentUser.kelompok) {
     periodSchedules = periodSchedules.filter(s => {
       const tk = String(s.tingkat_pengajian || "").toLowerCase();
-      return s.kelompok_pengajian === currentUser.kelompok ||
+      const sk = String(s.kelompok_pengajian || "").trim().toLowerCase();
+      const uk = String(currentUser.kelompok || "").trim().toLowerCase();
+      return sk === uk ||
              tk.includes("desa") ||
              tk.includes("daerah");
     });
@@ -1568,7 +1581,7 @@ window.updateAttendanceTrendChart = function() {
   const grouping = groupingEl ? groupingEl.value : "week";
   const schedules = getJadwalPengajianList() || [];
   const presensiDb = getPresensiKehadiranList() || [];
-  const jamaah = getJamaahList() || [];
+  const jamaah = (getJamaahList() || []).filter(j => !j.statusKeaktifan || j.statusKeaktifan === "Aktif");
   const currentUser = getCurrentUser();
   const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
   const isRestricted = ["operator kelompok", "pengurus kelompok", "user", "jamaah"].includes(curRoleClean);
@@ -1577,7 +1590,9 @@ window.updateAttendanceTrendChart = function() {
   if (isRestricted && currentUser && currentUser.kelompok) {
     targetSchedules = targetSchedules.filter(s => {
       const tk = String(s.tingkat_pengajian || "").toLowerCase();
-      return s.kelompok_pengajian === currentUser.kelompok ||
+      const sk = String(s.kelompok_pengajian || "").trim().toLowerCase();
+      const uk = String(currentUser.kelompok || "").trim().toLowerCase();
+      return sk === uk ||
              tk.includes("desa") ||
              tk.includes("daerah");
     });
@@ -1956,6 +1971,7 @@ function fillMonitoringDOM() {
   const filterKelompok = document.getElementById("monitor-kelompok") ? document.getElementById("monitor-kelompok").value : "";
   const filterPeramutan = document.getElementById("monitor-filter-peramutan") ? document.getElementById("monitor-filter-peramutan").value : "";
   const filterGender = document.getElementById("monitor-filter-gender") ? document.getElementById("monitor-filter-gender").value : "";
+  const filterStatus = document.getElementById("monitor-filter-status") ? document.getElementById("monitor-filter-status").value : "";
   
   let filtered = currentMonitoringTableData;
   if (search) {
@@ -1969,6 +1985,17 @@ function fillMonitoringDOM() {
   }
   if (filterGender) {
     filtered = filtered.filter(p => p.gender === filterGender);
+  }
+  if (filterStatus) {
+    if (filterStatus === "Hadir Fisik") {
+      filtered = filtered.filter(p => p.fisik > 0);
+    } else if (filterStatus === "Online") {
+      filtered = filtered.filter(p => p.online > 0);
+    } else if (filterStatus === "Izin") {
+      filtered = filtered.filter(p => p.izin > 0);
+    } else if (filterStatus === "Alpha") {
+      filtered = filtered.filter(p => p.alpha > 0);
+    }
   }
   
   if (filtered.length === 0) {
@@ -2116,7 +2143,7 @@ window.populateJadwalPesertaSpesifikFields = function(existingSpesifik = null) {
   const listContainer = document.getElementById("jadwal-form-peserta-list");
   if (listContainer) {
     listContainer.innerHTML = "";
-    const jamaahList = getJamaahList() || [];
+    const jamaahList = (getJamaahList() || []).filter(j => !j.statusKeaktifan || j.statusKeaktifan === "Aktif");
     const sortedList = [...jamaahList].sort((a, b) => a.namaLengkap.localeCompare(b.namaLengkap));
     sortedList.forEach(j => {
       const div = document.createElement("div");
@@ -2164,7 +2191,7 @@ window.loadKehadiranTeksTable = function() {
   
   const allJadwal = getJadwalPengajianList() || [];
   const allPresensi = getPresensiKehadiranList() || [];
-  const jamaahList = getJamaahList() || [];
+  const jamaahList = (getJamaahList() || []).filter(j => !j.statusKeaktifan || j.statusKeaktifan === "Aktif");
   
   // 1. Get all Teks sessions in the selected month & year
   const teksSessions = allJadwal.filter(s => {
@@ -2261,4 +2288,87 @@ window.loadKehadiranTeksTable = function() {
       </tr>
     `;
   }).join("");
+};
+
+window.loadQRCetakDropdowns = function() {
+  const selectJenis = document.getElementById("qr-jenis");
+  if (!selectJenis) return;
+  selectJenis.innerHTML = "";
+  
+  const list = typeof getMasterJenisPengajianList === 'function' ? getMasterJenisPengajianList() : (typeof localMasterJenisPengajian !== 'undefined' ? localMasterJenisPengajian : []);
+  list.forEach(item => {
+    const name = typeof item === 'object' ? item.nama : item;
+    if (name) {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      selectJenis.appendChild(opt);
+    }
+  });
+};
+
+window.generateStaticQRCode = function() {
+  const tingkat = document.getElementById("qr-tingkat").value;
+  const jenis = document.getElementById("qr-jenis").value;
+  
+  if (!tingkat || !jenis) {
+    alert("Harap pilih tingkat dan jenis pengajian!");
+    return;
+  }
+  
+  const qrData = `AJI_PRESENSI:${tingkat}:${jenis}`;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrData)}`;
+  
+  document.getElementById("qr-print-title").textContent = `${tingkat.toUpperCase()} - ${jenis.toUpperCase()}`;
+  document.getElementById("qr-print-image").src = qrCodeUrl;
+  document.getElementById("qr-print-area").style.display = "flex";
+  document.getElementById("btn-print-qr").style.display = "flex";
+};
+
+window.generateGeneralQRCode = function() {
+  const qrData = `AJI_PRESENSI_UMUM`;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrData)}`;
+  
+  document.getElementById("qr-print-title").textContent = "QR CODE ABSENSI UMUM (1 UNTUK SEMUA)";
+  document.getElementById("qr-print-image").src = qrCodeUrl;
+  document.getElementById("qr-print-area").style.display = "flex";
+  document.getElementById("btn-print-qr").style.display = "flex";
+};
+
+window.printStaticQRCode = function() {
+  const printContent = document.getElementById("qr-print-area").innerHTML;
+  
+  const win = window.open("", "_blank");
+  win.document.write(`
+    <html>
+      <head>
+        <title>Cetak QR Code Absensi Dinding</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            color: black;
+            background: white;
+            text-align: center;
+          }
+          h2 { margin: 0 0 10px 0; font-size: 2.2rem; font-weight: 800; letter-spacing: 0.5px; }
+          #qr-print-title { font-size: 1.6rem; font-weight: 800; margin-bottom: 25px; text-transform: uppercase; color: #047857; border-bottom: 3px solid #047857; padding-bottom: 8px; }
+          img { width: 350px; height: 350px; border: 1px solid #ddd; padding: 15px; background: white; }
+          p { margin-top: 25px; font-size: 1.15rem; color: #374151; max-width: 450px; line-height: 1.6; font-weight: 500; }
+          strong { color: #111827; }
+        </style>
+      </head>
+      <body onload="window.print(); window.close();">
+        <div style="display: flex; flex-direction: column; align-items: center;">
+          ${printContent}
+        </div>
+      </body>
+    </html>
+  `);
+  win.document.close();
 };

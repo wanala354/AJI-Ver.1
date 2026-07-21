@@ -2,6 +2,9 @@
     // ----------------------------------------------------
     function getFilteredJamaahForDashboard(jamaahList) {
       let list = jamaahList || [];
+      // Exclude non-active Jamaah (Meninggal, Pindah Sambung, Sekolah Luar Daerah, Non-Aktif Lainnya)
+      list = list.filter(j => !j.statusKeaktifan || j.statusKeaktifan === "Aktif");
+
       const currentUser = getCurrentUser();
       const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
       const isKelompokRestricted = currentUser && (curRoleClean === "operator kelompok" || curRoleClean === "pengurus kelompok");
@@ -518,7 +521,7 @@
         calculateAndRenderReport();
       });
       const selectedKelompok = document.getElementById("report-filter-kelompok").value;
-      const jamaah = getJamaahList();
+      const jamaah = getJamaahList().filter(j => !j.statusKeaktifan || j.statusKeaktifan === "Aktif");
       const filtered = selectedKelompok === "" ? jamaah : jamaah.filter(j => j.kelompokPengajian === selectedKelompok);
       const totalJamaah = filtered.length;
       const totalKK = filtered.filter(j => j.statusHubunganKeluarga === "Kepala Keluarga").length;

@@ -1245,6 +1245,8 @@
       document.getElementById("filter-peramutan").addEventListener("change", () => { currentPage = 1; filterJamaahTable(); });
       document.getElementById("filter-ekonomi").addEventListener("change", () => { currentPage = 1; filterJamaahTable(); });
       document.getElementById("filter-kelancaran").addEventListener("change", () => { currentPage = 1; filterJamaahTable(); });
+      const filterStatusEl = document.getElementById("filter-status-keaktifan");
+      if (filterStatusEl) filterStatusEl.addEventListener("change", () => { currentPage = 1; filterJamaahTable(); });
       
       document.getElementById("btn-reset-filters").addEventListener("click", () => {
         document.getElementById("filter-search").value = "";
@@ -1262,6 +1264,7 @@
         document.getElementById("filter-peramutan").value = "";
         document.getElementById("filter-ekonomi").value = "";
         document.getElementById("filter-kelancaran").value = "";
+        if (filterStatusEl) filterStatusEl.value = "Aktif";
         
         currentPage = 1;
         filterJamaahTable();
@@ -1420,6 +1423,8 @@
             dapuan: document.getElementById("form-dapuan").value,
             statusEkonomi: document.getElementById("form-ekonomi").value,
             kelancaranSambung: document.getElementById("form-kelancaran").value,
+            statusKeaktifan: document.getElementById("form-status-keaktifan") ? document.getElementById("form-status-keaktifan").value : "Aktif",
+            keteranganStatus: document.getElementById("form-keterangan-status") ? document.getElementById("form-keterangan-status").value.trim() : "",
             fotoUrl: fotoUrl
           };
           saveJamaah(jamaahData, currentUser.username);

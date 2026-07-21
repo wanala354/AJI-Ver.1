@@ -35,7 +35,7 @@
             <th>Nama Opsi</th>
             <th>Sasaran Peserta</th>
             <th>Batasan Gender</th>
-            <th>Batasan Jabatan (Dapuan)</th>
+            <th>Batasan Dapuan</th>
             <th style="width: 150px; text-align:center;">Aksi</th>
           </tr>
         `;
@@ -360,7 +360,7 @@
       list.innerHTML = "";
       
       const teacherJamaahIds = new Set((getMasterPengajarList() || []).map(p => p.id_jamaah));
-      const candidates = (getJamaahList() || []).filter(j => !teacherJamaahIds.has(j.id));
+      const candidates = (getJamaahList() || []).filter(j => (!j.statusKeaktifan || j.statusKeaktifan === "Aktif") && !teacherJamaahIds.has(j.id));
       
       candidates.forEach(j => {
         const opt = document.createElement("option");
