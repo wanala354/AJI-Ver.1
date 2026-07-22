@@ -1,10 +1,49 @@
+# Dependencies
 node_modules/
+
+# Environment & Secret Credentials
 .env
+.env.local
+.env.*.local
+*.keystore
+*.jks
+*.p12
+*.pem
+key.properties
+local.properties
+
+# Binary App Bundles & Build Outputs
+*.apk
+*.aab
+*.dex
+*.class
+/mobile-kotlin/app/build/
+/mobile-kotlin/build/
+/mobile-kotlin/.gradle/
+/mobile-app/android/app/build/
+/mobile-app/android/.gradle/
+/mobile-app/dist/
+
+# Restored Backup Files & Temporary Utility Scripts
+*.restored_content_*
 *.cjs
 temp.js
 test_form.js
 mockData.js
+scratch/
+.temp/
+*.log
+
+# Clasp / Google Apps Script
 .clasp.json
 appsscript.json
 .claspignore
 *.py
+
+# OS & IDE Caches / Legacy Folders
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+AJI/
+mobile/
