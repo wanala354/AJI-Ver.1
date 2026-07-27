@@ -49,6 +49,8 @@
       const ekonomiVal = document.getElementById("filter-ekonomi").value;
       const dapuanVal = document.getElementById("filter-dapuan").value;
       const kelancaranVal = document.getElementById("filter-kelancaran").value;
+      const statusKeaktifanEl = document.getElementById("filter-status-keaktifan");
+      const statusKeaktifanVal = statusKeaktifanEl ? statusKeaktifanEl.value : "Aktif";
       
       const list = getJamaahList();
       filteredJamaahList = list.filter(j => {
@@ -85,8 +87,14 @@
             matchKelancaran = ks.toLowerCase() === kelancaranVal.toLowerCase();
           }
         }
+
+        let matchStatusKeaktifan = true;
+        if (statusKeaktifanVal !== "") {
+          const curStatus = (j.statusKeaktifan || "Aktif").trim();
+          matchStatusKeaktifan = curStatus.toLowerCase() === statusKeaktifanVal.toLowerCase();
+        }
         
-        return matchSearch && matchKelompok && matchPeramutan && matchEkonomi && matchDapuan && matchKelancaran;
+        return matchSearch && matchKelompok && matchPeramutan && matchEkonomi && matchDapuan && matchKelancaran && matchStatusKeaktifan;
       });
       
       renderPagedJamaahTable();
@@ -166,9 +174,21 @@
         }
         actionButtons += `</div>`;
           
+        const statusKeaktifan = j.statusKeaktifan || "Aktif";
+        let statusBadgeHtml = "";
+        if (statusKeaktifan !== "Aktif") {
+          let bClass = "badge-gray";
+          if (statusKeaktifan === "Meninggal") bClass = "badge-red";
+          else if (statusKeaktifan === "Pindah Sambung") bClass = "badge-yellow";
+          else if (statusKeaktifan === "Sekolah/Kuliah Luar Daerah") bClass = "badge-blue";
+          
+          const ketText = j.keteranganStatus ? ` (${j.keteranganStatus})` : "";
+          statusBadgeHtml = `<br><span class="badge ${bClass}" style="font-size:0.68rem; margin-top:3px; display:inline-block;" title="${statusKeaktifan}${ketText}"><i class="fa-solid fa-user-slash"></i> ${statusKeaktifan}</span>`;
+        }
+
         tr.innerHTML = `
           <td><strong>${j.id}</strong></td>
-          <td>${j.namaLengkap}</td>
+          <td>${j.namaLengkap}${statusBadgeHtml}</td>
           <td>${j.kelompokPengajian}</td>
           <td>${j.jenisKelamin}</td>
           <td>${j.umur} Tahun</td>
@@ -206,30 +226,13 @@
     // JAMAAH FORM ENTRY MODAL
     // ----------------------------------------------------
     function openJamaahModal(jamaahId = null) {
-      const currentUser = getCurrentUser();
-      const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
-
-      if (jamaahId) {
-        const item = getJamaahList().find(j => j.id === jamaahId);
-        if (item) {
-          const isAdmin = curRoleClean === "admin";
-          const isOperatorDesa = curRoleClean === "operator desa";
-          const isOperatorKelompok = curRoleClean === "operator kelompok";
-          const canWriteThisRow = isAdmin || isOperatorDesa || (isOperatorKelompok && item.kelompokPengajian === currentUser.kelompok);
-
-          if (!canWriteThisRow) {
-            showToast("Anda tidak memiliki akses untuk mengedit data jamaah ini!", "error");
-            return;
-          }
-        }
-      }
-
       const modal = document.getElementById("jamaah-modal");
       const form = document.getElementById("jamaah-form");
       form.reset();
       editingJamaahId = jamaahId;
       
       populateFormDropdowns();
+      const currentUser = getCurrentUser();
       
       if (jamaahId) {
         document.getElementById("modal-title").innerHTML = `<i class="fa-solid fa-user-pen"></i> Edit Data Jamaah (${jamaahId})`;
@@ -267,6 +270,16 @@
           document.getElementById("form-ekonomi").value = item.statusEkonomi;
           document.getElementById("form-kelancaran").value = item.kelancaranSambung;
 
+          // Status Keaktifan edit fields (Only visible on EDIT mode)
+          const grpStatus = document.getElementById("form-group-status-keaktifan");
+          const grpKet = document.getElementById("form-group-keterangan-status");
+          if (grpStatus) grpStatus.style.display = "";
+          if (grpKet) grpKet.style.display = "";
+          const elStatus = document.getElementById("form-status-keaktifan");
+          const elKet = document.getElementById("form-keterangan-status");
+          if (elStatus) elStatus.value = item.statusKeaktifan || "Aktif";
+          if (elKet) elKet.value = item.keteranganStatus || "";
+
           document.getElementById("form-foto-url").value = item.fotoUrl || "";
           const previewImg = document.getElementById("form-foto-preview");
           const placeholder = document.getElementById("form-foto-placeholder");
@@ -287,6 +300,16 @@
         document.getElementById("form-id").value = "";
         document.getElementById("form-umur").value = "0";
         document.getElementById("form-peramutan").value = "-";
+        
+        // Hide Status Keaktifan on NEW creation mode (Default is 'Aktif')
+        const grpStatus = document.getElementById("form-group-status-keaktifan");
+        const grpKet = document.getElementById("form-group-keterangan-status");
+        if (grpStatus) grpStatus.style.display = "none";
+        if (grpKet) grpKet.style.display = "none";
+        const elStatus = document.getElementById("form-status-keaktifan");
+        const elKet = document.getElementById("form-keterangan-status");
+        if (elStatus) elStatus.value = "Aktif";
+        if (elKet) elKet.value = "";
         
         const curRoleClean = (currentUser.role || "").trim().toLowerCase();
         if (curRoleClean === "operator kelompok") {

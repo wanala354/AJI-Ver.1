@@ -360,7 +360,7 @@
       list.innerHTML = "";
       
       const teacherJamaahIds = new Set((getMasterPengajarList() || []).map(p => p.id_jamaah));
-      const candidates = (getJamaahList() || []).filter(j => !teacherJamaahIds.has(j.id));
+      const candidates = (getJamaahList() || []).filter(j => (!j.statusKeaktifan || j.statusKeaktifan === "Aktif") && !teacherJamaahIds.has(j.id));
       
       candidates.forEach(j => {
         const opt = document.createElement("option");
@@ -444,42 +444,19 @@
       const tbody = document.getElementById("table-users-body");
       tbody.innerHTML = "";
       
-      const currentUser = getCurrentUser();
-      const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
-      const isAdmin = currentUser && curRoleClean === "admin";
-      const isOperatorDesa = currentUser && curRoleClean === "operator desa";
-      const isOperatorKelompok = currentUser && curRoleClean === "operator kelompok";
-
       const list = getUsersList();
       list.forEach(u => {
         const tr = document.createElement("tr");
+        const passDisplay = u.passwordHash.substring(0, 8) + "...";
         
-        // Find related jamaah full name
-        const jamaahObj = getJamaahList().find(j => j.id === (u.jamaahId || u.jamaah_id));
-        const namaJamaah = jamaahObj ? jamaahObj.namaLengkap : "-";
-        
-        // Operator Kelompok can only edit/delete users in their own kelompok
-        const canWriteThisUser = isAdmin || isOperatorDesa || (isOperatorKelompok && u.kelompok === currentUser.kelompok);
-        
-        let actionButtons = "";
-        if (canWriteThisUser) {
-          actionButtons = `
-            <button class="btn-icon edit" data-user="${u.username}" title="Edit"><i class="fa-solid fa-pen"></i></button>
-            <button class="btn-icon delete" data-user="${u.username}" title="Hapus"><i class="fa-solid fa-trash"></i></button>
-          `;
-        } else {
-          actionButtons = `<span style="color: var(--text-muted); font-size: 0.85rem;">Read-only</span>`;
-        }
-
         tr.innerHTML = `
           <td><strong>${u.username}</strong></td>
           <td>${u.email}</td>
           <td><span class="badge ${(u.role || '').trim().toLowerCase() === 'admin' ? 'badge-red' : 'badge-blue' }">${u.role}</span></td>
           <td>${u.kelompok || "Semua"}</td>
-          <td>${namaJamaah}</td>
           <td style="text-align:center;">
             <div class="action-btns" style="justify-content:center;">
-              ${actionButtons}
+              <button class="btn-icon edit" data-user="${u.username}" title="Edit"><i class="fa-solid fa-pen"></i></button>
             </div>
           </td>
         `;
@@ -489,26 +466,12 @@
       tbody.querySelectorAll(".btn-icon.edit").forEach(btn => {
         btn.addEventListener("click", () => openUserModal(btn.getAttribute("data-user")));
       });
-
-      tbody.querySelectorAll(".btn-icon.delete").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const username = btn.getAttribute("data-user");
-          deleteUser(username, currentUser.username);
-        });
-      });
     }
 
     function populateUserKelompokDropdown() {
       const select = document.getElementById("user-form-kelompok");
       select.innerHTML = '<option value="" disabled selected>-- Pilih Kelompok --</option>';
-      
-      const currentUser = getCurrentUser();
-      const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
-      
       localMasterKelompok.forEach(k => {
-        if (curRoleClean === "operator kelompok" && k !== currentUser.kelompok) {
-          return;
-        }
         const opt = document.createElement("option");
         opt.value = k;
         opt.textContent = k;
@@ -532,29 +495,7 @@
       const form = document.getElementById("user-form");
       form.reset();
       
-      const currentUser = getCurrentUser();
-      
       populateUserKelompokDropdown();
-      
-      // Restrict Role dropdown options for Operator Kelompok
-      const roleSelect = document.getElementById("user-form-role");
-      const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
-      for (let i = 0; i < roleSelect.options.length; i++) {
-        const opt = roleSelect.options[i];
-        const val = opt.value.toLowerCase();
-        if (curRoleClean === "operator kelompok") {
-          if (val === "admin" || val === "operator desa" || val === "pengurus desa") {
-            opt.style.display = "none";
-            opt.disabled = true;
-          } else {
-            opt.style.display = "block";
-            opt.disabled = false;
-          }
-        } else {
-          opt.style.display = "block";
-          opt.disabled = false;
-        }
-      }
       
       const isEditInput = document.getElementById("user-form-is-edit");
       const usernameInput = document.getElementById("user-form-username");
@@ -572,7 +513,7 @@
           document.getElementById("user-form-email").value = userObj.email;
           document.getElementById("user-form-role").value = userObj.role;
           toggleUserKelompokField();
-          if ((userObj.role || "").trim().toLowerCase() === "operator kelompok" || (userObj.role || "").trim().toLowerCase() === "pengurus kelompok") {
+          if ((userObj.role || "").trim().toLowerCase() === "operator kelompok") {
             document.getElementById("user-form-kelompok").value = userObj.kelompok;
           }
           document.getElementById("user-form-password").placeholder = "Kosongkan jika tidak diubah";

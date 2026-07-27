@@ -195,6 +195,8 @@
           dapuan: j.dapuan,
           statusEkonomi: j.status_ekonomi,
           kelancaranSambung: j.kelancaran_sambung,
+          statusKeaktifan: j.status_keaktifan || "Aktif",
+          keteranganStatus: j.keterangan_status || "",
           fotoUrl: j.foto_url || ""
         }));
         
@@ -203,8 +205,7 @@
           email: u.email,
           role: u.role,
           passwordHash: u.password_hash,
-          kelompok: u.kelompok,
-          jamaahId: u.jamaah_id || null
+          kelompok: u.kelompok
         }));
         
         const auditLogs = (resLogs.data || []).map(l => ({
@@ -496,6 +497,8 @@
           dapuan: jamaahData.dapuan,
           status_ekonomi: jamaahData.statusEkonomi,
           kelancaran_sambung: jamaahData.kelancaranSambung,
+          status_keaktifan: jamaahData.statusKeaktifan || "Aktif",
+          keterangan_status: jamaahData.keteranganStatus || null,
           foto_url: jamaahData.fotoUrl || null
         };
         
@@ -702,14 +705,6 @@
       });
     }
 
-    function supabaseDeleteUser(username, operatorUsername) {
-      return supabaseClient.from("app_users").delete().eq("username", username).then(({ error }) => {
-        if (error) throw error;
-        supabaseLogAction(operatorUsername, "DELETE_USER", "Menghapus akun pengguna: " + username);
-        return true;
-      });
-    }
-
     function supabaseChangePassword(targetUsername, newPasswordHash, operatorUsername) {
       return supabaseClient.from("app_users")
         .update({ password_hash: newPasswordHash })
@@ -883,10 +878,6 @@
           },
           saveUserGAS: function(userData, operatorUsername) {
             this._call(() => supabaseSaveUser(userData, operatorUsername));
-            return this;
-          },
-          deleteUserGAS: function(username, operatorUsername) {
-            this._call(() => supabaseDeleteUser(username, operatorUsername));
             return this;
           },
           changePasswordGAS: function(targetUsername, newPasswordHash, operatorUsername) {
@@ -1171,14 +1162,7 @@
                   kepalaKeluargaList: filteredKK,
                   kartuKeluargaMappings: filteredMappings,
                   auditLogs: filteredLogs,
-                  usersList: usersList.map(u => ({
-                    username: u.username,
-                    email: u.email,
-                    role: u.role,
-                    passwordHash: u.passwordHash || u.password_hash || "",
-                    kelompok: u.kelompok,
-                    jamaahId: u.jamaahId || u.jamaah_id || null
-                  })),
+                  usersList: usersList,
                   masterKelompok,
                   masterPendidikan,
                   masterDapuan,
@@ -1478,16 +1462,6 @@
                   localStorage.setItem("aji_users", JSON.stringify(users));
                   this.logActionGAS(operatorUsername, "CREATE_USER", "Membuat akun pengguna baru: " + userData.username + " (" + userData.role + ")");
                 }
-                return true;
-              });
-              return this;
-            },
-            deleteUserGAS: function(username, operatorUsername) {
-              this._call(() => {
-                const users = JSON.parse(localStorage.getItem("aji_users") || "[]");
-                const filtered = users.filter(u => u.username.toLowerCase() !== username.toLowerCase());
-                localStorage.setItem("aji_users", JSON.stringify(filtered));
-                this.logActionGAS(operatorUsername, "DELETE_USER", "Menghapus akun pengguna: " + username);
                 return true;
               });
               return this;
@@ -1947,19 +1921,6 @@
     function deleteJamaah(id, operatorUsername) {
       const item = getJamaahList().find(j => j.id === id);
       if (!item) return;
-
-      const currentUser = getCurrentUser();
-      const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
-      const isAdmin = currentUser && curRoleClean === "admin";
-      const isOperatorDesa = currentUser && curRoleClean === "operator desa";
-      const isOperator = currentUser && curRoleClean === "operator kelompok";
-      const canDelete = isAdmin || isOperatorDesa || (isOperator && item.kelompokPengajian === currentUser.kelompok);
-
-      if (!canDelete) {
-        showToast("Anda tidak memiliki akses untuk menghapus jamaah ini!", "error");
-        return;
-      }
-
       if (confirm(`Apakah Anda yakin ingin menghapus Jamaah: "${item.namaLengkap}" (${id})?`)) {
         google.script.run
           .withSuccessHandler(function() {
@@ -1972,22 +1933,6 @@
             showToast("Gagal menghapus data: " + err.message, "error");
           })
           .deleteJamaahGAS(id, operatorUsername);
-      }
-    }
-
-    function deleteUser(username, operatorUsername) {
-      if (confirm(`Apakah Anda yakin ingin menghapus akun pengguna: "${username}"?`)) {
-        google.script.run
-          .withSuccessHandler(function() {
-            fetchDatabaseFromServer(function() {
-              renderUsersTable();
-              showToast(`Akun pengguna ${username} berhasil dihapus!`, "success");
-            });
-          })
-          .withFailureHandler(function(err) {
-            showToast("Gagal menghapus pengguna: " + err.message, "error");
-          })
-          .deleteUserGAS(username, operatorUsername);
       }
     }
 
