@@ -1563,22 +1563,22 @@
         saveBtn.disabled = true;
         saveBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...`;
 
-        google.script.run
-          .withSuccessHandler(function() {
+        saveUser(
+          userData,
+          curUser ? curUser.username : "admin",
+          function() {
             saveBtn.disabled = false;
             saveBtn.innerHTML = `<i class="fa-solid fa-save"></i> Simpan User`;
             closeUserModal();
-            fetchDatabaseFromServer(function() {
-              renderUsersTable();
-              showToast(`Akun pengguna ${username} berhasil disimpan!`, "success");
-            });
-          })
-          .withFailureHandler(function(err) {
+            renderUsersTable();
+            showToast(`Akun pengguna ${username} berhasil disimpan!`, "success");
+          },
+          function(err) {
             saveBtn.disabled = false;
             saveBtn.innerHTML = `<i class="fa-solid fa-save"></i> Simpan User`;
-            showToast("Gagal menyimpan akun: " + err.message, "error");
-          })
-          .saveUserGAS(userData, curUser.username);
+            showToast("Gagal menyimpan akun: " + (err ? (err.message || err) : "Terjadi kesalahan"), "error");
+          }
+        );
       });
 
       // Profile settings form submission

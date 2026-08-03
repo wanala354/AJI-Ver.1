@@ -206,7 +206,10 @@
           email: u.email,
           role: u.role,
           passwordHash: u.password_hash,
-          kelompok: u.kelompok
+          kelompok: u.kelompok,
+          jamaah_id: u.jamaah_id || u.jamaahId || null,
+          jamaahId: u.jamaah_id || u.jamaahId || null,
+          status: u.status || 'active'
         }));
         
         const auditLogs = (resLogs.data || []).map(l => ({
@@ -772,6 +775,17 @@
         });
     }
 
+    function supabaseDeleteUser(username, operatorUsername) {
+      return supabaseClient.from("app_users")
+        .delete()
+        .eq("username", username)
+        .then(({ error }) => {
+          if (error) throw error;
+          supabaseLogAction(operatorUsername, "DELETE_USER", "Menghapus akun pengguna: " + username);
+          return true;
+        });
+    }
+
     function supabaseSaveJadwalPengajian(jadwalData, operatorUsername) {
       const isEdit = !!jadwalData.id;
       const dataPayload = {
@@ -934,6 +948,10 @@
           },
           saveUserGAS: function(userData, operatorUsername) {
             this._call(() => supabaseSaveUser(userData, operatorUsername));
+            return this;
+          },
+          deleteUserGAS: function(username, operatorUsername) {
+            this._call(() => supabaseDeleteUser(username, operatorUsername));
             return this;
           },
           changePasswordGAS: function(targetUsername, newPasswordHash, operatorUsername) {
@@ -1501,6 +1519,16 @@
               });
               return this;
             },
+            deleteUserGAS: function(username, operatorUsername) {
+              this._call(() => {
+                let users = JSON.parse(localStorage.getItem("aji_users") || "[]");
+                users = users.filter(u => u.username.toLowerCase() !== username.toLowerCase());
+                localStorage.setItem("aji_users", JSON.stringify(users));
+                this.logActionGAS(operatorUsername, "DELETE_USER", "Menghapus akun pengguna: " + username);
+                return true;
+              });
+              return this;
+            },
             saveUserGAS: function(userData, operatorUsername) {
               this._call(() => {
                 const users = JSON.parse(localStorage.getItem("aji_users") || "[]");
@@ -1992,6 +2020,90 @@
           .deleteJamaahGAS(id, operatorUsername);
       }
     }
+
+    function saveUser(userData, operatorUsername, callback, errorCallback) {
+      if (useSupabase && supabaseClient) {
+        const pgUser = {
+          username: userData.username,
+          email: userData.email,
+          role: userData.role,
+          kelompok: userData.kelompok
+        };
+        if (userData.passwordHash) {
+          pgUser.password_hash = userData.passwordHash;
+        }
+        
+        supabaseClient.from("app_users").select("username").eq("username", userData.username).then(({ data }) => {
+          const isEdit = data && data.length > 0;
+          let req;
+          if (isEdit) {
+            req = supabaseClient.from("app_users").update(pgUser).eq("username", pgUser.username);
+          } else {
+            req = supabaseClient.from("app_users").insert([pgUser]);
+          }
+          return req.then(({ error }) => {
+            if (error) throw error;
+            const action = isEdit ? "UPDATE_USER" : "CREATE_USER";
+            const desc = isEdit 
+              ? "Memperbarui akun pengguna: " + userData.username + " (" + userData.role + ")"
+              : "Membuat akun pengguna baru: " + userData.username + " (" + userData.role + ")";
+            supabaseLogAction(operatorUsername, action, desc);
+            fetchDatabaseFromServer(function() {
+              if (callback) callback();
+            });
+          });
+        }).catch(err => {
+          if (errorCallback) errorCallback(err);
+        });
+      } else {
+        const users = JSON.parse(localStorage.getItem("aji_users") || "[]");
+        const idx = users.findIndex(u => u.username.toLowerCase() === userData.username.toLowerCase());
+        
+        if (idx !== -1) {
+          if (!userData.passwordHash) {
+            userData.passwordHash = users[idx].passwordHash;
+          }
+          users[idx] = userData;
+          localStorage.setItem("aji_users", JSON.stringify(users));
+        } else {
+          users.push(userData);
+          localStorage.setItem("aji_users", JSON.stringify(users));
+        }
+        fetchDatabaseFromServer(function() {
+          if (callback) callback();
+        });
+      }
+    }
+
+    function deleteUser(username, operatorUsername, callback, errorCallback) {
+      if (useSupabase && supabaseClient) {
+        supabaseClient.from("app_users")
+          .delete()
+          .eq("username", username)
+          .then(({ error }) => {
+            if (error) throw error;
+            supabaseLogAction(operatorUsername, "DELETE_USER", "Menghapus akun pengguna: " + username);
+            fetchDatabaseFromServer(function() {
+              if (callback) callback();
+            });
+          })
+          .catch(err => {
+            if (errorCallback) errorCallback(err);
+          });
+      } else {
+        let users = JSON.parse(localStorage.getItem("aji_users") || "[]");
+        users = users.filter(u => u.username.toLowerCase() !== username.toLowerCase());
+        localStorage.setItem("aji_users", JSON.stringify(users));
+        fetchDatabaseFromServer(function() {
+          if (callback) callback();
+        });
+      }
+    }
+
+    window.saveUser = saveUser;
+    window.deleteUser = deleteUser;
+    window.supabaseSaveUser = supabaseSaveUser;
+    window.supabaseDeleteUser = supabaseDeleteUser;
 
     function saveJadwalPengajian(jadwalData, operatorUsername, callback, errorCallback) {
       google.script.run

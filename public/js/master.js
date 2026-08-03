@@ -440,32 +440,151 @@
     // ----------------------------------------------------
     // USER ACCOUNTS MANAGEMENT (CRUD)
     // ----------------------------------------------------
+    function populateUserFilterKelompok() {
+      const select = document.getElementById("user-filter-kelompok");
+      if (!select || select.children.length > 1) return;
+      const list = typeof localMasterKelompok !== 'undefined' ? localMasterKelompok : [];
+      list.forEach(k => {
+        const opt = document.createElement("option");
+        opt.value = k;
+        opt.textContent = k;
+        select.appendChild(opt);
+      });
+    }
+
+    function initUserTableFilters() {
+      populateUserFilterKelompok();
+      
+      const searchInput = document.getElementById("user-filter-search");
+      const roleSelect = document.getElementById("user-filter-role");
+      const kelompokSelect = document.getElementById("user-filter-kelompok");
+
+      if (searchInput && !searchInput.dataset.filterBound) {
+        searchInput.dataset.filterBound = "true";
+        searchInput.addEventListener("input", renderUsersTable);
+      }
+      if (roleSelect && !roleSelect.dataset.filterBound) {
+        roleSelect.dataset.filterBound = "true";
+        roleSelect.addEventListener("change", renderUsersTable);
+      }
+      if (kelompokSelect && !kelompokSelect.dataset.filterBound) {
+        kelompokSelect.dataset.filterBound = "true";
+        kelompokSelect.addEventListener("change", renderUsersTable);
+      }
+    }
+
     function renderUsersTable() {
       const tbody = document.getElementById("table-users-body");
+      if (!tbody) return;
+
+      initUserTableFilters();
+
       tbody.innerHTML = "";
       
       const list = getUsersList();
+      const jamaahList = typeof getJamaahList === 'function' ? getJamaahList() : (typeof localJamaahList !== 'undefined' ? localJamaahList : []);
+
+      const searchVal = (document.getElementById("user-filter-search")?.value || "").trim().toLowerCase();
+      const roleVal = (document.getElementById("user-filter-role")?.value || "").trim().toLowerCase();
+      const kelompokVal = (document.getElementById("user-filter-kelompok")?.value || "").trim().toLowerCase();
+
       list.forEach(u => {
+        let namaJamaah = "-";
+        const jId = u.jamaah_id || u.jamaahId;
+        if (jId) {
+          const jObj = jamaahList.find(j => j.id === jId);
+          if (jObj) {
+            namaJamaah = jObj.namaLengkap || jObj.nama_lengkap || jObj.nama || jId;
+          } else {
+            namaJamaah = jId;
+          }
+        } else if (u.namaLengkap || u.nama_lengkap) {
+          namaJamaah = u.namaLengkap || u.nama_lengkap;
+        } else if (u.username) {
+          const uClean = u.username.trim().toLowerCase();
+          const jMatch = jamaahList.find(j => {
+            const jNama = (j.namaLengkap || j.nama_lengkap || j.nama || "").trim().toLowerCase();
+            if (!jNama) return false;
+            return jNama === uClean || jNama.replace(/\s+/g, ".") === uClean || jNama.replace(/\s+/g, "") === uClean;
+          });
+          if (jMatch) {
+            namaJamaah = jMatch.namaLengkap || jMatch.nama_lengkap || jMatch.nama;
+          }
+        }
+
+        // Apply filters
+        if (roleVal && (u.role || '').trim().toLowerCase() !== roleVal) {
+          return;
+        }
+        if (kelompokVal && (u.kelompok || 'Semua').trim().toLowerCase() !== kelompokVal) {
+          return;
+        }
+        if (searchVal) {
+          const matchUsername = (u.username || '').toLowerCase().includes(searchVal);
+          const matchEmail = (u.email || '').toLowerCase().includes(searchVal);
+          const matchNama = namaJamaah.toLowerCase().includes(searchVal);
+          if (!matchUsername && !matchEmail && !matchNama) {
+            return;
+          }
+        }
+
         const tr = document.createElement("tr");
-        const passDisplay = u.passwordHash.substring(0, 8) + "...";
-        
+
+        const roleClean = (u.role || '').trim().toLowerCase();
+        let badgeClass = 'badge-blue';
+        if (roleClean === 'admin') badgeClass = 'badge-red';
+        else if (roleClean === 'jamaah') badgeClass = 'badge-green';
+
         tr.innerHTML = `
           <td><strong>${u.username}</strong></td>
           <td>${u.email}</td>
-          <td><span class="badge ${(u.role || '').trim().toLowerCase() === 'admin' ? 'badge-red' : 'badge-blue' }">${u.role}</span></td>
+          <td><span class="badge ${badgeClass}">${u.role}</span></td>
           <td>${u.kelompok || "Semua"}</td>
+          <td>${namaJamaah}</td>
           <td style="text-align:center;">
             <div class="action-btns" style="justify-content:center;">
               <button class="btn-icon edit" data-user="${u.username}" title="Edit"><i class="fa-solid fa-pen"></i></button>
+              <button class="btn-icon delete" data-user="${u.username}" title="Hapus" style="color: #ef4444;"><i class="fa-solid fa-trash"></i></button>
             </div>
           </td>
         `;
         tbody.appendChild(tr);
       });
 
+      if (tbody.children.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color: var(--text-muted); padding: 20px;">Tidak ada data pengguna yang sesuai filter.</td></tr>`;
+      }
+
       tbody.querySelectorAll(".btn-icon.edit").forEach(btn => {
         btn.addEventListener("click", () => openUserModal(btn.getAttribute("data-user")));
       });
+
+      tbody.querySelectorAll(".btn-icon.delete").forEach(btn => {
+        btn.addEventListener("click", () => deleteUserConfirm(btn.getAttribute("data-user")));
+      });
+    }
+
+    function deleteUserConfirm(username) {
+      const curUser = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+      if (curUser && curUser.username && curUser.username.toLowerCase() === username.toLowerCase()) {
+        showToast("Anda tidak dapat menghapus akun Anda sendiri!", "warning");
+        return;
+      }
+      if (!confirm(`Apakah Anda yakin ingin menghapus akun pengguna "${username}"?`)) return;
+
+      const opUsername = curUser ? curUser.username : "admin";
+
+      deleteUser(
+        username,
+        opUsername,
+        function() {
+          renderUsersTable();
+          showToast(`Akun pengguna "${username}" berhasil dihapus!`, "success");
+        },
+        function(err) {
+          showToast("Gagal menghapus pengguna: " + (err ? (err.message || err) : "Terjadi kesalahan"), "error");
+        }
+      );
     }
 
     function populateUserKelompokDropdown() {
@@ -480,9 +599,9 @@
     }
 
     function toggleUserKelompokField() {
-      const role = document.getElementById("user-form-role").value;
+      const role = (document.getElementById("user-form-role").value || "").trim().toLowerCase();
       const group = document.getElementById("user-form-kelompok-group");
-      if (role === "Operator Kelompok" || role === "Pengurus Kelompok") {
+      if (role === "operator kelompok" || role === "pengurus kelompok") {
         group.style.display = "block";
       } else {
         group.style.display = "none";
@@ -511,9 +630,16 @@
         const userObj = getUsersList().find(u => u.username.toLowerCase() === username.toLowerCase());
         if (userObj) {
           document.getElementById("user-form-email").value = userObj.email;
-          document.getElementById("user-form-role").value = userObj.role;
+          const roleSelect = document.getElementById("user-form-role");
+          const targetRole = (userObj.role || "").trim().toLowerCase();
+          const matchedOpt = Array.from(roleSelect.options).find(opt => opt.value.trim().toLowerCase() === targetRole);
+          if (matchedOpt) {
+            roleSelect.value = matchedOpt.value;
+          } else {
+            roleSelect.value = userObj.role || "";
+          }
           toggleUserKelompokField();
-          if ((userObj.role || "").trim().toLowerCase() === "operator kelompok") {
+          if (targetRole === "operator kelompok" || targetRole === "pengurus kelompok") {
             document.getElementById("user-form-kelompok").value = userObj.kelompok;
           }
           document.getElementById("user-form-password").placeholder = "Kosongkan jika tidak diubah";

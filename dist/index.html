@@ -1738,6 +1738,28 @@
                 <button class="btn-primary" id="btn-add-user" style="padding:8px 15px; font-size:0.85rem;"><i
                     class="fa-solid fa-user-plus"></i> Tambah User</button>
               </div>
+              <!-- FILTER USER -->
+              <div class="user-filter-bar" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; align-items: center;">
+                <div style="flex: 1; min-width: 180px;">
+                  <input type="text" id="user-filter-search" placeholder="Cari nama jamaah / username / email..." style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--card-bg); color: var(--text-primary); font-size: 0.85rem;">
+                </div>
+                <div style="min-width: 140px;">
+                  <select id="user-filter-role" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--card-bg); color: var(--text-primary); font-size: 0.85rem;">
+                    <option value="">Semua Role</option>
+                    <option value="Admin">Admin</option>
+                    <option value="Operator Kelompok">Operator Kelompok</option>
+                    <option value="Operator Desa">Operator Desa</option>
+                    <option value="Pengurus Desa">Pengurus Desa</option>
+                    <option value="Pengurus Kelompok">Pengurus Kelompok</option>
+                    <option value="Jamaah">Jamaah</option>
+                  </select>
+                </div>
+                <div style="min-width: 160px;">
+                  <select id="user-filter-kelompok" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--card-bg); color: var(--text-primary); font-size: 0.85rem;">
+                    <option value="">Semua Kelompok</option>
+                  </select>
+                </div>
+              </div>
               <div class="table-responsive">
                 <table class="table-custom" id="table-users">
                   <thead>
@@ -2892,17 +2914,17 @@
   </div>
 
   <!-- EMBEDDED CODE LOGIC -->
-  <script src="./js/state.js?v=3.2.0"></script>
-  <script src="./js/api.js?v=3.2.0"></script>
-  <script src="./js/ui.js?v=3.2.0"></script>
-  <script src="./js/dashboard.js?v=3.2.0"></script>
-  <script src="./js/jamaah.js?v=3.2.0"></script>
-  <script src="./js/haji.js?v=3.2.0"></script>
-  <script src="./js/master.js?v=3.2.0"></script>
-  <script src="./js/utils.js?v=3.2.0"></script>
-  <script src="./js/pengurus.js?v=3.2.0"></script>
-  <script src="./js/pengajian.js?v=3.2.0"></script>
-  <script src="./js/jamaah_portal.js?v=3.2.0"></script>
+  <script src="./js/state.js?v=3.2.1"></script>
+  <script src="./js/api.js?v=3.2.1"></script>
+  <script src="./js/ui.js?v=3.2.1"></script>
+  <script src="./js/dashboard.js?v=3.2.1"></script>
+  <script src="./js/jamaah.js?v=3.2.1"></script>
+  <script src="./js/haji.js?v=3.2.1"></script>
+  <script src="./js/master.js?v=3.2.1"></script>
+  <script src="./js/utils.js?v=3.2.1"></script>
+  <script src="./js/pengurus.js?v=3.2.1"></script>
+  <script src="./js/pengajian.js?v=3.2.1"></script>
+  <script src="./js/jamaah_portal.js?v=3.2.1"></script>
 </body>
 
 </html>
