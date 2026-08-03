@@ -29,7 +29,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4"></script>
 
   <!-- Embedded Stylesheet -->
-  <link rel="stylesheet" crossorigin href="./assets/index-BaUD6Nsu.css">
+  <link rel="stylesheet" crossorigin href="./assets/index-TSQxTPJx.css">
 </head>
 
 <body class="dark-theme">
@@ -667,33 +667,39 @@
             <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin: 0;">Modul Data Haji Jamaah</h2>
           </div>
 
-          <!-- Summary Cards -->
-          <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 20px;">
-            <div class="stat-card-haji green-accent">
-              <div class="stat-card-title">Total Data Haji</div>
-              <div class="stat-card-icon" style="color: #10b981;">
-                <i class="fa-solid fa-layer-group"></i>
+          <!-- Summary Cards (Dashboard KPI Card Style) -->
+          <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 20px;">
+            <div class="kpi-card haji-total">
+              <div class="kpi-details">
+                <h3>Total Data Haji</h3>
+                <div class="kpi-value" id="haji-stat-total">0</div>
+                <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 4px;">Jamaah terdaftar data haji</div>
               </div>
-              <div class="stat-card-value" id="haji-stat-total">0</div>
-              <div class="stat-card-desc">Jamaah terdaftar data haji</div>
+              <div class="kpi-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                <i class="fa-solid fa-kaaba"></i>
+              </div>
             </div>
 
-            <div class="stat-card-haji green-accent">
-              <div class="stat-card-title">Sudah Berangkat</div>
-              <div class="stat-card-icon" style="color: #10b981;">
+            <div class="kpi-card haji-sudah">
+              <div class="kpi-details">
+                <h3>Sudah Berangkat</h3>
+                <div class="kpi-value" id="haji-stat-sudah">0</div>
+                <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 4px;">Jamaah sudah menunaikan ibadah haji</div>
+              </div>
+              <div class="kpi-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
                 <i class="fa-solid fa-person-praying"></i>
               </div>
-              <div class="stat-card-value" id="haji-stat-sudah">0</div>
-              <div class="stat-card-desc">Jamaah sudah menunaikan ibadah haji</div>
             </div>
 
-            <div class="stat-card-haji amber-accent">
-              <div class="stat-card-title">Belum Berangkat</div>
-              <div class="stat-card-icon" style="color: #f59e0b;">
+            <div class="kpi-card haji-belum">
+              <div class="kpi-details">
+                <h3>Belum Berangkat</h3>
+                <div class="kpi-value" id="haji-stat-belum">0</div>
+                <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 4px;">Jamaah dalam antrean porsi haji</div>
+              </div>
+              <div class="kpi-icon" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
                 <i class="fa-solid fa-clock-rotate-left"></i>
               </div>
-              <div class="stat-card-value" id="haji-stat-belum">0</div>
-              <div class="stat-card-desc">Jamaah dalam antrean porsi haji</div>
             </div>
           </div>
 

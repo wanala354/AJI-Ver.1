@@ -699,6 +699,9 @@
     .kpi-card.gus::after { background: #8b5cf6; }
     .kpi-card.teks-presensi::after { background: #ec4899; }
     .kpi-card.pengurus-kpi::after { background: #8b5cf6; }
+    .kpi-card.haji-total::after { background: #10b981; }
+    .kpi-card.haji-sudah::after { background: #10b981; }
+    .kpi-card.haji-belum::after { background: #f59e0b; }
 
     /* CHART GRIDS */
     .chart-grid {
