@@ -2415,29 +2415,128 @@ body.dark-theme .session-card.active {
   background: var(--primary);
 }
 
-/* Badges Data Haji */
-.badge-haji-sudah {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-radius: 6px;
-  background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
-  font-weight: 600;
-  font-size: 0.82rem;
-  border: 1px solid rgba(16, 185, 129, 0.3);
+/* ----------------------------------------------------
+   MODUL DATA HAJI STYLES (MATCHING REFERENCE DESIGN)
+   ---------------------------------------------------- */
+.stat-card-haji {
+  background: var(--bg-card);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.stat-card-haji::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+}
+.stat-card-haji.green-accent::before {
+  background: #10b981;
+}
+.stat-card-haji.amber-accent::before {
+  background: #f59e0b;
 }
 
+.table-haji-custom th {
+  color: #10b981 !important;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.3px;
+  padding: 12px 14px;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--border-color);
+}
+.table-haji-custom td {
+  padding: 12px 14px;
+  vertical-align: middle;
+}
+
+.haji-badge-kelompok {
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid #3b82f6;
+  color: #60a5fa;
+  border-radius: 14px;
+  padding: 3px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.haji-badge-belum,
 .badge-haji-belum {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid #d97706;
+  color: #fbbf24;
+  border-radius: 14px;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-radius: 6px;
-  background: rgba(245, 158, 11, 0.15);
-  color: #f59e0b;
+  gap: 6px;
+}
+
+.haji-badge-sudah,
+.badge-haji-sudah {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid #059669;
+  color: #34d399;
+  border-radius: 14px;
+  padding: 4px 12px;
+  font-size: 0.75rem;
   font-weight: 600;
-  font-size: 0.82rem;
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.haji-badge-tahun {
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
+  border-radius: 12px;
+  padding: 2px 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.haji-btn-edit {
+  padding: 5px 8px;
+  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  cursor: pointer;
+  margin-right: 4px;
+  transition: all 0.2s;
+}
+.haji-btn-edit:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.haji-btn-delete {
+  padding: 5px 8px;
+  font-size: 0.8rem;
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.haji-btn-delete:hover {
+  background: rgba(239, 68, 68, 0.35);
 }

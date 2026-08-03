@@ -371,32 +371,32 @@ function renderHajiTable() {
     const tr = document.createElement("tr");
 
     const badgeStatus = item.statusHaji === "Sudah Berangkat"
-      ? `<span class="badge-haji-sudah"><i class="fa-solid fa-check-circle"></i> Sudah Berangkat</span>`
-      : `<span class="badge-haji-belum"><i class="fa-solid fa-clock"></i> Belum Berangkat</span>`;
+      ? `<span class="haji-badge-sudah"><i class="fa-solid fa-circle-check"></i> Sudah Berangkat</span>`
+      : `<span class="haji-badge-belum"><i class="fa-solid fa-clock"></i> Belum Berangkat</span>`;
 
     const noKursiDisplay = item.statusHaji === "Belum Berangkat"
-      ? (item.nomorKursi ? `<strong>${item.nomorKursi}</strong>` : '-')
+      ? (item.nomorKursi ? `<strong style="color: #ffffff;">${item.nomorKursi}</strong>` : '-')
       : '-';
 
     const thnBerangkatDisplay = item.statusHaji === "Belum Berangkat"
-      ? (item.rencanaTahunBerangkat ? `<span class="badge badge-warning">${item.rencanaTahunBerangkat}</span>` : '-')
-      : (item.tahunBerangkat ? `<span class="badge badge-green">${item.tahunBerangkat}</span>` : '-');
+      ? (item.rencanaTahunBerangkat ? `<span class="haji-badge-tahun">${item.rencanaTahunBerangkat}</span>` : '-')
+      : (item.tahunBerangkat ? `<span class="haji-badge-tahun" style="border-color:#10b981; color:#34d399; background:rgba(16,185,129,0.15);">${item.tahunBerangkat}</span>` : '-');
 
     tr.innerHTML = `
       <td>${idx + 1}</td>
-      <td><code>${item.jamaahId || '-'}</code></td>
-      <td style="font-weight:600;">${item.namaLengkap}</td>
-      <td><span class="badge badge-blue">${item.kelompokPengajian}</span></td>
+      <td style="font-weight:600; color:var(--text-primary);">${item.jamaahId || '-'}</td>
+      <td style="font-weight:700; color:#ffffff;">${item.namaLengkap}</td>
+      <td><span class="haji-badge-kelompok">${item.kelompokPengajian}</span></td>
       <td>${badgeStatus}</td>
       <td>${noKursiDisplay}</td>
       <td>${thnBerangkatDisplay}</td>
       <td style="font-size:0.85rem; color:var(--text-secondary);">${item.catatan || '-'}</td>
       <td style="text-align:center;">
-        <button class="btn-secondary" style="padding:4px 8px; font-size:0.8rem; margin-right:4px;" onclick="openHajiModal('${item.id}')" title="Edit Data Haji">
+        <button class="haji-btn-edit" onclick="openHajiModal('${item.id}')" title="Edit Data Haji">
           <i class="fa-solid fa-pen-to-square"></i>
         </button>
-        <button style="padding:4px 8px; font-size:0.8rem; background:rgba(239,68,68,0.2); color:#ef4444; border:1px solid rgba(239,68,68,0.3); border-radius:6px; cursor:pointer;" onclick="deleteHajiData('${item.id}', '${item.namaLengkap.replace(/'/g, "\\'")}')" title="Hapus Data Haji">
-          <i class="fa-solid fa-trash"></i>
+        <button class="haji-btn-delete" onclick="deleteHajiData('${item.id}', '${item.namaLengkap.replace(/'/g, "\\'")}')" title="Hapus Data Haji">
+          <i class="fa-solid fa-trash-can"></i>
         </button>
       </td>
     `;

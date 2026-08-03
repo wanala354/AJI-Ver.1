@@ -29,7 +29,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4"></script>
 
   <!-- Embedded Stylesheet -->
-  <link rel="stylesheet" crossorigin href="./assets/index-DUcTa8tu.css">
+  <link rel="stylesheet" crossorigin href="./assets/index-BaUD6Nsu.css">
 </head>
 
 <body class="dark-theme">
@@ -661,36 +661,36 @@
 
         <!-- PAGE 3.5: MODUL DATA HAJI -->
         <section id="section-haji" class="page-section">
+          <!-- Module Header -->
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+            <i class="fa-solid fa-layer-group" style="font-size: 1.2rem; color: var(--text-primary);"></i>
+            <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin: 0;">Modul Data Haji Jamaah</h2>
+          </div>
+
           <!-- Summary Cards -->
-          <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">
-            <div class="stat-card" style="border-left: 4px solid var(--primary);">
-              <div class="stat-card-header">
-                <div class="stat-card-title">Total Data Haji</div>
-                <div class="stat-card-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--primary);">
-                  <i class="fa-solid fa-kaaba"></i>
-                </div>
+          <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px; margin-bottom: 20px;">
+            <div class="stat-card-haji green-accent">
+              <div class="stat-card-title">Total Data Haji</div>
+              <div class="stat-card-icon" style="color: #10b981;">
+                <i class="fa-solid fa-layer-group"></i>
               </div>
               <div class="stat-card-value" id="haji-stat-total">0</div>
               <div class="stat-card-desc">Jamaah terdaftar data haji</div>
             </div>
 
-            <div class="stat-card" style="border-left: 4px solid #10b981;">
-              <div class="stat-card-header">
-                <div class="stat-card-title">Sudah Berangkat</div>
-                <div class="stat-card-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
-                  <i class="fa-solid fa-person-praying"></i>
-                </div>
+            <div class="stat-card-haji green-accent">
+              <div class="stat-card-title">Sudah Berangkat</div>
+              <div class="stat-card-icon" style="color: #10b981;">
+                <i class="fa-solid fa-person-praying"></i>
               </div>
               <div class="stat-card-value" id="haji-stat-sudah">0</div>
               <div class="stat-card-desc">Jamaah sudah menunaikan ibadah haji</div>
             </div>
 
-            <div class="stat-card" style="border-left: 4px solid #f59e0b;">
-              <div class="stat-card-header">
-                <div class="stat-card-title">Belum Berangkat</div>
-                <div class="stat-card-icon" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
-                  <i class="fa-solid fa-clock-rotate-left"></i>
-                </div>
+            <div class="stat-card-haji amber-accent">
+              <div class="stat-card-title">Belum Berangkat</div>
+              <div class="stat-card-icon" style="color: #f59e0b;">
+                <i class="fa-solid fa-clock-rotate-left"></i>
               </div>
               <div class="stat-card-value" id="haji-stat-belum">0</div>
               <div class="stat-card-desc">Jamaah dalam antrean porsi haji</div>
@@ -699,7 +699,7 @@
 
           <div class="card-panel">
             <div class="card-panel-header">
-              <span class="card-panel-title"><i class="fa-solid fa-kaaba"></i> Data Haji Jamaah</span>
+              <span class="card-panel-title"><i class="fa-solid fa-layer-group"></i> Data Haji Jamaah</span>
               <button class="btn-primary" id="btn-add-haji" onclick="openHajiModal()">
                 <i class="fa-solid fa-plus"></i> Tambah Data Haji
               </button>
@@ -729,7 +729,7 @@
             </div>
 
             <div class="table-responsive">
-              <table class="table-custom" id="table-haji">
+              <table class="table-custom table-haji-custom" id="table-haji">
                 <thead>
                   <tr>
                     <th style="width: 50px;">No</th>
@@ -748,7 +748,7 @@
               </table>
             </div>
 
-            <div class="table-footer-info" style="margin-top: 15px;">
+            <div class="table-footer-info" style="margin-top: 15px; color: var(--text-secondary); font-size: 0.85rem;">
               <div>Menampilkan <span id="haji-shown-count">0</span> dari <span id="haji-total-count">0</span> Data Haji</div>
             </div>
           </div>
