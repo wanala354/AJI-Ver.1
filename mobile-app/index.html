@@ -1165,11 +1165,11 @@
                 style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
                 <span class="card-panel-title"><i class="fa-solid fa-calendar-days"></i> Kalender Jadwal Kegiatan</span>
                 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                  <div class="select-container" style="min-width: 120px;">
+                  <div class="select-container" style="min-width: 100px;">
                     <select id="filter-jadwal-tahun" class="select-filter" style="width: 100%;"
                       onchange="renderCalendar()"></select>
                   </div>
-                  <div class="select-container" style="min-width: 150px;">
+                  <div class="select-container" style="min-width: 130px;">
                     <select id="filter-jadwal-bulan" class="select-filter" style="width: 100%;"
                       onchange="renderCalendar()">
                       <option value="0">Januari</option>
@@ -1184,6 +1184,21 @@
                       <option value="9">Oktober</option>
                       <option value="10">November</option>
                       <option value="11">Desember</option>
+                    </select>
+                  </div>
+                  <div class="select-container" style="min-width: 150px;">
+                    <select id="filter-jadwal-tingkat" class="select-filter" style="width: 100%;"
+                      onchange="renderCalendar()">
+                      <option value="">Semua Tingkat</option>
+                      <option value="Tingkat Kelompok">Tingkat Kelompok</option>
+                      <option value="Tingkat Desa">Tingkat Desa</option>
+                      <option value="Tingkat Daerah">Tingkat Daerah</option>
+                    </select>
+                  </div>
+                  <div class="select-container" style="min-width: 160px;">
+                    <select id="filter-jadwal-kelompok" class="select-filter" style="width: 100%;"
+                      onchange="renderCalendar()">
+                      <option value="">Semua Kelompok</option>
                     </select>
                   </div>
                   <button class="btn-primary" id="btn-add-jadwal" style="padding: 8px 15px; font-size: 0.85rem;"

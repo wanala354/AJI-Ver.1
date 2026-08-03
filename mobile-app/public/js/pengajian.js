@@ -51,6 +51,32 @@ window.initPengajianModule = function() {
     monthSelect.value = currentMonth;
   }
 
+  // Populate Kelompok Filter for Kalender Jadwal
+  const jadwalKelompokSelect = document.getElementById("filter-jadwal-kelompok");
+  if (jadwalKelompokSelect && (jadwalKelompokSelect.options.length <= 1)) {
+    const curVal = jadwalKelompokSelect.value;
+    jadwalKelompokSelect.innerHTML = '<option value="">Semua Kelompok</option>';
+    const masterKel = typeof getKelompokList === 'function' ? getKelompokList() : (typeof localMasterKelompok !== 'undefined' ? localMasterKelompok : []);
+    masterKel.forEach(k => {
+      const opt = document.createElement("option");
+      opt.value = k;
+      opt.textContent = k;
+      jadwalKelompokSelect.appendChild(opt);
+    });
+    if (curVal) {
+      jadwalKelompokSelect.value = curVal;
+    }
+    const currentUser = getCurrentUser();
+    const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
+    const isKelompokRestricted = currentUser && (curRoleClean === "operator kelompok" || curRoleClean === "pengurus kelompok");
+    if (isKelompokRestricted && currentUser.kelompok) {
+      jadwalKelompokSelect.value = currentUser.kelompok;
+      jadwalKelompokSelect.disabled = true;
+    } else {
+      jadwalKelompokSelect.disabled = false;
+    }
+  }
+
   // Populate Year, Month and Kelompok Filters for Kehadiran Teks
   const teksYearSelect = document.getElementById("teks-filter-tahun");
   const teksMonthSelect = document.getElementById("teks-filter-bulan");
@@ -169,6 +195,27 @@ window.renderCalendar = function() {
       return sk === uk ||
              tk.includes("desa") ||
              tk.includes("daerah");
+    });
+  }
+
+  const filterTingkatSelect = document.getElementById("filter-jadwal-tingkat");
+  const filterKelompokSelect = document.getElementById("filter-jadwal-kelompok");
+  const filterTingkatVal = filterTingkatSelect ? filterTingkatSelect.value.trim().toLowerCase() : "";
+  const filterKelompokVal = filterKelompokSelect ? filterKelompokSelect.value.trim().toLowerCase() : "";
+
+  if (filterTingkatVal) {
+    schedules = schedules.filter(s => {
+      const tk = String(s.tingkat_pengajian || "").trim().toLowerCase();
+      return tk === filterTingkatVal || tk.includes(filterTingkatVal.replace("tingkat ", "")) || filterTingkatVal.includes(tk);
+    });
+  }
+
+  if (filterKelompokVal) {
+    schedules = schedules.filter(s => {
+      const tk = String(s.tingkat_pengajian || "").trim().toLowerCase();
+      const sk = String(s.kelompok_pengajian || "").trim().toLowerCase();
+      const isDesaOrDaerah = tk.includes("desa") || tk.includes("daerah");
+      return sk === filterKelompokVal || isDesaOrDaerah;
     });
   }
 
