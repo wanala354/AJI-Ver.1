@@ -262,6 +262,9 @@
             <li class="submenu-item" data-target="section-kartu-keluarga" id="submenu-kartu-keluarga">
               <a href="#"><i class="fa-solid fa-file-invoice"></i> Kartu Keluarga</a>
             </li>
+            <li class="submenu-item" data-target="section-haji" id="submenu-haji">
+              <a href="#"><i class="fa-solid fa-kaaba"></i> Data Haji</a>
+            </li>
           </ul>
         </li>
 
@@ -652,6 +655,101 @@
                   Silakan pilih salah satu Kepala Keluarga di daftar sebelah kiri untuk memuat data Kartu Keluarga.
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- PAGE 3.5: MODUL DATA HAJI -->
+        <section id="section-haji" class="page-section">
+          <!-- Summary Cards -->
+          <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px;">
+            <div class="stat-card" style="border-left: 4px solid var(--primary);">
+              <div class="stat-card-header">
+                <div class="stat-card-title">Total Data Haji</div>
+                <div class="stat-card-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--primary);">
+                  <i class="fa-solid fa-kaaba"></i>
+                </div>
+              </div>
+              <div class="stat-card-value" id="haji-stat-total">0</div>
+              <div class="stat-card-desc">Jamaah terdaftar data haji</div>
+            </div>
+
+            <div class="stat-card" style="border-left: 4px solid #10b981;">
+              <div class="stat-card-header">
+                <div class="stat-card-title">Sudah Berangkat</div>
+                <div class="stat-card-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                  <i class="fa-solid fa-person-praying"></i>
+                </div>
+              </div>
+              <div class="stat-card-value" id="haji-stat-sudah">0</div>
+              <div class="stat-card-desc">Jamaah sudah menunaikan ibadah haji</div>
+            </div>
+
+            <div class="stat-card" style="border-left: 4px solid #f59e0b;">
+              <div class="stat-card-header">
+                <div class="stat-card-title">Belum Berangkat</div>
+                <div class="stat-card-icon" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
+                  <i class="fa-solid fa-clock-rotate-left"></i>
+                </div>
+              </div>
+              <div class="stat-card-value" id="haji-stat-belum">0</div>
+              <div class="stat-card-desc">Jamaah dalam antrean porsi haji</div>
+            </div>
+          </div>
+
+          <div class="card-panel">
+            <div class="card-panel-header">
+              <span class="card-panel-title"><i class="fa-solid fa-kaaba"></i> Data Haji Jamaah</span>
+              <button class="btn-primary" id="btn-add-haji" onclick="openHajiModal()">
+                <i class="fa-solid fa-plus"></i> Tambah Data Haji
+              </button>
+            </div>
+
+            <div class="table-actions-bar">
+              <div class="search-filter-group">
+                <div class="search-input-wrapper">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                  <input type="text" id="haji-filter-search" placeholder="Cari Nama / Nomor Kursi..." oninput="renderHajiTable()">
+                </div>
+
+                <select id="haji-filter-kelompok" class="select-filter" onchange="renderHajiTable()">
+                  <option value="">Semua Kelompok</option>
+                </select>
+
+                <select id="haji-filter-status" class="select-filter" onchange="renderHajiTable()">
+                  <option value="">Semua Status Haji</option>
+                  <option value="Sudah Berangkat">Sudah Berangkat</option>
+                  <option value="Belum Berangkat">Belum Berangkat</option>
+                </select>
+              </div>
+
+              <button class="btn-secondary" onclick="resetHajiFilters()">
+                <i class="fa-solid fa-filter-circle-xmark"></i> Reset
+              </button>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table-custom" id="table-haji">
+                <thead>
+                  <tr>
+                    <th style="width: 50px;">No</th>
+                    <th>ID Jamaah</th>
+                    <th>Nama Jamaah</th>
+                    <th>Kelompok Pengajian</th>
+                    <th>Status Haji</th>
+                    <th>No. Kursi / Porsi</th>
+                    <th>Rencana Thn Berangkat</th>
+                    <th>Catatan</th>
+                    <th style="width: 100px; text-align: center;">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="table-haji-body">
+                </tbody>
+              </table>
+            </div>
+
+            <div class="table-footer-info" style="margin-top: 15px;">
+              <div>Menampilkan <span id="haji-shown-count">0</span> dari <span id="haji-total-count">0</span> Data Haji</div>
             </div>
           </div>
         </section>
@@ -2695,12 +2793,90 @@
     </div>
   </div>
 
+  <!-- MODAL FORM DATA HAJI -->
+  <div class="modal-overlay" id="modal-haji" style="display: none;">
+    <div class="modal-container" style="max-width: 550px;">
+      <div class="modal-header">
+        <h3 id="modal-haji-title"><i class="fa-solid fa-kaaba"></i> Tambah Data Haji</h3>
+        <button class="modal-close-btn" type="button" onclick="closeHajiModal()">&times;</button>
+      </div>
+      <form id="form-haji" onsubmit="event.preventDefault(); saveHajiData();">
+        <input type="hidden" id="haji-edit-id">
+        <div class="modal-body" style="display: flex; flex-direction: column; gap: 15px;">
+          
+          <!-- Pilih Jamaah -->
+          <div class="form-group">
+            <label for="haji-jamaah-id" style="font-weight: 600; display: block; margin-bottom: 6px;">Pilih Jamaah*</label>
+            <select id="haji-jamaah-id" class="select-filter" style="width: 100%; padding: 10px;" required onchange="onHajiJamaahSelected()">
+              <option value="">-- Pilih Jamaah --</option>
+            </select>
+          </div>
+
+          <!-- Info Kelompok Pengajian (Read-only display) -->
+          <div class="form-group" id="haji-kelompok-info-wrapper" style="display: none;">
+            <label style="font-weight: 600; display: block; margin-bottom: 4px; color: var(--text-secondary); font-size: 0.85rem;">Kelompok Pengajian:</label>
+            <div id="haji-jamaah-kelompok-display" style="font-weight: 700; color: var(--primary); padding: 8px 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9rem;">
+              -
+            </div>
+          </div>
+
+          <!-- Status Haji -->
+          <div class="form-group">
+            <label style="font-weight: 600; display: block; margin-bottom: 8px;">Status Haji*</label>
+            <div style="display: flex; gap: 20px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px;">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 500;">
+                <input type="radio" name="haji-status" value="Sudah Berangkat" onchange="toggleHajiFormFields()">
+                <span class="badge-haji-sudah" style="padding: 4px 8px; border-radius: 4px; background: rgba(16, 185, 129, 0.2); color: #10b981; font-weight: 600;"><i class="fa-solid fa-check-circle"></i> Sudah Berangkat</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 500;">
+                <input type="radio" name="haji-status" value="Belum Berangkat" checked onchange="toggleHajiFormFields()">
+                <span class="badge-haji-belum" style="padding: 4px 8px; border-radius: 4px; background: rgba(245, 158, 11, 0.2); color: #f59e0b; font-weight: 600;"><i class="fa-solid fa-clock"></i> Belum Berangkat</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Fields khusus Belum Berangkat -->
+          <div id="haji-fields-belum" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group">
+              <label for="haji-nomor-kursi" style="font-weight: 600; display: block; margin-bottom: 6px;">Nomor Porsi / Kursi Haji</label>
+              <input type="text" id="haji-nomor-kursi" placeholder="Contoh: 1000123456" style="width: 100%; padding: 10px; border-radius: 6px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);">
+            </div>
+            <div class="form-group">
+              <label for="haji-rencana-tahun" style="font-weight: 600; display: block; margin-bottom: 6px;">Rencana Tahun Berangkat</label>
+              <input type="number" id="haji-rencana-tahun" placeholder="Contoh: 2028" min="2024" max="2070" style="width: 100%; padding: 10px; border-radius: 6px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);">
+            </div>
+          </div>
+
+          <!-- Fields khusus Sudah Berangkat (Opsional) -->
+          <div id="haji-fields-sudah" style="display: none;">
+            <div class="form-group">
+              <label for="haji-tahun-berangkat" style="font-weight: 600; display: block; margin-bottom: 6px;">Tahun Keberangkatan Haji (Opsional)</label>
+              <input type="number" id="haji-tahun-berangkat" placeholder="Contoh: 2019" min="1950" max="2026" style="width: 100%; padding: 10px; border-radius: 6px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);">
+            </div>
+          </div>
+
+          <!-- Catatan -->
+          <div class="form-group">
+            <label for="haji-catatan" style="font-weight: 600; display: block; margin-bottom: 6px;">Catatan / Keterangan (Opsional)</label>
+            <textarea id="haji-catatan" rows="3" placeholder="Contoh: Haji Reguler / Khusus / Furoda..." style="width: 100%; padding: 10px; border-radius: 6px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); outline: none; resize: none;"></textarea>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeHajiModal()">Batal</button>
+          <button type="submit" class="btn-primary"><i class="fa-solid fa-save"></i> Simpan Data Haji</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- EMBEDDED CODE LOGIC -->
   <script src="./js/state.js?v=3.2.0"></script>
   <script src="./js/api.js?v=3.2.0"></script>
   <script src="./js/ui.js?v=3.2.0"></script>
   <script src="./js/dashboard.js?v=3.2.0"></script>
   <script src="./js/jamaah.js?v=3.2.0"></script>
+  <script src="./js/haji.js?v=3.2.0"></script>
   <script src="./js/master.js?v=3.2.0"></script>
   <script src="./js/utils.js?v=3.2.0"></script>
   <script src="./js/pengurus.js?v=3.2.0"></script>

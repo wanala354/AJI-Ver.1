@@ -130,8 +130,9 @@
         supabaseClient.from("master_jenis_pengajian").select("*").limit(1000).then(res => res, err => ({ data: [], error: err })),
         supabaseClient.from("master_peserta_pengajian").select("*").limit(1000).then(res => res, err => ({ data: [], error: err })),
         supabaseClient.from("master_grup_kustom").select("*").limit(1000).then(res => res, err => ({ data: [], error: err })),
-        supabaseClient.from("master_tempat_kegiatan").select("*").limit(1000).then(res => res, err => ({ data: [], error: err }))
-      ]).then(([resJamaah, resUsers, resKelompok, resPendidikan, resPekerjaan, resDapuan, resLogs, resMateri, resJadwal, resPresensi, resMasterPengajar, resJenisPengajian, resPesertaPengajian, resGrupKustom, resTempatKegiatan]) => {
+        supabaseClient.from("master_tempat_kegiatan").select("*").limit(1000).then(res => res, err => ({ data: [], error: err })),
+        supabaseClient.from("data_haji").select("*").limit(50000).then(res => res, err => ({ data: [], error: err }))
+      ]).then(([resJamaah, resUsers, resKelompok, resPendidikan, resPekerjaan, resDapuan, resLogs, resMateri, resJadwal, resPresensi, resMasterPengajar, resJenisPengajian, resPesertaPengajian, resGrupKustom, resTempatKegiatan, resDataHaji]) => {
         if (resJamaah.error) throw resJamaah.error;
         if (resUsers.error) throw resUsers.error;
         
@@ -241,6 +242,24 @@
           });
         }
         
+        const hajiList = (resDataHaji.data || []).map(h => ({
+          id: h.id,
+          jamaahId: h.jamaah_id,
+          statusHaji: h.status_haji,
+          nomorKursi: h.nomor_kursi || "",
+          rencanaTahunBerangkat: h.rencana_tahun_berangkat ? parseInt(h.rencana_tahun_berangkat) : null,
+          tahunBerangkat: h.tahun_berangkat ? parseInt(h.tahun_berangkat) : null,
+          catatan: h.catatan || "",
+          createdAt: h.created_at
+        }));
+
+        let filteredHaji = hajiList;
+        if (isKelompokRestricted) {
+          const targetKelompok = userObj.kelompok;
+          const allowedJamaahIds = filteredJamaah.map(j => j.id);
+          filteredHaji = hajiList.filter(h => allowedJamaahIds.includes(h.jamaahId));
+        }
+
         return {
           jamaahList: filteredJamaah,
           kepalaKeluargaList: filteredJamaah.filter(j => j.statusHubunganKeluarga === "Kepala Keluarga"),
@@ -250,6 +269,7 @@
           })),
           auditLogs: filteredLogs,
           usersList: usersList,
+          dataHaji: filteredHaji,
           masterKelompok: rawKelompok.map(n => ({ nama: n })),
           masterPendidikan: rawPendidikan.map(n => ({ nama: n })),
           masterDapuan: rawDapuan.map(n => ({ nama: n })),
@@ -460,6 +480,42 @@
           supabaseLogAction(jamaahUsername || idJamaah, "SELF_CHECKIN", "Self check-in jamaah " + idJamaah + " untuk sesi " + idPengajian + ": " + status);
           return true;
         });
+    }
+
+    // --- DATA HAJI SUPABASE API ---
+    function supabaseSaveDataHaji(hajiData, operatorUsername) {
+      const payload = {
+        jamaah_id: hajiData.jamaahId,
+        status_haji: hajiData.statusHaji,
+        nomor_kursi: hajiData.nomorKursi || null,
+        rencana_tahun_berangkat: hajiData.rencanaTahunBerangkat ? parseInt(hajiData.rencanaTahunBerangkat) : null,
+        tahun_berangkat: hajiData.tahunBerangkat ? parseInt(hajiData.tahunBerangkat) : null,
+        catatan: hajiData.catatan || null,
+        updated_at: new Date().toISOString()
+      };
+
+      if (hajiData.id) {
+        payload.id = hajiData.id;
+        return supabaseClient.from("data_haji").upsert(payload).then(({ data, error }) => {
+          if (error) throw error;
+          supabaseLogAction(operatorUsername, "UPDATE_HAJI", "Memperbarui data haji jamaah: " + hajiData.jamaahId);
+          return { success: true };
+        });
+      } else {
+        return supabaseClient.from("data_haji").insert([payload]).then(({ data, error }) => {
+          if (error) throw error;
+          supabaseLogAction(operatorUsername, "CREATE_HAJI", "Menambahkan data haji jamaah: " + hajiData.jamaahId);
+          return { success: true };
+        });
+      }
+    }
+
+    function supabaseDeleteDataHaji(id, jamaahId, operatorUsername) {
+      return supabaseClient.from("data_haji").delete().eq("id", id).then(({ error }) => {
+        if (error) throw error;
+        supabaseLogAction(operatorUsername, "DELETE_HAJI", "Menghapus data haji jamaah: " + jamaahId);
+        return { success: true };
+      });
     }
 
     function supabaseSaveJamaah(jamaahData, operatorUsername) {
@@ -1851,6 +1907,7 @@
           localMasterTempatKegiatan = (data.masterTempatKegiatan || []).map(m => m.nama);
           localJadwalPengajian = data.jadwalPengajian || [];
           localPresensiKehadiran = data.presensiKehadiran || [];
+          localDataHaji = data.dataHaji || [];
           
           if (callback) callback();
         })

@@ -6,6 +6,7 @@
     let localKartuKeluargaMappings = [];
     let localAuditLogs = [];
     let localUsersList = [];
+    let localDataHaji = [];
 
     // Portal Jamaah State
     let localCurrentJamaahId = null;   // ID jamaah dari user yang sedang login (role=jamaah)

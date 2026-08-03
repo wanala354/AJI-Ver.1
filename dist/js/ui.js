@@ -302,6 +302,7 @@
       const menuAudit = document.getElementById("menu-audit");
       const btnAdd = document.getElementById("btn-add-jamaah");
       const btnAddJadwal = document.getElementById("btn-add-jadwal");
+      const btnAddHaji = document.getElementById("btn-add-haji");
       const accessNote = document.getElementById("table-access-note");
       
       if (userRoleClean === "admin") {
@@ -311,6 +312,7 @@
         if (menuAudit) menuAudit.style.display = "block";
         if (btnAdd) btnAdd.style.display = "inline-flex";
         if (btnAddJadwal) btnAddJadwal.style.display = "inline-flex";
+        if (btnAddHaji) btnAddHaji.style.display = "inline-flex";
         accessNote.textContent = "Hak Akses: Administrator (Full CRUD Aktif)";
         accessNote.style.color = "#10b981";
       } else if (userRoleClean === "operator kelompok" || userRoleClean === "operator desa") {
@@ -319,6 +321,7 @@
         if (menuAudit) menuAudit.style.display = "block";
         if (btnAdd) btnAdd.style.display = "inline-flex";
         if (btnAddJadwal) btnAddJadwal.style.display = "inline-flex";
+        if (btnAddHaji) btnAddHaji.style.display = "inline-flex";
 
         const menuOpUserMgmt = document.getElementById("menu-operator-user-mgmt");
 
@@ -342,6 +345,7 @@
         if (menuAudit) menuAudit.style.display = "block";
         if (btnAdd) btnAdd.style.display = "none";
         if (btnAddJadwal) btnAddJadwal.style.display = "none";
+        if (btnAddHaji) btnAddHaji.style.display = "none";
         if (userRoleClean === "pengurus desa") {
           accessNote.textContent = "Hak Akses: Pengurus Desa (Mode Read-only Semua Tingkat)";
         } else {
@@ -355,6 +359,7 @@
         if (menuAudit) menuAudit.style.display = "none";
         if (btnAdd) btnAdd.style.display = "none";
         if (btnAddJadwal) btnAddJadwal.style.display = "none";
+        if (btnAddHaji) btnAddHaji.style.display = "none";
         accessNote.textContent = "Hak Akses: User (Mode Read-only)";
         accessNote.style.color = "#9ca3af";
       }
@@ -1295,6 +1300,13 @@
 
       // Jamaah Save Form Modal
       document.getElementById("btn-add-jamaah").addEventListener("click", () => openJamaahModal(null));
+      const btnAddHajiEl = document.getElementById("btn-add-haji");
+      if (btnAddHajiEl) {
+        btnAddHajiEl.addEventListener("click", (e) => {
+          if (e) e.preventDefault();
+          if (typeof openHajiModal === "function") openHajiModal(null);
+        });
+      }
       document.getElementById("modal-close-btn").addEventListener("click", closeJamaahModal);
       document.getElementById("modal-cancel-btn").addEventListener("click", closeJamaahModal);
       
@@ -1776,6 +1788,7 @@
         "section-dashboard": { title: "Dashboard Utama", icon: "fa-chart-pie" },
         "section-jamaah": { title: "Modul Data Jamaah", icon: "fa-users" },
         "section-kartu-keluarga": { title: "Modul Kartu Keluarga Relasional", icon: "fa-file-invoice" },
+        "section-haji": { title: "Modul Data Haji Jamaah", icon: "fa-kaaba" },
         "section-report": { title: "Rekapitulasi & Laporan", icon: "fa-file-contract" },
         "section-master": { title: "Pengaturan Data Master", icon: "fa-folder-tree" },
         "section-users": { title: "Manajemen Akun Pengguna", icon: "fa-users-gear" },
@@ -1790,7 +1803,11 @@
         "section-jamaah-jadwal": { title: "Jadwal Pengajian", icon: "fa-calendar-check" }
       };
       
-      document.getElementById("page-nav-title").innerHTML = `<i class="fa-solid ${titleMap[sectionId].icon}"></i> ${titleMap[sectionId].title}`;
+      const titleInfo = titleMap[sectionId] || { title: "Modul AJI", icon: "fa-mosque" };
+      const pageNavTitleEl = document.getElementById("page-nav-title");
+      if (pageNavTitleEl) {
+        pageNavTitleEl.innerHTML = `<i class="fa-solid ${titleInfo.icon}"></i> ${titleInfo.title}`;
+      }
       
       if (sectionId === "section-dashboard") {
         loadDashboardKPIs();
@@ -1801,6 +1818,8 @@
       } else if (sectionId === "section-kartu-keluarga") {
         populateKKFilterOptions();
         populateKKList();
+      } else if (sectionId === "section-haji") {
+        if (typeof initHajiModule === 'function') initHajiModule();
       } else if (sectionId === "section-report") {
         populateReportFilterOptions();
         calculateAndRenderReport();
