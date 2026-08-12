@@ -56,7 +56,14 @@
       filteredJamaahList = list.filter(j => {
         const matchSearch = j.namaLengkap.toLowerCase().includes(searchVal) || j.id.toLowerCase().includes(searchVal);
         const matchKelompok = kelompokVal === "" || j.kelompokPengajian === kelompokVal;
-        const matchPeramutan = peramutanVal === "" || j.kelompokPeramutan === peramutanVal;
+        let matchPeramutan = true;
+        if (peramutanVal !== "") {
+          if (peramutanVal === "PAUD & Balita" || peramutanVal === "PAUD dan Balita" || peramutanVal === "PAUD" || peramutanVal === "Balita" || peramutanVal === "PAUD_BALITA") {
+            matchPeramutan = j.kelompokPeramutan === "PAUD" || j.kelompokPeramutan === "Balita";
+          } else {
+            matchPeramutan = j.kelompokPeramutan === peramutanVal;
+          }
+        }
         const matchEkonomi = ekonomiVal === "" || j.statusEkonomi === ekonomiVal;
         let matchDapuan = true;
         if (dapuanVal) {

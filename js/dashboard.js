@@ -195,7 +195,7 @@
       document.getElementById("kpi-total-dhuafa").textContent = jamaah.filter(j => j.statusEkonomi === "Dhuafa").length;
       
       // Dynamic KPIs added in v2.1
-      document.getElementById("kpi-total-paud").textContent = jamaah.filter(j => j.kelompokPeramutan === "PAUD").length;
+      document.getElementById("kpi-total-paud").textContent = jamaah.filter(j => j.kelompokPeramutan === "PAUD" || j.kelompokPeramutan === "Balita").length;
       document.getElementById("kpi-total-janda").textContent = jamaah.filter(j => j.statusPernikahan === "Janda").length;
 
       // Calculate presence in "Teks" sessions for selected month

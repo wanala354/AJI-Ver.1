@@ -2028,7 +2028,11 @@ function fillMonitoringDOM() {
     filtered = filtered.filter(p => p.kelompokPengajian === filterKelompok);
   }
   if (filterPeramutan) {
-    filtered = filtered.filter(p => p.peramutan === filterPeramutan);
+    if (filterPeramutan === "PAUD & Balita" || filterPeramutan === "PAUD dan Balita" || filterPeramutan === "PAUD" || filterPeramutan === "Balita") {
+      filtered = filtered.filter(p => p.peramutan === "PAUD" || p.peramutan === "Balita");
+    } else {
+      filtered = filtered.filter(p => p.peramutan === filterPeramutan);
+    }
   }
   if (filterGender) {
     filtered = filtered.filter(p => p.gender === filterGender);
