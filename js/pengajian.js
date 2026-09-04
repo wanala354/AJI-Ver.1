@@ -2976,31 +2976,3 @@ function renderKetertibanJamaahTable() {
 window.renderKetertibanJamaahTable = renderKetertibanJamaahTable;
 window.initMonitoringKetertibanFilters = initMonitoringKetertibanFilters;
 
-// Temporary Visual Debug Overlay
-document.addEventListener("DOMContentLoaded", () => {
-  const debugDiv = document.createElement("div");
-  debugDiv.style.position = "fixed";
-  debugDiv.style.top = "10px";
-  debugDiv.style.left = "10px";
-  debugDiv.style.background = "rgba(0,0,0,0.85)";
-  debugDiv.style.color = "#00ff00";
-  debugDiv.style.padding = "10px";
-  debugDiv.style.zIndex = "999999";
-  debugDiv.style.fontFamily = "monospace";
-  debugDiv.style.fontSize = "12px";
-  debugDiv.style.borderRadius = "5px";
-  debugDiv.style.pointerEvents = "none";
-  debugDiv.id = "app-debug-overlay";
-  document.body.appendChild(debugDiv);
-  
-  setInterval(() => {
-    const jam = typeof window.getJamaahList === 'function' ? window.getJamaahList() : [];
-    const jad = typeof window.getJadwalPengajianList === 'function' ? window.getJadwalPengajianList() : [];
-    const pre = typeof window.getPresensiKehadiranList === 'function' ? window.getPresensiKehadiranList() : [];
-    debugDiv.innerHTML = `
-      Jamaah: ${jam.length}<br>
-      Jadwal: ${jad.length}<br>
-      Presensi: ${pre.length}
-    `;
-  }, 1000);
-});
