@@ -312,250 +312,300 @@
       const textColor = isDark ? "#9ca3af" : "#4b5563";
       const gridColor = isDark ? "rgba(16, 185, 129, 0.1)" : "#e2e8f0";
       
-      Object.keys(charts).forEach(key => {
-        if (charts[key]) charts[key].destroy();
-      });
-      
-      // Kelompok Charts
-      const kelompokCounts = localMasterKelompok.map(k => jamaah.filter(j => j.kelompokPengajian === k).length);
-      const ctxKelompok = document.getElementById("chart-kelompok").getContext("2d");
-      charts.kelompok = new Chart(ctxKelompok, {
-        type: "bar",
-        data: {
-          labels: localMasterKelompok,
-          datasets: [{
-            label: "Jumlah Jamaah",
-            data: kelompokCounts,
-            backgroundColor: "rgba(16, 185, 129, 0.65)",
-            borderColor: "#10b981",
-            borderWidth: 1.5,
-            borderRadius: 4
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: { padding: 12 }
-          },
-          scales: {
-            y: { ticks: { color: textColor }, grid: { color: gridColor } },
-            x: { ticks: { color: textColor }, grid: { display: false } }
+      const destroyChartIfExists = (canvasId) => {
+        if (typeof Chart !== "undefined" && Chart.getChart) {
+          const existing = Chart.getChart(canvasId);
+          if (existing) {
+            try { existing.destroy(); } catch (e) {}
           }
         }
-      });
+      };
 
-      // Ekonomi composition
-      const ekonomiCounts = ["Aghnia", "Dhuafa", "Menengah"].map(e => jamaah.filter(j => j.statusEkonomi === e).length);
-      const ctxEkonomi = document.getElementById("chart-ekonomi").getContext("2d");
-      charts.ekonomi = new Chart(ctxEkonomi, {
-        type: "pie",
-        data: {
-          labels: ["Aghnia", "Dhuafa", "Menengah"],
-          datasets: [{
-            data: ekonomiCounts,
-            backgroundColor: ["rgba(16, 185, 129, 0.7)", "rgba(245, 158, 11, 0.7)", "rgba(59, 130, 246, 0.7)"],
-            borderWidth: 1,
-            borderColor: isDark ? "#0f251c" : "#ffffff"
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { position: "right", labels: { color: textColor, font: { family: "Outfit" } } }
-          }
-        }
-      });
-
-      // Pendidikan composition
-      const pendidikanCounts = localMasterPendidikan.map(p => jamaah.filter(j => j.tingkatPendidikan === p).length);
-      const ctxPendidikan = document.getElementById("chart-pendidikan").getContext("2d");
-      charts.pendidikan = new Chart(ctxPendidikan, {
-        type: "doughnut",
-        data: {
-          labels: localMasterPendidikan,
-          datasets: [{
-            data: pendidikanCounts,
-            backgroundColor: ["#38bdf8", "#0284c7", "#34d399", "#059669", "#fbbf24", "#f59e0b", "#c084fc", "#8b5cf6"],
-            borderWidth: 1,
-            borderColor: isDark ? "#0f251c" : "#ffffff"
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { position: "right", labels: { color: textColor, font: { family: "Outfit" } } }
-          }
-        }
-      });
-
-      // Pekerjaan composition
-      const jobsToShow = localMasterPekerjaan.filter(p => p !== "Lainnya").slice(0, 7).concat("Lainnya");
-      const pekerjaanCounts = jobsToShow.map(p => {
-        if (p === "Lainnya") {
-          return jamaah.filter(j => jobsToShow.indexOf(j.pekerjaanUtama) === -1 || j.pekerjaanUtama === "Lainnya").length;
-        }
-        return jamaah.filter(j => j.pekerjaanUtama === p).length;
-      });
-      
-      const ctxPekerjaan = document.getElementById("chart-pekerjaan").getContext("2d");
-      charts.pekerjaan = new Chart(ctxPekerjaan, {
-        type: "bar",
-        data: {
-          labels: jobsToShow,
-          datasets: [{
-            label: "Jumlah Jamaah",
-            data: pekerjaanCounts,
-            backgroundColor: "rgba(59, 130, 246, 0.65)",
-            borderColor: "#3b82f6",
-            borderWidth: 1.5,
-            borderRadius: 4
-          }]
-        },
-        options: {
-          indexAxis: "y",
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { ticks: { color: textColor }, grid: { color: gridColor } },
-            y: { ticks: { color: textColor }, grid: { display: false } }
-          }
-        }
-      });
-
-      // Peramutan composition
-      const peramutanOpts = ["Balita", "PAUD", "Caberawit", "GUS", "GUM", "Dewasa", "Manula"];
-      const peramutanCounts = peramutanOpts.map(p => jamaah.filter(j => j.kelompokPeramutan === p).length);
-      const ctxPeramutan = document.getElementById("chart-peramutan").getContext("2d");
-      charts.peramutan = new Chart(ctxPeramutan, {
-        type: "bar",
-        data: {
-          labels: peramutanOpts,
-          datasets: [{
-            label: "Sebaran Peramutan",
-            data: peramutanCounts,
-            backgroundColor: "rgba(245, 158, 11, 0.65)",
-            borderColor: "#f59e0b",
-            borderWidth: 1.5,
-            borderRadius: 4
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            y: { ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true },
-            x: { ticks: { color: textColor }, grid: { display: false } }
-          }
-        }
-      });
-
-      // Sambung composition (Tingkat Kelancaran Sambung berdasarkan rekap kehadiran 1 bulan)
-      // Kategori: 51% - 100% = Lancar, 21% - 50% = Kurang Lancar, 1% - 20% / <=20% = Tidak Lancar
-      const kelancaranOpts = ["Lancar", "Kurang Lancar", "Tidak Lancar"];
-      
-      const allJadwal = typeof getJadwalPengajianList === 'function' ? (getJadwalPengajianList() || []) : (typeof localJadwalPengajian !== 'undefined' ? localJadwalPengajian : []);
-      const allPresensi = typeof getPresensiKehadiranList === 'function' ? (getPresensiKehadiranList() || []) : (typeof localPresensiKehadiran !== 'undefined' ? localPresensiKehadiran : []);
-      
-      const monthFilterEl = document.getElementById("dashboard-bulan-filter");
-      const todayStr = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
-      const currentYearMonth = monthFilterEl && monthFilterEl.value ? monthFilterEl.value : todayStr.substring(0, 7);
-
-      const monthSessions = allJadwal.filter(s => s && s.tanggal && s.tanggal.startsWith(currentYearMonth));
-
-      // Build presensi lookup set: key = `${id_pengajian}_${id_jamaah}`
-      const presensiSet = new Set();
-      allPresensi.forEach(p => {
-        if (p && p.id_pengajian && p.id_jamaah) {
-          const statusLower = (p.status || "").trim().toLowerCase();
-          if (statusLower === "hadir fisik" || statusLower === "online" || statusLower === "hadir") {
-            presensiSet.add(`${String(p.id_pengajian).trim()}_${String(p.id_jamaah).trim()}`);
-          }
-        }
-      });
-
-      let countLancar = 0;
-      let countKurangLancar = 0;
-      let countTidakLancar = 0;
-
-      jamaah.forEach(j => {
-        // Find sessions in month filter that apply to this jamaah
-        const eligibleSessions = monthSessions.filter(s => {
-          if (!localIsJamaahEligibleForJenis(j, s.jenis_pengajian)) return false;
-
-          const sessionKelompok = (s.kelompok_pengajian || "").trim();
-          if (sessionKelompok && sessionKelompok !== "Semua" && sessionKelompok !== "Desa" && sessionKelompok !== "Daerah") {
-            if (j.kelompokPengajian !== sessionKelompok) return false;
-          }
-          return true;
-        });
-
-        if (eligibleSessions.length === 0) {
-          // Jika tidak ada sesi dalam bulan ini untuk jamaah tersebut
-          countTidakLancar++;
-        } else {
-          let attendedCount = 0;
-          eligibleSessions.forEach(s => {
-            if (presensiSet.has(`${String(s.id).trim()}_${String(j.id).trim()}`)) {
-              attendedCount++;
-            }
-          });
-
-          const pct = Math.round((attendedCount / eligibleSessions.length) * 100);
-
-          if (pct > 50) {
-            countLancar++;
-          } else if (pct >= 21) {
-            countKurangLancar++;
-          } else {
-            countTidakLancar++;
-          }
-        }
-      });
-
-      const sambungCounts = [countLancar, countKurangLancar, countTidakLancar];
-
-      const ctxSambung = document.getElementById("chart-sambung").getContext("2d");
-      charts.sambung = new Chart(ctxSambung, {
-        type: "bar",
-        data: {
-          labels: kelancaranOpts,
-          datasets: [{
-            label: "Jumlah Jamaah",
-            data: sambungCounts,
-            backgroundColor: ["rgba(16, 185, 129, 0.65)", "rgba(245, 158, 11, 0.65)", "rgba(239, 68, 68, 0.65)"],
-            borderColor: ["#10b981", "#f59e0b", "#ef4444"],
-            borderWidth: 1.5,
-            borderRadius: 4
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                label: function(context) {
-                  const val = context.raw || 0;
-                  const total = sambungCounts.reduce((a, b) => a + b, 0);
-                  const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
-                  return ` ${val} Jamaah (${pct}%)`;
-                }
+      // 1. Kelompok Chart
+      destroyChartIfExists("chart-kelompok");
+      try {
+        const kelompokLabels = (localMasterKelompok || []).map(k => typeof k === 'object' && k !== null ? (k.nama || k.name || '') : String(k));
+        const kelompokCounts = kelompokLabels.map(k => jamaah.filter(j => j.kelompokPengajian === k).length);
+        const elKelompok = document.getElementById("chart-kelompok");
+        if (elKelompok) {
+          charts.kelompok = new Chart(elKelompok.getContext("2d"), {
+            type: "bar",
+            data: {
+              labels: kelompokLabels,
+              datasets: [{
+                label: "Jumlah Jamaah",
+                data: kelompokCounts,
+                backgroundColor: "rgba(16, 185, 129, 0.65)",
+                borderColor: "#10b981",
+                borderWidth: 1.5,
+                borderRadius: 4
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+                tooltip: { padding: 12 }
+              },
+              scales: {
+                y: { ticks: { color: textColor }, grid: { color: gridColor } },
+                x: { ticks: { color: textColor }, grid: { display: false } }
               }
             }
-          },
-          scales: {
-            y: { ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true },
-            x: { ticks: { color: textColor }, grid: { display: false } }
-          }
+          });
         }
-      });
+      } catch (err) {
+        console.error("Error rendering chart-kelompok:", err);
+      }
+
+      // 2. Ekonomi composition
+      destroyChartIfExists("chart-ekonomi");
+      try {
+        const ekonomiCounts = ["Aghnia", "Dhuafa", "Menengah"].map(e => jamaah.filter(j => j.statusEkonomi === e).length);
+        const elEkonomi = document.getElementById("chart-ekonomi");
+        if (elEkonomi) {
+          charts.ekonomi = new Chart(elEkonomi.getContext("2d"), {
+            type: "pie",
+            data: {
+              labels: ["Aghnia", "Dhuafa", "Menengah"],
+              datasets: [{
+                data: ekonomiCounts,
+                backgroundColor: ["rgba(16, 185, 129, 0.7)", "rgba(245, 158, 11, 0.7)", "rgba(59, 130, 246, 0.7)"],
+                borderWidth: 1,
+                borderColor: isDark ? "#0f251c" : "#ffffff"
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { position: "right", labels: { color: textColor, font: { family: "Outfit" } } }
+              }
+            }
+          });
+        }
+      } catch (err) {
+        console.error("Error rendering chart-ekonomi:", err);
+      }
+
+      // 3. Pendidikan composition
+      destroyChartIfExists("chart-pendidikan");
+      try {
+        const pendidikanLabels = (localMasterPendidikan || []).map(p => typeof p === 'object' && p !== null ? (p.nama || p.name || '') : String(p));
+        const pendidikanCounts = pendidikanLabels.map(p => jamaah.filter(j => j.tingkatPendidikan === p).length);
+        const elPendidikan = document.getElementById("chart-pendidikan");
+        if (elPendidikan) {
+          charts.pendidikan = new Chart(elPendidikan.getContext("2d"), {
+            type: "doughnut",
+            data: {
+              labels: pendidikanLabels,
+              datasets: [{
+                data: pendidikanCounts,
+                backgroundColor: ["#38bdf8", "#0284c7", "#34d399", "#059669", "#fbbf24", "#f59e0b", "#c084fc", "#8b5cf6"],
+                borderWidth: 1,
+                borderColor: isDark ? "#0f251c" : "#ffffff"
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { position: "right", labels: { color: textColor, font: { family: "Outfit" } } }
+              }
+            }
+          });
+        }
+      } catch (err) {
+        console.error("Error rendering chart-pendidikan:", err);
+      }
+
+      // 4. Pekerjaan composition
+      destroyChartIfExists("chart-pekerjaan");
+      try {
+        const pekerjaanList = (localMasterPekerjaan || []).map(p => typeof p === 'object' && p !== null ? (p.nama || p.name || '') : String(p));
+        const jobsToShow = pekerjaanList.filter(p => p !== "Lainnya").slice(0, 7).concat("Lainnya");
+        const pekerjaanCounts = jobsToShow.map(p => {
+          if (p === "Lainnya") {
+            return jamaah.filter(j => jobsToShow.indexOf(j.pekerjaanUtama) === -1 || j.pekerjaanUtama === "Lainnya").length;
+          }
+          return jamaah.filter(j => j.pekerjaanUtama === p).length;
+        });
+        
+        const elPekerjaan = document.getElementById("chart-pekerjaan");
+        if (elPekerjaan) {
+          charts.pekerjaan = new Chart(elPekerjaan.getContext("2d"), {
+            type: "bar",
+            data: {
+              labels: jobsToShow,
+              datasets: [{
+                label: "Jumlah Jamaah",
+                data: pekerjaanCounts,
+                backgroundColor: "rgba(59, 130, 246, 0.65)",
+                borderColor: "#3b82f6",
+                borderWidth: 1.5,
+                borderRadius: 4
+              }]
+            },
+            options: {
+              indexAxis: "y",
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: {
+                x: { ticks: { color: textColor }, grid: { color: gridColor } },
+                y: { ticks: { color: textColor }, grid: { display: false } }
+              }
+            }
+          });
+        }
+      } catch (err) {
+        console.error("Error rendering chart-pekerjaan:", err);
+      }
+
+      // 5. Peramutan composition
+      destroyChartIfExists("chart-peramutan");
+      try {
+        const peramutanOpts = ["Balita", "PAUD", "Caberawit", "GUS", "GUM", "Dewasa", "Manula"];
+        const peramutanCounts = peramutanOpts.map(p => jamaah.filter(j => j.kelompokPeramutan === p).length);
+        const elPeramutan = document.getElementById("chart-peramutan");
+        if (elPeramutan) {
+          charts.peramutan = new Chart(elPeramutan.getContext("2d"), {
+            type: "bar",
+            data: {
+              labels: peramutanOpts,
+              datasets: [{
+                label: "Sebaran Peramutan",
+                data: peramutanCounts,
+                backgroundColor: "rgba(245, 158, 11, 0.65)",
+                borderColor: "#f59e0b",
+                borderWidth: 1.5,
+                borderRadius: 4
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: {
+                y: { ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true },
+                x: { ticks: { color: textColor }, grid: { display: false } }
+              }
+            }
+          });
+        }
+      } catch (err) {
+        console.error("Error rendering chart-peramutan:", err);
+      }
+
+      // 6. Sambung composition (Tingkat Kelancaran Sambung berdasarkan rekap kehadiran 1 bulan)
+      // Kategori: 51% - 100% = Lancar, 21% - 50% = Kurang Lancar, 1% - 20% / <=20% = Tidak Lancar
+      destroyChartIfExists("chart-sambung");
+      try {
+        const kelancaranOpts = ["Lancar", "Kurang Lancar", "Tidak Lancar"];
+        
+        const allJadwal = typeof getJadwalPengajianList === 'function' ? (getJadwalPengajianList() || []) : (typeof localJadwalPengajian !== 'undefined' ? localJadwalPengajian : []);
+        const allPresensi = typeof getPresensiKehadiranList === 'function' ? (getPresensiKehadiranList() || []) : (typeof localPresensiKehadiran !== 'undefined' ? localPresensiKehadiran : []);
+        
+        const monthFilterEl = document.getElementById("dashboard-bulan-filter");
+        const todayStr = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
+        const currentYearMonth = monthFilterEl && monthFilterEl.value ? monthFilterEl.value : todayStr.substring(0, 7);
+
+        const monthSessions = allJadwal.filter(s => s && s.tanggal && s.tanggal.startsWith(currentYearMonth));
+
+        // Build presensi lookup set: key = `${id_pengajian}_${id_jamaah}`
+        const presensiSet = new Set();
+        allPresensi.forEach(p => {
+          if (p && p.id_pengajian && p.id_jamaah) {
+            const statusLower = (p.status || "").trim().toLowerCase();
+            if (statusLower === "hadir fisik" || statusLower === "online" || statusLower === "hadir") {
+              presensiSet.add(`${String(p.id_pengajian).trim()}_${String(p.id_jamaah).trim()}`);
+            }
+          }
+        });
+
+        let countLancar = 0;
+        let countKurangLancar = 0;
+        let countTidakLancar = 0;
+
+        jamaah.forEach(j => {
+          // Find sessions in month filter that apply to this jamaah
+          const eligibleSessions = monthSessions.filter(s => {
+            if (!localIsJamaahEligibleForJenis(j, s.jenis_pengajian)) return false;
+
+            const sessionKelompok = (s.kelompok_pengajian || "").trim();
+            if (sessionKelompok && sessionKelompok !== "Semua" && sessionKelompok !== "Desa" && sessionKelompok !== "Daerah") {
+              if (j.kelompokPengajian !== sessionKelompok) return false;
+            }
+            return true;
+          });
+
+          if (eligibleSessions.length === 0) {
+            // Jika tidak ada sesi dalam bulan ini untuk jamaah tersebut
+            countTidakLancar++;
+          } else {
+            let attendedCount = 0;
+            eligibleSessions.forEach(s => {
+              if (presensiSet.has(`${String(s.id).trim()}_${String(j.id).trim()}`)) {
+                attendedCount++;
+              }
+            });
+
+            const pct = Math.round((attendedCount / eligibleSessions.length) * 100);
+
+            if (pct > 50) {
+              countLancar++;
+            } else if (pct >= 21) {
+              countKurangLancar++;
+            } else {
+              countTidakLancar++;
+            }
+          }
+        });
+
+        const sambungCounts = [countLancar, countKurangLancar, countTidakLancar];
+
+        const elSambung = document.getElementById("chart-sambung");
+        if (elSambung) {
+          charts.sambung = new Chart(elSambung.getContext("2d"), {
+            type: "bar",
+            data: {
+              labels: kelancaranOpts,
+              datasets: [{
+                label: "Jumlah Jamaah",
+                data: sambungCounts,
+                backgroundColor: ["rgba(16, 185, 129, 0.65)", "rgba(245, 158, 11, 0.65)", "rgba(239, 68, 68, 0.65)"],
+                borderColor: ["#10b981", "#f59e0b", "#ef4444"],
+                borderWidth: 1.5,
+                borderRadius: 4
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      const val = context.raw || 0;
+                      const total = sambungCounts.reduce((a, b) => a + b, 0);
+                      const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                      return ` ${val} Jamaah (${pct}%)`;
+                    }
+                  }
+                }
+              },
+              scales: {
+                y: { ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true },
+                x: { ticks: { color: textColor }, grid: { display: false } }
+              }
+            }
+          });
+        }
+      } catch (err) {
+        console.error("Error rendering chart-sambung:", err);
+      }
       loadDashboardKPIs();
     }
 
