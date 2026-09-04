@@ -131,18 +131,19 @@
         supabaseClient.from("master_peserta_pengajian").select("*").limit(1000).then(res => res, err => ({ data: [], error: err })),
         supabaseClient.from("master_grup_kustom").select("*").limit(1000).then(res => res, err => ({ data: [], error: err })),
         supabaseClient.from("master_tempat_kegiatan").select("*").limit(1000).then(res => res, err => ({ data: [], error: err })),
-        supabaseClient.from("data_haji").select("*").limit(50000).then(res => res, err => ({ data: [], error: err }))
-      ]).then(([resJamaah, resUsers, resKelompok, resPendidikan, resPekerjaan, resDapuan, resLogs, resMateri, resJadwal, resPresensi, resMasterPengajar, resJenisPengajian, resPesertaPengajian, resGrupKustom, resTempatKegiatan, resDataHaji]) => {
+        supabaseClient.from("data_haji").select("*").limit(50000).then(res => res, err => ({ data: [], error: err })),
+        supabaseClient.from("pengurus").select("*").limit(50000).then(res => res, err => ({ data: [], error: err }))
+      ]).then(([resJamaah, resUsers, resKelompok, resPendidikan, resPekerjaan, resDapuan, resLogs, resMateri, resJadwal, resPresensi, resMasterPengajar, resJenisPengajian, resPesertaPengajian, resGrupKustom, resTempatKegiatan, resDataHaji, resPengurus]) => {
         if (resJamaah.error) throw resJamaah.error;
         if (resUsers.error) throw resUsers.error;
         
-        const rawKelompok = (resKelompok.data || []).map(r => r.nama);
-        const rawPendidikan = (resPendidikan.data || []).map(r => r.nama);
-        const rawDapuan = (resDapuan.data || []).map(r => r.nama);
-        const rawPekerjaan = (resPekerjaan.data || []).map(r => r.nama);
+        const rawKelompok = (resKelompok.data || []).map(r => typeof r === 'object' && r !== null ? (r.nama || r.name || r.kelompok || String(r)) : String(r));
+        const rawPendidikan = (resPendidikan.data || []).map(r => typeof r === 'object' && r !== null ? (r.nama || r.name || String(r)) : String(r));
+        const rawDapuan = (resDapuan.data || []).map(r => typeof r === 'object' && r !== null ? (r.nama || r.name || String(r)) : String(r));
+        const rawPekerjaan = (resPekerjaan.data || []).map(r => typeof r === 'object' && r !== null ? (r.nama || r.name || String(r)) : String(r));
         const rawHubungan = ["Kepala Keluarga", "Istri", "Anak", "Ayah", "Ibu"];
         
-        const rawMateri = (resMateri.data || []).map(r => r.nama);
+        const rawMateri = (resMateri.data || []).map(r => typeof r === 'object' && r !== null ? (r.nama || r.name || String(r)) : String(r));
         const rawJenisPengajian = (resJenisPengajian.data || []).map(r => ({
           nama: r.nama,
           peserta_pengajian: r.peserta_pengajian || "",
@@ -158,7 +159,7 @@
           deskripsi: r.deskripsi || "",
           daftar_id_anggota: r.daftar_id_anggota || ""
         }));
-        const rawTempatKegiatan = (resTempatKegiatan.data || []).map(r => r.nama);
+        const rawTempatKegiatan = (resTempatKegiatan.data || []).map(r => typeof r === 'object' && r !== null ? (r.nama || r.name || String(r)) : String(r));
         
         const jadwalList = (resJadwal.data || []).map(j => ({
           id: j.id,
@@ -218,11 +219,21 @@
           action: l.action,
           description: l.description
         }));
+
+        const pengurusList = (resPengurus.data || []).map(p => ({
+          id: p.id,
+          jamaah_id: p.jamaah_id,
+          dapuan: p.dapuan,
+          tingkat_pengurus: p.tingkat_pengurus,
+          bidang: p.bidang || "",
+          keterangan: p.keterangan || ""
+        }));
         
         let filteredJamaah = jamaahList;
         let filteredLogs = auditLogs;
         let filteredJadwal = jadwalList;
         let filteredPresensi = presensiList;
+        let filteredPengurus = pengurusList;
         
         const userObj = usersList.find(u => u.username.toLowerCase() === (operatorUsername || "").toLowerCase());
         const isKelompokRestricted = userObj && (userObj.role.trim().toLowerCase() === "operator kelompok" || userObj.role.trim().toLowerCase() === "pengurus kelompok");
@@ -243,6 +254,9 @@
                    log.description.indexOf("di Kelompok " + targetKelompok) !== -1 ||
                    log.description.indexOf("kelompokPengajian: '" + targetKelompok + "'") !== -1;
           });
+
+          const allowedJamaahIds = new Set(filteredJamaah.map(j => j.id));
+          filteredPengurus = pengurusList.filter(p => allowedJamaahIds.has(p.jamaah_id));
         }
         
         const hajiList = (resDataHaji.data || []).map(h => ({
@@ -258,13 +272,13 @@
 
         let filteredHaji = hajiList;
         if (isKelompokRestricted) {
-          const targetKelompok = userObj.kelompok;
           const allowedJamaahIds = filteredJamaah.map(j => j.id);
           filteredHaji = hajiList.filter(h => allowedJamaahIds.includes(h.jamaahId));
         }
 
         return {
           jamaahList: filteredJamaah,
+          pengurusList: filteredPengurus,
           kepalaKeluargaList: filteredJamaah.filter(j => j.statusHubunganKeluarga === "Kepala Keluarga"),
           kartuKeluargaMappings: filteredJamaah.filter(j => j.statusHubunganKeluarga !== "Kepala Keluarga" && j.kepalaKeluargaId).map(j => ({
             kepalaKeluargaId: j.kepala_keluarga_id,
@@ -273,16 +287,16 @@
           auditLogs: filteredLogs,
           usersList: usersList,
           dataHaji: filteredHaji,
-          masterKelompok: rawKelompok.map(n => ({ nama: n })),
-          masterPendidikan: rawPendidikan.map(n => ({ nama: n })),
-          masterDapuan: rawDapuan.map(n => ({ nama: n })),
-          masterPekerjaan: rawPekerjaan.map(n => ({ nama: n })),
-          masterHubungan: rawHubungan.map(n => ({ nama: n })),
-          masterMateri: rawMateri.map(n => ({ nama: n })),
+          masterKelompok: rawKelompok,
+          masterPendidikan: rawPendidikan,
+          masterDapuan: rawDapuan,
+          masterPekerjaan: rawPekerjaan,
+          masterHubungan: rawHubungan,
+          masterMateri: rawMateri,
           masterJenisPengajian: rawJenisPengajian,
           masterPesertaPengajian: rawPesertaPengajian,
           masterGrupKustom: rawGrupKustom,
-          masterTempatKegiatan: rawTempatKegiatan.map(n => ({ nama: n })),
+          masterTempatKegiatan: rawTempatKegiatan,
           masterPengajar: (resMasterPengajar.data || []).map(p => ({
             id_pengajar: p.id,
             id_jamaah: p.id_jamaah
