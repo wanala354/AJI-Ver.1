@@ -116,7 +116,10 @@
         if (!filter) return;
         filter.innerHTML = '<option value="">Semua Kelompok Pengajian</option>';
         (localMasterKelompok || []).forEach(k => {
-          filter.innerHTML += `<option value="${k}">${k}</option>`;
+          const val = typeof k === 'object' && k !== null ? (k.nama || k.name || k.kelompok || String(k)) : String(k);
+          if (val && val !== '[object Object]') {
+            filter.innerHTML += `<option value="${val}">${val}</option>`;
+          }
         });
         
         const currentUser = getCurrentUser();

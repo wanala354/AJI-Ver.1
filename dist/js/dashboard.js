@@ -294,16 +294,19 @@
       const filterDashboardEl = document.getElementById("dashboard-kelompok-filter");
       if (filterDashboardEl && filterDashboardEl.options.length <= 1) {
          filterDashboardEl.innerHTML = '<option value="">Semua Kelompok</option>';
-         localMasterKelompok.forEach(k => {
-            filterDashboardEl.innerHTML += `<option value="${k}">${k}</option>`;
-           });
-           const currentUser = getCurrentUser();
-           const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
-           const isKelompokRestricted = currentUser && (curRoleClean === "operator kelompok" || curRoleClean === "pengurus kelompok");
-           if (isKelompokRestricted) {
-             filterDashboardEl.value = currentUser.kelompok;
-             filterDashboardEl.disabled = true;
-          }
+         (localMasterKelompok || []).forEach(k => {
+            const val = typeof k === 'object' && k !== null ? (k.nama || k.name || k.kelompok || String(k)) : String(k);
+            if (val && val !== '[object Object]') {
+              filterDashboardEl.innerHTML += `<option value="${val}">${val}</option>`;
+            }
+         });
+         const currentUser = getCurrentUser();
+         const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
+         const isKelompokRestricted = currentUser && (curRoleClean === "operator kelompok" || curRoleClean === "pengurus kelompok");
+         if (isKelompokRestricted) {
+           filterDashboardEl.value = currentUser.kelompok;
+           filterDashboardEl.disabled = true;
+        }
       }
       
       let jamaah = getFilteredJamaahForDashboard(allJamaah);
