@@ -116,7 +116,7 @@ window.initPengajianModule = function() {
       teksKelompokSelect.disabled = true;
     }
   }
-  
+
   // Render subtab active
   const activeBtn = document.querySelector("#section-pengajian .card-panel-tabs .tab-btn.active");
   if (activeBtn) {
@@ -2423,3 +2423,584 @@ window.printStaticQRCode = function() {
   `);
   win.document.close();
 };
+
+// ==========================================
+// MONITORING KETERTIBAN LOGIC
+// ==========================================
+let ketertibanChart = null;
+
+function getYearFromDateStr(dateStr) {
+  if (!dateStr) return null;
+  const s = String(dateStr).trim();
+  const m = s.match(/\b(20\d\d|19\d\d)\b/);
+  if (m) {
+    return parseInt(m[1], 10);
+  }
+  return null;
+}
+
+function getMonthFromDateStr(dateStr) {
+  if (!dateStr) return null;
+  const s = String(dateStr).trim();
+  if (s.includes("-")) {
+    const parts = s.split("-");
+    if (parts[0].length === 4) {
+      return parseInt(parts[1], 10) - 1; // YYYY-MM-DD
+    } else if (parts[2] && parts[2].length >= 4) {
+      return parseInt(parts[1], 10) - 1; // DD-MM-YYYY
+    }
+  } else if (s.includes("/")) {
+    const parts = s.split("/");
+    if (parts[0].length === 4) {
+      return parseInt(parts[1], 10) - 1; // YYYY/MM/DD
+    } else if (parts[2] && parts[2].length >= 4) {
+      return parseInt(parts[1], 10) - 1; // DD/MM/YYYY
+    }
+  }
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) {
+    return d.getMonth();
+  }
+  return null;
+}
+
+function matchTingkat(itemTingkat, filterTingkat) {
+  if (!filterTingkat) return true;
+  if (!itemTingkat) return true;
+  const fClean = filterTingkat.toLowerCase().replace("tingkat", "").trim();
+  const iClean = itemTingkat.toLowerCase().replace("tingkat", "").trim();
+  return fClean === iClean;
+}
+
+function getJamaahForKetertiban() {
+  const rawJamaah = (typeof window.getJamaahList === 'function' ? window.getJamaahList() : null) || (typeof getJamaahList === 'function' ? getJamaahList() : []) || (typeof localJamaahList !== 'undefined' ? localJamaahList : []);
+  let list = rawJamaah.filter(j => !j.statusKeaktifan || j.statusKeaktifan === "Aktif");
+  
+  const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+  const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
+  const isKelompokRestricted = currentUser && (curRoleClean === "operator kelompok" || curRoleClean === "pengurus kelompok");
+  
+  const kelSelect = document.getElementById("filter-ketertiban-kelompok");
+  const activeKelompok = isKelompokRestricted ? currentUser.kelompok : (kelSelect ? kelSelect.value : "");
+  
+  if (activeKelompok) {
+    list = list.filter(j => (j.kelompokPengajian || j.kelompok) === activeKelompok);
+  }
+  return list;
+}
+
+function initMonitoringKetertibanFilters() {
+  const yearSelect = document.getElementById("filter-ketertiban-tahun");
+  if (yearSelect) {
+    const currentYear = new Date().getFullYear();
+    const years = new Set();
+    for (let y = currentYear - 5; y <= currentYear + 2; y++) {
+      years.add(y);
+    }
+    const allJadwal = typeof getJadwalPengajianList === 'function' ? (getJadwalPengajianList() || []) : (typeof localJadwalPengajian !== 'undefined' ? localJadwalPengajian : []);
+    allJadwal.forEach(j => {
+      const y = getYearFromDateStr(j.tanggal);
+      if (y) years.add(y);
+    });
+    const sortedYears = Array.from(years).sort((a, b) => b - a);
+    const prevVal = yearSelect.value;
+    yearSelect.innerHTML = "";
+    sortedYears.forEach(y => {
+      const opt = document.createElement("option");
+      opt.value = String(y);
+      opt.textContent = String(y);
+      if (String(y) === String(currentYear)) opt.selected = true;
+      yearSelect.appendChild(opt);
+    });
+    if (prevVal && sortedYears.map(String).includes(String(prevVal))) {
+      yearSelect.value = prevVal;
+    } else {
+      yearSelect.value = String(currentYear);
+    }
+  }
+
+  const kelSelect = document.getElementById("filter-ketertiban-kelompok");
+  if (kelSelect) {
+    const rawMasterKel = typeof getKelompokList === 'function' ? (getKelompokList() || []) : (typeof localMasterKelompok !== 'undefined' ? localMasterKelompok : []);
+    const jamList = typeof window.getJamaahList === 'function' ? (window.getJamaahList() || []) : [];
+    
+    const kelSet = new Set(["Chandra", "Jatiranggon", "Pondok Melati", "Pondok Melati Selatan"]);
+    rawMasterKel.forEach(k => {
+      const name = typeof k === 'object' ? (k.nama || k.name || "") : k;
+      if (name && name !== "[object Object]") kelSet.add(name);
+    });
+    jamList.forEach(j => {
+      const kName = j.kelompokPengajian || j.kelompok;
+      if (kName && kName !== "[object Object]") kelSet.add(kName);
+    });
+
+    const currentVal = kelSelect.value;
+    kelSelect.innerHTML = '<option value="">Semua Kelompok</option>';
+    Array.from(kelSet).sort().forEach(kName => {
+      const opt = document.createElement("option");
+      opt.value = kName;
+      opt.textContent = kName;
+      kelSelect.appendChild(opt);
+    });
+    if (currentVal && currentVal !== "[object Object]") kelSelect.value = currentVal;
+
+    const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+    const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
+    const isKelompokRestricted = currentUser && (curRoleClean === "operator kelompok" || curRoleClean === "pengurus kelompok");
+    if (isKelompokRestricted && currentUser.kelompok) {
+      kelSelect.value = currentUser.kelompok;
+      kelSelect.disabled = true;
+    }
+  }
+
+  const jenisSelect = document.getElementById("filter-tabel-ketertiban-jenis");
+  if (jenisSelect) {
+    const rawMasterJenis = typeof getMasterJenisPengajianList === 'function' ? (getMasterJenisPengajianList() || []) : (typeof localMasterJenisPengajian !== 'undefined' ? localMasterJenisPengajian : []);
+    const jadList = typeof window.getJadwalPengajianList === 'function' ? (window.getJadwalPengajianList() || []) : [];
+    
+    const jenisSet = new Set(["Sambung", "Teks", "Caberawit", "Ibu-ibu", "GUS", "GUM", "Asrama", "Pengurus", "5 Unsur"]);
+    rawMasterJenis.forEach(item => {
+      const name = typeof item === 'object' ? (item.nama || item.name || "") : item;
+      if (name && name !== "[object Object]") jenisSet.add(name);
+    });
+    jadList.forEach(j => {
+      const jName = j.jenisPengajian || j.jenis_pengajian || j.jenis;
+      if (jName && jName !== "[object Object]") jenisSet.add(jName);
+    });
+
+    const currentVal = jenisSelect.value;
+    jenisSelect.innerHTML = '<option value="">Semua Jenis Pengajian</option>';
+    Array.from(jenisSet).sort().forEach(jName => {
+      const opt = document.createElement("option");
+      opt.value = jName;
+      opt.textContent = jName;
+      jenisSelect.appendChild(opt);
+    });
+    if (currentVal && currentVal !== "[object Object]") jenisSelect.value = currentVal;
+  }
+
+  setupMonitoringKetertibanEvents();
+}
+
+function setupMonitoringKetertibanEvents() {
+  const tahunEl = document.getElementById("filter-ketertiban-tahun");
+  if (tahunEl && !tahunEl.dataset.bound) {
+    tahunEl.dataset.bound = "true";
+    tahunEl.addEventListener("change", renderKetertibanTrendChart);
+  }
+  const tingkatEl = document.getElementById("filter-ketertiban-tingkat");
+  if (tingkatEl && !tingkatEl.dataset.bound) {
+    tingkatEl.dataset.bound = "true";
+    tingkatEl.addEventListener("change", onKetertibanTingkatChange);
+  }
+  const kelEl = document.getElementById("filter-ketertiban-kelompok");
+  if (kelEl && !kelEl.dataset.bound) {
+    kelEl.dataset.bound = "true";
+    kelEl.addEventListener("change", renderKetertibanTrendChart);
+  }
+  const tTingkatEl = document.getElementById("filter-tabel-ketertiban-tingkat");
+  if (tTingkatEl && !tTingkatEl.dataset.bound) {
+    tTingkatEl.dataset.bound = "true";
+    tTingkatEl.addEventListener("change", renderKetertibanJamaahTable);
+  }
+  const tJenisEl = document.getElementById("filter-tabel-ketertiban-jenis");
+  if (tJenisEl && !tJenisEl.dataset.bound) {
+    tJenisEl.dataset.bound = "true";
+    tJenisEl.addEventListener("change", renderKetertibanJamaahTable);
+  }
+  const tStatusEl = document.getElementById("filter-tabel-ketertiban-status");
+  if (tStatusEl && !tStatusEl.dataset.bound) {
+    tStatusEl.dataset.bound = "true";
+    tStatusEl.addEventListener("change", renderKetertibanJamaahTable);
+  }
+  const tSearchEl = document.getElementById("search-tabel-ketertiban-nama");
+  if (tSearchEl && !tSearchEl.dataset.bound) {
+    tSearchEl.dataset.bound = "true";
+    tSearchEl.addEventListener("input", renderKetertibanJamaahTable);
+  }
+}
+window.setupMonitoringKetertibanEvents = setupMonitoringKetertibanEvents;
+
+function onKetertibanTingkatChange() {
+  const tingkatVal = document.getElementById("filter-ketertiban-tingkat") ? document.getElementById("filter-ketertiban-tingkat").value : "";
+  const kelSelect = document.getElementById("filter-ketertiban-kelompok");
+  if (kelSelect) {
+    const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+    const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
+    const isKelompokRestricted = currentUser && (curRoleClean === "operator kelompok" || curRoleClean === "pengurus kelompok");
+    if (!isKelompokRestricted) {
+      if (tingkatVal && !matchTingkat("Kelompok", tingkatVal)) {
+        kelSelect.value = "";
+        kelSelect.disabled = true;
+      } else {
+        kelSelect.disabled = false;
+      }
+    }
+  }
+  renderKetertibanTrendChart();
+}
+window.onKetertibanTingkatChange = onKetertibanTingkatChange;
+
+function renderMonitoringKetertiban() {
+  // Selalu init filter dan render langsung
+  initMonitoringKetertibanFilters();
+  renderKetertibanTrendChart();
+  renderKetertibanJamaahTable();
+
+  // Jika data belum ada, fetch dari server lalu render ulang
+  const jamList = (typeof window.getJamaahList === 'function' ? window.getJamaahList() : null) || [];
+  const jadList = (typeof window.getJadwalPengajianList === 'function' ? window.getJadwalPengajianList() : null) || [];
+  if ((jamList.length === 0 || jadList.length === 0) && typeof window.fetchDatabaseFromServer === 'function') {
+    window.fetchDatabaseFromServer(function() {
+      initMonitoringKetertibanFilters();
+      renderKetertibanTrendChart();
+      renderKetertibanJamaahTable();
+    });
+  }
+}
+window.renderMonitoringKetertiban = renderMonitoringKetertiban;
+
+function renderKetertibanTrendChart() {
+  // --- Ambil referensi elemen UI ---
+  const yearSelect = document.getElementById("filter-ketertiban-tahun");
+  const tingkatSelect = document.getElementById("filter-ketertiban-tingkat");
+  const kelSelect = document.getElementById("filter-ketertiban-kelompok");
+  const chartWrapper = document.getElementById("ketertiban-chart-wrapper");
+
+  if (!yearSelect || !chartWrapper) return;
+
+  const currentYear = new Date().getFullYear();
+  const year = parseInt(yearSelect.value, 10) || currentYear;
+  const tingkat = (tingkatSelect ? tingkatSelect.value : "").trim();
+  const kelompok = (kelSelect ? kelSelect.value : "").trim();
+
+  // --- Ambil data ---
+  const allJadwal = (typeof window.getJadwalPengajianList === 'function' ? window.getJadwalPengajianList() : null) || [];
+  const allPresensi = (typeof window.getPresensiKehadiranList === 'function' ? window.getPresensiKehadiranList() : null) || [];
+
+  // --- Tampilkan loading jika data belum ada ---
+  if (allJadwal.length === 0) {
+    chartWrapper.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;height:300px;flex-direction:column;gap:12px;color:var(--text-muted);">
+        <i class="fa-solid fa-spinner fa-spin" style="font-size:2rem;color:var(--primary);"></i>
+        <span style="font-size:0.9rem;">Memuat data jadwal dari server...</span>
+      </div>`;
+    return;
+  }
+
+  // --- Reset wrapper ke canvas bersih ---
+  chartWrapper.innerHTML = '<canvas id="ketertiban-trend-chart"></canvas>';
+
+  // --- Filter jadwal berdasarkan tahun & tingkat ---
+  const filteredJadwal = allJadwal.filter(j => {
+    const jYear = getYearFromDateStr(j.tanggal);
+    if (!jYear || jYear !== year) return false;
+    const itemTingkat = j.tingkat_pengajian || j.tingkatPengajian || j.tingkat || "";
+    const itemKelompok = j.kelompok_pengajian || j.kelompokPengajian || j.kelompok || "";
+    if (tingkat && !matchTingkat(itemTingkat, tingkat)) return false;
+    if (kelompok && itemKelompok && itemKelompok !== kelompok && itemKelompok !== "Semua") return false;
+    return true;
+  });
+
+  const monthLabels = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des"];
+
+  // --- Kelompokkan jadwal per jenis pengajian ---
+  const jenisSet = new Set();
+  filteredJadwal.forEach(j => {
+    const jenis = j.jenis_pengajian || j.jenisPengajian || j.jenis || "";
+    if (jenis) jenisSet.add(jenis.trim());
+  });
+  const jenisList = Array.from(jenisSet);
+
+  const colorPalette = [
+    "#10b981", "#3b82f6", "#f59e0b", "#ec4899", "#8b5cf6",
+    "#14b8a6", "#ef4444", "#6366f1", "#06b6d4", "#84cc16",
+    "#a855f7", "#f97316"
+  ];
+
+  const datasets = [];
+  jenisList.forEach((jenis) => {
+    const monthlySum = Array(12).fill(0);
+    const monthlyCount = Array(12).fill(0);
+
+    filteredJadwal.filter(j => {
+      const itemJenis = j.jenis_pengajian || j.jenisPengajian || j.jenis || "";
+      return itemJenis.trim().toLowerCase() === jenis.toLowerCase();
+    }).forEach(j => {
+      const monthIdx = getMonthFromDateStr(j.tanggal);
+      if (monthIdx === null || monthIdx < 0 || monthIdx >= 12) return;
+
+      const jIdStr = String(j.id);
+      const presEntries = allPresensi.filter(p =>
+        String(p.id_pengajian || p.kegiatan_id || p.kegiatanId || p.idPengajian || "") === jIdStr
+      );
+      if (presEntries.length === 0) return;
+
+      let hadirCount = 0;
+      presEntries.forEach(p => {
+        const st = (p.status_kehadiran || p.statusKehadiran || p.status || "").toLowerCase();
+        if (st.includes("hadir") || st.includes("online")) hadirCount++;
+      });
+
+      monthlySum[monthIdx] += Math.round((hadirCount / presEntries.length) * 100);
+      monthlyCount[monthIdx]++;
+    });
+
+    const data = monthlySum.map((sum, i) => monthlyCount[i] > 0 ? Math.round(sum / monthlyCount[i]) : null);
+    const hasData = data.some(v => v !== null && v > 0);
+    if (hasData) {
+      const color = colorPalette[datasets.length % colorPalette.length];
+      datasets.push({
+        label: jenis,
+        data: data,
+        borderColor: color,
+        backgroundColor: color + "33",
+        borderWidth: 2.5,
+        pointBackgroundColor: color,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        spanGaps: true,
+        fill: false,
+        tension: 0.3
+      });
+    }
+  });
+
+  const isDark = document.body.classList.contains("dark-theme") || document.body.classList.contains("dark");
+  const textColor = isDark ? "#9ca3af" : "#4b5563";
+  const gridColor = isDark ? "rgba(16, 185, 129, 0.1)" : "#e2e8f0";
+
+  // --- Render chart setelah canvas visible di DOM ---
+  if (ketertibanChart) { try { ketertibanChart.destroy(); } catch(e) {} ketertibanChart = null; }
+
+  setTimeout(function() {
+    const canvas = document.getElementById("ketertiban-trend-chart");
+    if (!canvas || typeof Chart === 'undefined') return;
+    if (ketertibanChart) { try { ketertibanChart.destroy(); } catch(e) {} }
+
+    ketertibanChart = new Chart(canvas.getContext("2d"), {
+      type: "line",
+      data: {
+        labels: monthLabels,
+        datasets: datasets.length > 0 ? datasets : [{
+          label: "Belum ada data presensi di tahun " + year,
+          data: Array(12).fill(null),
+          borderColor: "#6b7280",
+          borderWidth: 1.5,
+          borderDash: [5, 5],
+          fill: false,
+          spanGaps: false
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: "top",
+            labels: { color: textColor, font: { size: 11, weight: "500" }, usePointStyle: true, boxWidth: 8 }
+          },
+          tooltip: {
+            padding: 12,
+            callbacks: {
+              label: ctx => ctx.parsed.y !== null ? `${ctx.dataset.label}: ${ctx.parsed.y}%` : `${ctx.dataset.label}: -`
+            }
+          }
+        },
+        scales: {
+          y: {
+            min: 0, max: 100,
+            ticks: { color: textColor, callback: v => v + "%" },
+            grid: { color: gridColor }
+          },
+          x: { ticks: { color: textColor }, grid: { display: false } }
+        }
+      }
+    });
+  }, 150);
+}
+window.renderKetertibanTrendChart = renderKetertibanTrendChart;
+
+function renderKetertibanJamaahTable() {
+  const tbody = document.getElementById("ketertibanJamaahTableBody");
+  if (!tbody) return;
+  
+  const yearSelect = document.getElementById("filter-ketertiban-tahun");
+  const currentYear = new Date().getFullYear();
+  const filterYear = parseInt(yearSelect ? yearSelect.value : currentYear, 10) || currentYear;
+
+  const tingkatFilter = (document.getElementById("filter-tabel-ketertiban-tingkat") ? document.getElementById("filter-tabel-ketertiban-tingkat").value : "").trim();
+  const jenisFilter = (document.getElementById("filter-tabel-ketertiban-jenis") ? document.getElementById("filter-tabel-ketertiban-jenis").value : "").trim();
+  const statusFilter = (document.getElementById("filter-tabel-ketertiban-status") ? document.getElementById("filter-tabel-ketertiban-status").value : "").trim();
+  const searchFilter = (document.getElementById("search-tabel-ketertiban-nama") ? document.getElementById("search-tabel-ketertiban-nama").value : "").trim().toLowerCase();
+  
+  const allJamaah = getJamaahForKetertiban();
+  const allJadwal = (typeof window.getJadwalPengajianList === 'function' ? window.getJadwalPengajianList() : null) || (typeof getJadwalPengajianList === 'function' ? getJadwalPengajianList() : []) || (typeof localJadwalPengajian !== 'undefined' ? localJadwalPengajian : []);
+  const allPresensi = (typeof window.getPresensiKehadiranList === 'function' ? window.getPresensiKehadiranList() : null) || (typeof getPresensiKehadiranList === 'function' ? getPresensiKehadiranList() : []) || (typeof localPresensiKehadiran !== 'undefined' ? localPresensiKehadiran : []);
+  
+  console.log("=== DEBUG renderKetertibanJamaahTable ===");
+  console.log("allJamaah count:", allJamaah.length, allJamaah);
+  console.log("allJadwal count:", allJadwal.length);
+  console.log("allPresensi count:", allPresensi.length);
+  console.log("tingkatFilter:", tingkatFilter);
+  console.log("jenisFilter:", jenisFilter);
+  console.log("statusFilter:", statusFilter);
+
+  let relevantJadwal = allJadwal.filter(j => {
+    const jYear = getYearFromDateStr(j.tanggal);
+    if (!jYear || jYear !== filterYear) return false;
+
+    const itemTingkat = j.tingkat || j.tingkat_pengajian || j.tingkatPengajian;
+    const itemJenis = j.jenisPengajian || j.jenis_pengajian || j.jenis;
+
+    if (tingkatFilter && !matchTingkat(itemTingkat, tingkatFilter)) return false;
+    if (jenisFilter && itemJenis && itemJenis.toLowerCase() !== jenisFilter.toLowerCase()) return false;
+    return true;
+  });
+  
+  let rowsHtml = "";
+  let counter = 0;
+  
+  allJamaah.forEach(j => {
+    const nama = j.namaLengkap || j.nama || "Jamaah";
+    if (searchFilter && !nama.toLowerCase().includes(searchFilter) && !(j.id && String(j.id).toLowerCase().includes(searchFilter))) {
+      return;
+    }
+    
+    let hadir = 0;
+    let izin = 0;
+    let alfa = 0;
+    let totalSesi = 0;
+    
+    const jamaahIdStr = String(j.id);
+    const jKelompok = (j.kelompokPengajian || j.kelompok || "").trim().toLowerCase();
+    
+    relevantJadwal.forEach(jadwal => {
+      // Cek apakah jadwal berlaku untuk jamaah ini (berdasarkan kelompok saja)
+      const jadwalKelompok = (jadwal.kelompok_pengajian || jadwal.kelompokPengajian || "").trim().toLowerCase();
+      const jadwalTingkat = (jadwal.tingkat_pengajian || jadwal.tingkatPengajian || "").trim().toLowerCase();
+      
+      // Jadwal tingkat kelompok: harus cocok kelompoknya
+      if (jadwalTingkat.includes('kelompok') || (jadwalKelompok && !jadwalTingkat.includes('desa') && !jadwalTingkat.includes('daerah'))) {
+        if (jadwalKelompok && jKelompok && jadwalKelompok !== jKelompok) return;
+      }
+      // Jika jadwal spesifik peserta: cek ID jamaah
+      if (jadwal.peserta_spesifik) {
+        const allowedIds = jadwal.peserta_spesifik.split(',').map(id => id.trim()).filter(Boolean);
+        if (allowedIds.length > 0 && !allowedIds.includes(jamaahIdStr)) return;
+      }
+      
+      const jIdStr = String(jadwal.id);
+      const pRecord = allPresensi.find(p => {
+        const pJadwalId = String(p.id_pengajian || p.kegiatan_id || p.kegiatanId || p.idPengajian || '');
+        const pJamaahId = String(p.id_jamaah || p.jamaah_id || p.jamaahId || '');
+        return pJadwalId === jIdStr && pJamaahId === jamaahIdStr;
+      });
+      
+      if (pRecord) {
+        totalSesi++;
+        const st = (pRecord.status_kehadiran || pRecord.statusKehadiran || pRecord.status || "").toLowerCase();
+        if (st === "hadir" || st === "online" || st.includes("hadir") || st.includes("online")) {
+          hadir++;
+        } else if (st === "izin" || st === "sakit") {
+          izin++;
+        } else {
+          alfa++;
+        }
+      }
+      // Tidak ada presensi = tidak dihitung totalSesi (skip sesi tanpa presensi tercatat)
+    });
+    
+    let pct = 100;
+    if (totalSesi > 0) {
+      pct = Math.round((hadir / totalSesi) * 100);
+    }
+    
+    let statusKet = "Lancar";
+    let badgeClass = "badge-green";
+    let fillClass = "lancar";
+    
+    if (totalSesi > 0) {
+      if (pct <= 20) {
+        statusKet = "Tidak Lancar";
+        badgeClass = "badge-red";
+        fillClass = "tidak-lancar";
+      } else if (pct <= 50) {
+        statusKet = "Kurang Lancar";
+        badgeClass = "badge-yellow";
+        fillClass = "kurang";
+      }
+    }
+    
+    // Jamaah tanpa presensi sama sekali - skip dari tabel
+    if (totalSesi === 0) return;
+    
+    // Status Filter Matching
+    if (statusFilter && statusKet !== statusFilter) {
+      return;
+    }
+    
+    counter++;
+    rowsHtml += `
+      <tr>
+        <td style="text-align: center;">${counter}</td>
+        <td>
+          <div style="font-weight: 600;">${nama}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">${j.id || ''} (${j.jenisKelamin || ''})</div>
+        </td>
+        <td><span class="badge badge-gray">${j.kelompokPengajian || j.kelompok || '-'}</span></td>
+        <td>
+          <div class="attendance-progress-wrapper">
+            <div class="attendance-progress-bar">
+              <div class="attendance-progress-fill ${fillClass}" style="width: ${pct}%;"></div>
+            </div>
+          </div>
+        </td>
+        <td style="text-align: center;"><strong style="font-size: 0.95rem;">${pct}%</strong></td>
+        <td style="text-align: center;">${totalSesi}</td>
+        <td style="text-align: center;"><span style="color: var(--success); font-weight: 600;">${hadir}</span></td>
+        <td style="text-align: center;"><span style="color: var(--warning); font-weight: 600;">${izin}</span></td>
+        <td style="text-align: center;"><span style="color: var(--danger); font-weight: 600;">${alfa}</span></td>
+        <td style="text-align: center;"><span class="badge ${badgeClass}">${statusKet}</span></td>
+      </tr>
+    `;
+  });
+  
+  if (counter === 0) {
+    rowsHtml = `<tr><td colspan="10" style="text-align: center; color: var(--text-muted); padding: 30px;">Tidak ada data ketertiban jamaah yang sesuai filter.</td></tr>`;
+  }
+  
+  tbody.innerHTML = rowsHtml;
+}
+window.renderKetertibanJamaahTable = renderKetertibanJamaahTable;
+window.initMonitoringKetertibanFilters = initMonitoringKetertibanFilters;
+
+// Temporary Visual Debug Overlay
+document.addEventListener("DOMContentLoaded", () => {
+  const debugDiv = document.createElement("div");
+  debugDiv.style.position = "fixed";
+  debugDiv.style.top = "10px";
+  debugDiv.style.left = "10px";
+  debugDiv.style.background = "rgba(0,0,0,0.85)";
+  debugDiv.style.color = "#00ff00";
+  debugDiv.style.padding = "10px";
+  debugDiv.style.zIndex = "999999";
+  debugDiv.style.fontFamily = "monospace";
+  debugDiv.style.fontSize = "12px";
+  debugDiv.style.borderRadius = "5px";
+  debugDiv.style.pointerEvents = "none";
+  debugDiv.id = "app-debug-overlay";
+  document.body.appendChild(debugDiv);
+  
+  setInterval(() => {
+    const jam = typeof window.getJamaahList === 'function' ? window.getJamaahList() : [];
+    const jad = typeof window.getJadwalPengajianList === 'function' ? window.getJadwalPengajianList() : [];
+    const pre = typeof window.getPresensiKehadiranList === 'function' ? window.getPresensiKehadiranList() : [];
+    debugDiv.innerHTML = `
+      Jamaah: ${jam.length}<br>
+      Jadwal: ${jad.length}<br>
+      Presensi: ${pre.length}
+    `;
+  }, 1000);
+});

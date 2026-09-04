@@ -337,17 +337,18 @@
     function deleteMasterItem(name) {
       const curUser = getCurrentUser();
       if (confirm(`Apakah Anda yakin ingin menghapus opsi "${name}" dari tabel master ${activeMasterTab}? Semua data yang terkait akan ikut dibersihkan.`)) {
-        google.script.run
-          .withSuccessHandler(function() {
-            fetchDatabaseFromServer(function() {
-              renderMasterTable();
-              showToast(`Opsi ${name} berhasil dihapus dari master ${activeMasterTab}!`, "success");
+        if (typeof supabaseDeleteMasterItem === 'function') {
+          supabaseDeleteMasterItem(activeMasterTab, name, curUser.username)
+            .then(() => {
+              fetchDatabaseFromServer(function() {
+                renderMasterTable();
+                showToast(`Opsi ${name} berhasil dihapus dari master ${activeMasterTab}!`, "success");
+              });
+            })
+            .catch(err => {
+              showToast("Gagal menghapus opsi master: " + err.message, "error");
             });
-          })
-          .withFailureHandler(function(err) {
-            showToast("Gagal menghapus opsi master: " + err.message, "error");
-          })
-          .deleteMasterItemGAS(activeMasterTab, name, curUser.username);
+        }
       }
     }
 

@@ -14,7 +14,7 @@
     // Constants for static master lists (v2.1)
     const MASTER_PERNIKAHAN = ["Belum Menikah", "Menikah", "Janda", "Duda"];
     const MASTER_EKONOMI = ["Aghnia", "Dhuafa", "Menengah"];
-    const MASTER_KELANCARAN = ["Lancar", "Kurang Lancar", "Perlu Perhatian"];
+    const MASTER_KELANCARAN = ["Lancar", "Kurang Lancar", "Tidak Lancar", "Perlu Perhatian"];
     const MASTER_STATUS_KEAKTIFAN = ["Aktif", "Meninggal", "Pindah Sambung", "Sekolah/Kuliah Luar Daerah", "Non-Aktif Lainnya"];
     
     // Loaded dynamically from Google Sheets master sheets

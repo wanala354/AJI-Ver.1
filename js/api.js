@@ -898,117 +898,7 @@
     // Intercept Window Google Script Run Calls
     function setupDatabaseMockOrSupabase() {
       if (useSupabase) {
-        const supabaseRun = {
-          _successHandler: null,
-          _failureHandler: null,
-          withSuccessHandler: function(h) { this._successHandler = h; return this; },
-          withFailureHandler: function(h) { this._failureHandler = h; return this; },
-          _call: function(promiseFunc) {
-            setTimeout(() => {
-              try {
-                promiseFunc().then(res => {
-                  if (this._successHandler) this._successHandler(res);
-                }).catch(err => {
-                  if (this._failureHandler) this._failureHandler(err);
-                  else console.error(err);
-                });
-              } catch (err) {
-                if (this._failureHandler) this._failureHandler(err);
-                else console.error(err);
-              }
-            }, 50);
-          },
-          logActionGAS: function(user, action, description) {
-            this._call(() => supabaseLogAction(user, action, description));
-            return this;
-          },
-          getAllDataGAS: function(operatorUsername) {
-            this._call(() => supabaseGetAllData(operatorUsername));
-            return this;
-          },
-          authenticateUserGAS: function(username, passwordHash) {
-            this._call(() => supabaseAuthenticateUser(username, passwordHash));
-            return this;
-          },
-          saveJamaahGAS: function(jamaahData, operatorUsername) {
-            this._call(() => supabaseSaveJamaah(jamaahData, operatorUsername));
-            return this;
-          },
-          deleteJamaahGAS: function(id, operatorUsername) {
-            this._call(() => supabaseDeleteJamaah(id, operatorUsername));
-            return this;
-          },
-          saveMasterItemGAS: function(tableName, oldName, newName, operatorUsername, peserta, gender, dapuan) {
-            this._call(() => supabaseSaveMasterItem(tableName, oldName, newName, operatorUsername, peserta, gender, dapuan));
-            return this;
-          },
-          deleteMasterItemGAS: function(tableName, name, operatorUsername) {
-            this._call(() => supabaseDeleteMasterItem(tableName, name, operatorUsername));
-            return this;
-          },
-          saveUserGAS: function(userData, operatorUsername) {
-            this._call(() => supabaseSaveUser(userData, operatorUsername));
-            return this;
-          },
-          deleteUserGAS: function(username, operatorUsername) {
-            this._call(() => supabaseDeleteUser(username, operatorUsername));
-            return this;
-          },
-          changePasswordGAS: function(targetUsername, newPasswordHash, operatorUsername) {
-            this._call(() => supabaseChangePassword(targetUsername, newPasswordHash, operatorUsername));
-            return this;
-          },
-          saveJadwalPengajianGAS: function(jadwalData, operatorUsername) {
-            this._call(() => supabaseSaveJadwalPengajian(jadwalData, operatorUsername));
-            return this;
-          },
-          deleteJadwalPengajianGAS: function(id, operatorUsername) {
-            this._call(() => supabaseDeleteJadwalPengajian(id, operatorUsername));
-            return this;
-          },
-          savePresensiKehadiranGAS: function(idPengajian, presensiList, operatorUsername) {
-            this._call(() => supabaseSavePresensiKehadiran(idPengajian, presensiList, operatorUsername));
-            return this;
-          },
-          saveMasterPengajarGAS: function(pengajarData, operatorUsername) {
-            this._call(() => supabaseSaveMasterPengajar(pengajarData, operatorUsername));
-            return this;
-          },
-          deleteMasterPengajarGAS: function(id_pengajar, operatorUsername) {
-            this._call(() => supabaseDeleteMasterPengajar(id_pengajar, operatorUsername));
-            return this;
-          },
-          registerJamaahLinkedGAS: function(regData) {
-            this._call(() => supabaseRegisterJamaahLinked(regData));
-            return this;
-          },
-          registerJamaahNewGAS: function(regData) {
-            this._call(() => supabaseRegisterJamaahNew(regData));
-            return this;
-          },
-          getPendingUsersGAS: function(operatorKelompok) {
-            this._call(() => supabaseGetPendingUsers(operatorKelompok));
-            return this;
-          },
-          approveUserGAS: function(username, operatorUsername) {
-            this._call(() => supabaseApproveUser(username, operatorUsername));
-            return this;
-          },
-          rejectUserGAS: function(username, operatorUsername) {
-            this._call(() => supabaseRejectUser(username, operatorUsername));
-            return this;
-          },
-          selfCheckInGAS: function(idPengajian, idJamaah, status, keterangan, jamaahUsername) {
-            this._call(() => supabaseSelfCheckIn(idPengajian, idJamaah, status, keterangan, jamaahUsername));
-            return this;
-          }
-        };
-        
-        window.google = {
-          script: {
-            run: supabaseRun
-          }
-        };
+        // Supabase direct mode
       } else {
         if (nativeGoogle) {
           window.google = nativeGoogle;
@@ -1118,705 +1008,10 @@
           if (!localStorage.getItem("aji_audit_logs")) {
             localStorage.setItem("aji_audit_logs", JSON.stringify([]));
           }
-
-          const mockRun = {
-            _successHandler: null,
-            _failureHandler: null,
-            withSuccessHandler: function(h) { this._successHandler = h; return this; },
-            withFailureHandler: function(h) { this._failureHandler = h; return this; },
-            _call: function(action) {
-              setTimeout(() => {
-                try {
-                  const res = action();
-                  if (this._successHandler) this._successHandler(res);
-                } catch(err) {
-                  if (this._failureHandler) this._failureHandler(err);
-                  else console.error(err);
-                }
-              }, 50);
-            },
-            logActionGAS: function(user, action, description) {
-              const logs = JSON.parse(localStorage.getItem("aji_audit_logs") || "[]");
-              logs.unshift({
-                timestamp: new Date().toISOString(),
-                user: user || "System",
-                action: action,
-                description: description
-              });
-              localStorage.setItem("aji_audit_logs", JSON.stringify(logs));
-              return this;
-            },
-             getAllDataGAS: function(operatorUsername) {
-              this._call(() => {
-                const jamaahList = JSON.parse(localStorage.getItem("aji_jamaah") || "[]");
-                const usersList = JSON.parse(localStorage.getItem("aji_users") || "[]");
-                const rawK = JSON.parse(localStorage.getItem("aji_master_kelompok") || "[]");
-                const rawP = JSON.parse(localStorage.getItem("aji_master_pendidikan") || "[]");
-                const rawD = JSON.parse(localStorage.getItem("aji_master_dapuan") || "[]");
-                const rawW = JSON.parse(localStorage.getItem("aji_master_pekerjaan") || "[]");
-                const rawH = JSON.parse(localStorage.getItem("aji_master_hubungan") || "[]");
-                const rawM = JSON.parse(localStorage.getItem("aji_master_materi") || "[]");
-                const rawJP = JSON.parse(localStorage.getItem("aji_master_jenis_pengajian") || "[]");
-                const rawPeserta = JSON.parse(localStorage.getItem("aji_master_peserta_pengajian") || "[]");
-                const rawGrupKustom = JSON.parse(localStorage.getItem("aji_master_grup_kustom") || "[]");
-                const rawTK = JSON.parse(localStorage.getItem("aji_master_tempat_kegiatan") || "[]");
-                const rawJ = JSON.parse(localStorage.getItem("aji_pengajian_jadwal") || "[]");
-                const rawPr = JSON.parse(localStorage.getItem("aji_pengajian_presensi") || "[]");
-                const rawPeng = JSON.parse(localStorage.getItem("aji_master_pengajar") || "[]");
-                const auditLogs = JSON.parse(localStorage.getItem("aji_audit_logs") || "[]");
-                
-                const masterKelompok = rawK.map(n => ({ nama: n }));
-                const masterPendidikan = rawP.map(n => ({ nama: n }));
-                const masterDapuan = rawD.map(n => ({ nama: n }));
-                const masterTempatKegiatan = rawTK.map(n => ({ nama: n }));
-                const masterPekerjaan = rawW.map(n => ({ nama: n }));
-                const masterHubungan = rawH.map(n => ({ nama: n }));
-                const masterMateri = rawM.map(n => ({ nama: n }));
-                const masterJenisPengajian = rawJP.map(item => {
-                  if (typeof item === 'string') {
-                    let p = '';
-                    const j = item.trim().toLowerCase();
-                    if (j === "sambung" || j === "5 unsur") p = "Dewasa, Manula, GUM";
-                    else if (j === "gus") p = "GUS";
-                    else if (j === "gum") p = "GUM";
-                    else if (j === "gabungan gus dan gum") p = "GUS, GUM";
-                    else if (j === "caberawit") p = "PAUD, Caberawit";
-                    else if (j === "ibu-ibu" || j === "ibu - ibu") p = "Dewasa, Manula";
-                    else if (j === "kewanitaan") p = "Dewasa, Manula, GUM";
-                    else if (j === "teks" || j === "turba desa" || j === "turba daerah") p = "Dewasa, Manula, GUM, GUS";
-                    return { nama: item, peserta_pengajian: p, batasan_gender: "Semua", target_dapuan: "" };
-                  }
-                  return {
-                    nama: item.nama,
-                    peserta_pengajian: item.peserta_pengajian || "",
-                    batasan_gender: item.batasan_gender || "Semua",
-                    target_dapuan: item.target_dapuan || ""
-                  };
-                });
-                
-                const kepalaKeluargaList = _getKepalaKeluargaList(jamaahList);
-                const kartuKeluargaMappings = _getKartuKeluargaMappings(jamaahList);
-                
-                let filteredJamaah = jamaahList;
-                let filteredKK = kepalaKeluargaList;
-                let filteredMappings = kartuKeluargaMappings;
-                let filteredJadwal = rawJ.map(x => ({ ...x, peserta_spesifik: x.peserta_spesifik || "", lokasi: x.lokasi || "" }));
-                let filteredPresensi = rawPr;
-                let filteredLogs = auditLogs;
-                
-                if (operatorUsername) {
-                  const userObj = usersList.find(u => u.username.toLowerCase() === operatorUsername.toLowerCase());
-                  const isKelompokRestricted = userObj && (userObj.role.trim().toLowerCase() === "operator kelompok" || userObj.role.trim().toLowerCase() === "pengurus kelompok");
-                  if (isKelompokRestricted) {
-                    const targetKelompok = userObj.kelompok;
-                    filteredJamaah = jamaahList.filter(j => j.kelompokPengajian === targetKelompok);
-                    filteredKK = kepalaKeluargaList.filter(kk => kk.kelompokPengajian === targetKelompok);
-                    const subKKIds = new Set(filteredKK.map(kk => kk.id));
-                    filteredMappings = kartuKeluargaMappings.filter(m => subKKIds.has(m.kepalaKeluargaId));
-                    
-                    filteredJadwal = rawJ.filter(j => {
-                      const tk = String(j.tingkat_pengajian || "").toLowerCase();
-                      return j.kelompok_pengajian === targetKelompok ||
-                             tk.includes("desa") ||
-                             tk.includes("daerah");
-                    }).map(x => ({ ...x, peserta_spesifik: x.peserta_spesifik || "", lokasi: x.lokasi || "" }));
-                    const jIds = new Set(filteredJadwal.map(j => j.id));
-                    filteredPresensi = rawPr.filter(p => jIds.has(p.id_pengajian));
-                    
-                    filteredLogs = auditLogs.filter(log => {
-                      return log.user.toLowerCase() === operatorUsername.toLowerCase() ||
-                             log.description.indexOf("di Kelompok " + targetKelompok) !== -1 ||
-                             log.description.indexOf("kelompokPengajian: '" + targetKelompok + "'") !== -1;
-                    });
-                  }
-                }
-                
-                return {
-                  jamaahList: filteredJamaah,
-                  kepalaKeluargaList: filteredKK,
-                  kartuKeluargaMappings: filteredMappings,
-                  auditLogs: filteredLogs,
-                  usersList: usersList,
-                  masterKelompok,
-                  masterPendidikan,
-                  masterDapuan,
-                  masterPekerjaan,
-                  masterHubungan,
-                  masterMateri,
-                  masterJenisPengajian,
-                  masterTempatKegiatan,
-                  masterPesertaPengajian: rawPeserta,
-                  masterGrupKustom: rawGrupKustom,
-                  masterPengajar: rawPeng,
-                  jadwalPengajian: filteredJadwal,
-                  presensiKehadiran: filteredPresensi
-                };
-              });
-              return this;
-            },
-            authenticateUserGAS: function(username, passwordHash) {
-              this._call(() => {
-                const users = JSON.parse(localStorage.getItem("aji_users") || "[]");
-                const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.passwordHash === passwordHash);
-                if (user) {
-                  if ((user.status || 'active') === 'pending') {
-                    return { success: false, pending: true };
-                  }
-                  this.logActionGAS(user.username, "LOGIN", "Pengguna " + user.username + " dengan role " + user.role + " (" + user.kelompok + ") login ke Web App (Local Mock).");
-                  return {
-                    success: true,
-                    user: {
-                      username: user.username,
-                      email: user.email,
-                      role: user.role,
-                      kelompok: user.kelompok,
-                      jamaah_id: user.jamaah_id || null,
-                      status: user.status || 'active'
-                    }
-                  };
-                }
-                return { success: false };
-              });
-              return this;
-            },
-            saveJamaahGAS: function(jamaahData, operatorUsername) {
-              this._call(() => {
-                const jamaahList = JSON.parse(localStorage.getItem("aji_jamaah") || "[]");
-                let isEdit = false;
-                let oldData = {};
-                
-                if (!jamaahData.id) {
-                  let maxIdNum = 0;
-                  jamaahList.forEach(j => {
-                    if (j.id && j.id.indexOf("J-") === 0) {
-                      const num = parseInt(j.id.replace("J-", ""));
-                      if (num > maxIdNum) maxIdNum = num;
-                    }
-                  });
-                  jamaahData.id = "J-" + String(maxIdNum + 1).padStart(3, '0');
-                } else {
-                  const idx = jamaahList.findIndex(j => j.id === jamaahData.id);
-                  if (idx !== -1) {
-                    isEdit = true;
-                    oldData = Object.assign({}, jamaahList[idx]);
-                    jamaahList.splice(idx, 1);
-                  }
-                }
-                
-                if (jamaahData.statusHubunganKeluarga === "Kepala Keluarga") {
-                  jamaahData.kepalaKeluargaId = "";
-                }
-                
-                jamaahList.push(jamaahData);
-                localStorage.setItem("aji_jamaah", JSON.stringify(jamaahList));
-                
-                if (isEdit) {
-                  let diffStr = [];
-                  for (const key in jamaahData) {
-                    if (oldData[key] !== jamaahData[key] && key !== "umur" && key !== "kelompokPeramutan") {
-                      diffStr.push(`${key}: '${oldData[key]}' -> '${jamaahData[key]}'`);
-                    }
-                  }
-                  this.logActionGAS(operatorUsername, "UPDATE", "Memperbarui Jamaah " + jamaahData.namaLengkap + " (" + jamaahData.id + "). Perubahan: " + diffStr.join(", "));
-                } else {
-                  this.logActionGAS(operatorUsername, "CREATE", "Menambahkan Jamaah " + jamaahData.namaLengkap + " (" + jamaahData.id + ") di Kelompok " + jamaahData.kelompokPengajian);
-                }
-                
-                return jamaahData;
-              });
-              return this;
-            },
-            deleteJamaahGAS: function(id, operatorUsername) {
-              this._call(() => {
-                const jamaahList = JSON.parse(localStorage.getItem("aji_jamaah") || "[]");
-                const idx = jamaahList.findIndex(j => j.id === id);
-                if (idx !== -1) {
-                  const nama = jamaahList[idx].namaLengkap;
-                  const hub = jamaahList[idx].statusHubunganKeluarga;
-                  jamaahList.splice(idx, 1);
-                  
-                  if (hub === "Kepala Keluarga") {
-                    jamaahList.forEach(j => {
-                      if (j.kepalaKeluargaId === id) {
-                        j.kepalaKeluargaId = "";
-                      }
-                    });
-                  }
-                  
-                  localStorage.setItem("aji_jamaah", JSON.stringify(jamaahList));
-                  this.logActionGAS(operatorUsername, "DELETE", "Menghapus Jamaah " + nama + " (" + id + ").");
-                  return true;
-                }
-                return false;
-              });
-              return this;
-            },
-                        saveMasterItemGAS: function(tableName, oldName, newName, operatorUsername, peserta, gender, dapuan) {
-              if (tableName === "Jenis Kegiatan") tableName = "Jenis Pengajian";
-              if (tableName === "Materi Kegiatan") tableName = "Materi Pengajian";
-              if (tableName === "Peserta Kegiatan") tableName = "Peserta Pengajian";
-              this._call(() => {
-                const keyMap = {
-                  "Kelompok": "aji_master_kelompok",
-                  "Tingkat Pendidikan": "aji_master_pendidikan",
-                  "Dapuan": "aji_master_dapuan",
-                  "Pekerjaan": "aji_master_pekerjaan",
-                  "Status Hubungan Keluarga": "aji_master_hubungan",
-                  "Materi Pengajian": "aji_master_materi",
-                  "Jenis Pengajian": "aji_master_jenis_pengajian",
-                  "Grup Kustom": "aji_master_grup_kustom",
-                  "Peserta Pengajian": "aji_master_peserta_pengajian",
-                  "Tempat Kegiatan": "aji_master_tempat_kegiatan"
-                };
-                const colMap = {
-                  "Kelompok": "kelompokPengajian",
-                  "Tingkat Pendidikan": "tingkatPendidikan",
-                  "Dapuan": "dapuan",
-                  "Pekerjaan": "pekerjaanUtama",
-                  "Status Hubungan Keluarga": "statusHubunganKeluarga"
-                };
-                
-                const lsKey = keyMap[tableName];
-                if (!lsKey) throw new Error("Table master not supported: " + tableName);
-                
-                const list = JSON.parse(localStorage.getItem(lsKey) || "[]");
-                
-                if (tableName === "Jenis Pengajian") {
-                  if (oldName) {
-                    const idx = list.findIndex(x => (typeof x === 'object' ? x.nama : x) === oldName);
-                    if (idx !== -1) {
-                      list[idx] = { nama: newName, peserta_pengajian: peserta || "", batasan_gender: gender || "Semua", target_dapuan: dapuan || "" };
-                      localStorage.setItem(lsKey, JSON.stringify(list));
-                      this.logActionGAS(operatorUsername, "UPDATE_MASTER", "Mengubah opsi di tabel " + tableName + ": '" + oldName + "' -> '" + newName + "'");
-                    }
-                  } else {
-                    list.push({ nama: newName, peserta_pengajian: peserta || "", batasan_gender: gender || "Semua", target_dapuan: dapuan || "" });
-                    localStorage.setItem(lsKey, JSON.stringify(list));
-                    this.logActionGAS(operatorUsername, "CREATE_MASTER", "Menambahkan opsi baru di tabel " + tableName + ": '" + newName + "'");
-                  }
-                } else if (tableName === "Grup Kustom") {
-                  if (oldName) {
-                    const idx = list.findIndex(x => x.nama === oldName);
-                    if (idx !== -1) {
-                      list[idx] = { nama: newName, deskripsi: peserta || "", daftar_id_anggota: gender || "" };
-                      localStorage.setItem(lsKey, JSON.stringify(list));
-                      this.logActionGAS(operatorUsername, "UPDATE_MASTER", "Mengubah grup kustom di tabel " + tableName + ": '" + oldName + "' -> '" + newName + "'");
-                    }
-                  } else {
-                    list.push({ nama: newName, deskripsi: peserta || "", daftar_id_anggota: gender || "" });
-                    localStorage.setItem(lsKey, JSON.stringify(list));
-                    this.logActionGAS(operatorUsername, "CREATE_MASTER", "Menambahkan grup kustom baru di tabel " + tableName + ": '" + newName + "'");
-                  }
-                } else if (tableName === "Peserta Pengajian") {
-                  if (oldName) {
-                    const idx = list.findIndex(x => x.id_peserta === oldName);
-                    if (idx !== -1) {
-                      list[idx] = { id_peserta: oldName, nama: newName };
-                      localStorage.setItem(lsKey, JSON.stringify(list));
-                      this.logActionGAS(operatorUsername, "UPDATE_MASTER", "Mengubah opsi peserta di tabel " + tableName + ": '" + oldName + "' -> '" + newName + "'");
-                    }
-                  } else {
-                    let maxId = 0;
-                    list.forEach(x => {
-                      const num = parseInt(x.id_peserta.replace("P-", ""));
-                      if (num > maxId) maxId = num;
-                    });
-                    const newId = "P-" + String(maxId + 1).padStart(3, '0');
-                    list.push({ id_peserta: newId, nama: newName });
-                    localStorage.setItem(lsKey, JSON.stringify(list));
-                    this.logActionGAS(operatorUsername, "CREATE_MASTER", "Menambahkan opsi peserta baru di tabel " + tableName + ": '" + newName + "'");
-                  }
-                } else {
-                  if (oldName) {
-                    const idx = list.indexOf(oldName);
-                    if (idx !== -1) {
-                      list[idx] = newName;
-                      localStorage.setItem(lsKey, JSON.stringify(list));
-                      this.logActionGAS(operatorUsername, "UPDATE_MASTER", "Mengubah opsi di tabel " + tableName + ": '" + oldName + "' -> '" + newName + "'");
-                      
-                      const jamaahList = JSON.parse(localStorage.getItem("aji_jamaah") || "[]");
-                      const colName = colMap[tableName];
-                      let changedCount = 0;
-                      if (colName) {
-                        jamaahList.forEach(j => {
-                          if (j[colName] === oldName) {
-                            j[colName] = newName;
-                            changedCount++;
-                          }
-                        });
-                        if (changedCount > 0) {
-                          localStorage.setItem("aji_jamaah", JSON.stringify(jamaahList));
-                        }
-                      }
-                    }
-                  } else {
-                    list.push(newName);
-                    localStorage.setItem(lsKey, JSON.stringify(list));
-                    this.logActionGAS(operatorUsername, "CREATE_MASTER", "Menambahkan opsi baru di tabel " + tableName + ": '" + newName + "'");
-                  }
-                }
-                return true;
-              });
-              return this;
-            },
-                        deleteMasterItemGAS: function(tableName, name, operatorUsername) {
-              if (tableName === "Jenis Kegiatan") tableName = "Jenis Pengajian";
-              if (tableName === "Materi Kegiatan") tableName = "Materi Pengajian";
-              if (tableName === "Peserta Kegiatan") tableName = "Peserta Pengajian";
-              this._call(() => {
-                const keyMap = {
-                  "Kelompok": "aji_master_kelompok",
-                  "Tingkat Pendidikan": "aji_master_pendidikan",
-                  "Dapuan": "aji_master_dapuan",
-                  "Pekerjaan": "aji_master_pekerjaan",
-                  "Status Hubungan Keluarga": "aji_master_hubungan",
-                  "Materi Pengajian": "aji_master_materi",
-                  "Jenis Pengajian": "aji_master_jenis_pengajian",
-                  "Grup Kustom": "aji_master_grup_kustom",
-                  "Peserta Pengajian": "aji_master_peserta_pengajian",
-                  "Tempat Kegiatan": "aji_master_tempat_kegiatan"
-                };
-                const colMap = {
-                  "Kelompok": "kelompokPengajian",
-                  "Tingkat Pendidikan": "tingkatPendidikan",
-                  "Dapuan": "dapuan",
-                  "Pekerjaan": "pekerjaanUtama",
-                  "Status Hubungan Keluarga": "statusHubunganKeluarga"
-                };
-                
-                const lsKey = keyMap[tableName];
-                if (!lsKey) throw new Error("Table master not supported: " + tableName);
-                
-                const list = JSON.parse(localStorage.getItem(lsKey) || "[]");
-                const idx = list.findIndex(x => {
-                  if (typeof x === 'object') {
-                    if (tableName === "Peserta Pengajian") return x.id_peserta === name;
-                    return x.nama === name;
-                  }
-                  return x === name;
-                });
-                if (idx !== -1) {
-                  list.splice(idx, 1);
-                  localStorage.setItem(lsKey, JSON.stringify(list));
-                  this.logActionGAS(operatorUsername, "DELETE_MASTER", "Menghapus opsi dari tabel " + tableName + ": '" + name + "'");
-                  
-                  const jamaahList = JSON.parse(localStorage.getItem("aji_jamaah") || "[]");
-                  const colName = colMap[tableName];
-                  let changedCount = 0;
-                  if (colName) {
-                    jamaahList.forEach(j => {
-                      if (j[colName] === name) {
-                        j[colName] = "";
-                        changedCount++;
-                      }
-                    });
-                    if (changedCount > 0) {
-                      localStorage.setItem("aji_jamaah", JSON.stringify(jamaahList));
-                    }
-                  }
-                }
-                return true;
-              });
-              return this;
-            },
-            deleteUserGAS: function(username, operatorUsername) {
-              this._call(() => {
-                let users = JSON.parse(localStorage.getItem("aji_users") || "[]");
-                users = users.filter(u => u.username.toLowerCase() !== username.toLowerCase());
-                localStorage.setItem("aji_users", JSON.stringify(users));
-                this.logActionGAS(operatorUsername, "DELETE_USER", "Menghapus akun pengguna: " + username);
-                return true;
-              });
-              return this;
-            },
-            saveUserGAS: function(userData, operatorUsername) {
-              this._call(() => {
-                const users = JSON.parse(localStorage.getItem("aji_users") || "[]");
-                const idx = users.findIndex(u => u.username.toLowerCase() === userData.username.toLowerCase());
-                
-                if (idx !== -1) {
-                  if (!userData.passwordHash) {
-                    userData.passwordHash = users[idx].passwordHash;
-                  }
-                  users[idx] = userData;
-                  localStorage.setItem("aji_users", JSON.stringify(users));
-                  this.logActionGAS(operatorUsername, "UPDATE_USER", "Memperbarui akun pengguna: " + userData.username + " (" + userData.role + ")");
-                } else {
-                  users.push(userData);
-                  localStorage.setItem("aji_users", JSON.stringify(users));
-                  this.logActionGAS(operatorUsername, "CREATE_USER", "Membuat akun pengguna baru: " + userData.username + " (" + userData.role + ")");
-                }
-                return true;
-              });
-              return this;
-            },
-            changePasswordGAS: function(targetUsername, newPasswordHash, operatorUsername) {
-              this._call(() => {
-                const users = JSON.parse(localStorage.getItem("aji_users") || "[]");
-                const idx = users.findIndex(u => u.username.toLowerCase() === targetUsername.toLowerCase());
-                if (idx !== -1) {
-                  users[idx].passwordHash = newPasswordHash;
-                  localStorage.setItem("aji_users", JSON.stringify(users));
-                  this.logActionGAS(operatorUsername, "CHANGE_PASSWORD", "Mengubah password untuk pengguna: " + targetUsername);
-                  return true;
-                }
-                return false;
-              });
-              return this;
-            },
-            saveJadwalPengajianGAS: function(jadwalData, operatorUsername) {
-              this._call(() => {
-                const list = JSON.parse(localStorage.getItem("aji_pengajian_jadwal") || "[]");
-                let isEdit = false;
-                if (jadwalData.id) {
-                  const idx = list.findIndex(j => j.id == jadwalData.id);
-                  if (idx !== -1) {
-                    isEdit = true;
-                    list[idx] = jadwalData;
-                  }
-                } else {
-                  let maxId = 0;
-                  list.forEach(j => {
-                    if (j.id > maxId) maxId = j.id;
-                  });
-                  jadwalData.id = maxId + 1;
-                  list.push(jadwalData);
-                }
-                localStorage.setItem("aji_pengajian_jadwal", JSON.stringify(list));
-                this.logActionGAS(operatorUsername, isEdit ? "UPDATE" : "CREATE", (isEdit ? "Memperbarui" : "Membuat") + " jadwal pengajian mock: " + jadwalData.jenis_pengajian);
-                return jadwalData;
-              });
-              return this;
-            },
-            deleteJadwalPengajianGAS: function(id, operatorUsername) {
-              this._call(() => {
-                const list = JSON.parse(localStorage.getItem("aji_pengajian_jadwal") || "[]");
-                const idx = list.findIndex(j => j.id == id);
-                if (idx !== -1) {
-                  list.splice(idx, 1);
-                  localStorage.setItem("aji_pengajian_jadwal", JSON.stringify(list));
-                  
-                  // Cascading delete mock presensi
-                  const presensi = JSON.parse(localStorage.getItem("aji_pengajian_presensi") || "[]");
-                  const filtered = presensi.filter(p => p.id_pengajian != id);
-                  localStorage.setItem("aji_pengajian_presensi", JSON.stringify(filtered));
-                  
-                  this.logActionGAS(operatorUsername, "DELETE", "Menghapus jadwal pengajian mock id: " + id);
-                  return true;
-                }
-                return false;
-              });
-              return this;
-            },
-            savePresensiKehadiranGAS: function(idPengajian, presensiList, operatorUsername) {
-              this._call(() => {
-                let list = JSON.parse(localStorage.getItem("aji_pengajian_presensi") || "[]");
-                presensiList.forEach(p => {
-                  const idx = list.findIndex(item => item.id_pengajian == idPengajian && item.id_jamaah == p.id_jamaah);
-                  if (!p.status || p.status === "Alpha") {
-                    if (idx !== -1) {
-                      list.splice(idx, 1);
-                    }
-                  } else {
-                    const payload = {
-                      id_pengajian: parseInt(idPengajian),
-                      id_jamaah: p.id_jamaah,
-                      status: p.status,
-                      keterangan: p.keterangan || ""
-                    };
-                    if (idx !== -1) {
-                      payload.id = list[idx].id;
-                      list[idx] = payload;
-                    } else {
-                      let maxId = 0;
-                      list.forEach(item => {
-                        if (item.id > maxId) maxId = item.id;
-                      });
-                      payload.id = maxId + 1;
-                      list.push(payload);
-                    }
-                  }
-                });
-                localStorage.setItem("aji_pengajian_presensi", JSON.stringify(list));
-                this.logActionGAS(operatorUsername, "SAVE_PRESENSI", "Menyimpan data presensi mock untuk sesi pengajian ID " + idPengajian);
-                return true;
-              });
-              return this;
-            },
-            saveMasterPengajarGAS: function(pengajarData, operatorUsername) {
-              this._call(() => {
-                const list = JSON.parse(localStorage.getItem("aji_master_pengajar") || "[]");
-                let isEdit = false;
-                if (!pengajarData.id_pengajar) {
-                  let maxId = 0;
-                  list.forEach(item => {
-                    const idVal = parseInt(item.id_pengajar);
-                    if (!isNaN(idVal) && idVal > maxId) maxId = idVal;
-                  });
-                  pengajarData.id_pengajar = maxId + 1;
-                } else {
-                  const idx = list.findIndex(item => item.id_pengajar == pengajarData.id_pengajar);
-                  if (idx !== -1) {
-                    isEdit = true;
-                    list[idx] = pengajarData;
-                  }
-                }
-                if (!isEdit) {
-                  list.push(pengajarData);
-                }
-                localStorage.setItem("aji_master_pengajar", JSON.stringify(list));
-                const jObj = JSON.parse(localStorage.getItem("aji_jamaah") || "[]").find(j => j.id === pengajarData.id_jamaah);
-                const name = jObj ? jObj.namaLengkap : pengajarData.id_jamaah;
-                this.logActionGAS(operatorUsername, isEdit ? "UPDATE_PENGAJAR" : "CREATE_PENGAJAR", 
-                  `Menyimpan master pengajar mock ID ${pengajarData.id_pengajar} untuk jamaah ${name}`);
-                return pengajarData;
-              });
-              return this;
-            },
-            deleteMasterPengajarGAS: function(id_pengajar, operatorUsername) {
-              this._call(() => {
-                const list = JSON.parse(localStorage.getItem("aji_master_pengajar") || "[]");
-                const idx = list.findIndex(item => item.id_pengajar == id_pengajar);
-                if (idx !== -1) {
-                  list.splice(idx, 1);
-                  localStorage.setItem("aji_master_pengajar", JSON.stringify(list));
-                  this.logActionGAS(operatorUsername, "DELETE_PENGAJAR", `Menghapus master pengajar mock ID ${id_pengajar}`);
-                  return true;
-                }
-                return false;
-              });
-              return this;
-            },
-            registerJamaahLinkedGAS: function(regData) {
-              this._call(() => {
-                const users = JSON.parse(localStorage.getItem("aji_users") || "[]");
-                const exists = users.find(u => u.username.toLowerCase() === regData.username.toLowerCase());
-                if (exists) return { success: false, reason: 'username_taken' };
-                users.push({
-                  username: regData.username,
-                  email: regData.email || (regData.username + '@jamaah.aji'),
-                  role: 'jamaah',
-                  passwordHash: regData.passwordHash,
-                  kelompok: regData.kelompok || '',
-                  jamaah_id: regData.jamaah_id,
-                  status: 'active'
-                });
-                localStorage.setItem("aji_users", JSON.stringify(users));
-                this.logActionGAS(regData.username, "REGISTER", "Jamaah " + regData.namaLengkap + " mendaftar akun (linked, id=" + regData.jamaah_id + ").");
-                return { success: true };
-              });
-              return this;
-            },
-            registerJamaahNewGAS: function(regData) {
-              this._call(() => {
-                const users = JSON.parse(localStorage.getItem("aji_users") || "[]");
-                const exists = users.find(u => u.username.toLowerCase() === regData.username.toLowerCase());
-                if (exists) return { success: false, reason: 'username_taken' };
-                const jamaahList = JSON.parse(localStorage.getItem("aji_jamaah") || "[]");
-                let maxIdNum = 0;
-                jamaahList.forEach(j => {
-                  if (j.id && j.id.indexOf("J-") === 0) {
-                    const num = parseInt(j.id.replace("J-", ""));
-                    if (num > maxIdNum) maxIdNum = num;
-                  }
-                });
-                const newJamaahId = "J-" + String(maxIdNum + 1).padStart(3, '0');
-                jamaahList.push({
-                  id: newJamaahId,
-                  namaLengkap: regData.namaLengkap,
-                  kelompokPengajian: regData.kelompok,
-                  jenisKelamin: regData.jenisKelamin || '',
-                  tempatLahir: regData.tempatLahir || '',
-                  tanggalLahir: regData.tanggalLahir || '',
-                  statusPernikahan: regData.statusPernikahan || '',
-                  statusHubunganKeluarga: regData.statusHubunganKeluarga || 'Kepala Keluarga',
-                  kepalaKeluargaId: '',
-                  nomorHp: regData.nomorHp || '',
-                  tingkatPendidikan: regData.tingkatPendidikan || '',
-                  pekerjaanUtama: regData.pekerjaanUtama || '',
-                  dapuan: regData.dapuan || 'Rokyah biasa',
-                  statusEkonomi: regData.statusEkonomi || '',
-                  kelancaranSambung: regData.kelancaranSambung || ''
-                });
-                localStorage.setItem("aji_jamaah", JSON.stringify(jamaahList));
-                users.push({
-                  username: regData.username,
-                  email: regData.email || (regData.username + '@jamaah.aji'),
-                  role: 'jamaah',
-                  passwordHash: regData.passwordHash,
-                  kelompok: regData.kelompok || '',
-                  jamaah_id: newJamaahId,
-                  status: 'pending'
-                });
-                localStorage.setItem("aji_users", JSON.stringify(users));
-                return { success: true, pending: true };
-              });
-              return this;
-            },
-            getPendingUsersGAS: function(operatorKelompok) {
-              this._call(() => {
-                let users = JSON.parse(localStorage.getItem("aji_users") || "[]");
-                users = users.filter(u => (u.status || 'active') === 'pending');
-                if (operatorKelompok && operatorKelompok !== 'Semua') {
-                  users = users.filter(u => u.kelompok === operatorKelompok);
-                }
-                return users.map(u => ({
-                  username: u.username, email: u.email,
-                  kelompok: u.kelompok, jamaah_id: u.jamaah_id, created_at: ''
-                }));
-              });
-              return this;
-            },
-            approveUserGAS: function(username, operatorUsername) {
-              this._call(() => {
-                const users = JSON.parse(localStorage.getItem("aji_users") || "[]");
-                const idx = users.findIndex(u => u.username === username);
-                if (idx !== -1) { users[idx].status = 'active'; }
-                localStorage.setItem("aji_users", JSON.stringify(users));
-                this.logActionGAS(operatorUsername, "APPROVE_USER", "Menyetujui akun jamaah: " + username);
-                return true;
-              });
-              return this;
-            },
-            rejectUserGAS: function(username, operatorUsername) {
-              this._call(() => {
-                let users = JSON.parse(localStorage.getItem("aji_users") || "[]");
-                const found = users.find(u => u.username === username);
-                const jamaahId = found ? found.jamaah_id : null;
-                users = users.filter(u => u.username !== username);
-                localStorage.setItem("aji_users", JSON.stringify(users));
-                if (jamaahId) {
-                  let jList = JSON.parse(localStorage.getItem("aji_jamaah") || "[]");
-                  jList = jList.filter(j => j.id !== jamaahId);
-                  localStorage.setItem("aji_jamaah", JSON.stringify(jList));
-                }
-                this.logActionGAS(operatorUsername, "REJECT_USER", "Menolak akun jamaah: " + username);
-                return true;
-              });
-              return this;
-            },
-            selfCheckInGAS: function(idPengajian, idJamaah, status, keterangan, jamaahUsername) {
-              this._call(() => {
-                let list = JSON.parse(localStorage.getItem("aji_pengajian_presensi") || "[]");
-                const idx = list.findIndex(p => p.id_pengajian == idPengajian && p.id_jamaah == idJamaah);
-                if (!status || status === 'Alpha') {
-                  if (idx !== -1) list.splice(idx, 1);
-                } else {
-                  const payload = { id_pengajian: parseInt(idPengajian), id_jamaah: idJamaah, status: status, keterangan: keterangan || '' };
-                  if (idx !== -1) { payload.id = list[idx].id; list[idx] = payload; }
-                  else { payload.id = Date.now(); list.push(payload); }
-                }
-                localStorage.setItem("aji_pengajian_presensi", JSON.stringify(list));
-                this.logActionGAS(jamaahUsername || idJamaah, "SELF_CHECKIN", "Self check-in jamaah " + idJamaah + " sesi " + idPengajian + ": " + status);
-                return true;
-              });
-              return this;
-            }
-          };
           
           window.google = {
             script: {
-              run: mockRun
+              run: {}
             }
           };
         }
@@ -1872,78 +1067,49 @@
     }
 
     // ----------------------------------------------------
-    // GAS SERVER CLIENT-SIDE DATA BRIDGE
+    // SERVER CLIENT-SIDE DATA BRIDGE
     // ----------------------------------------------------
     function fetchDatabaseFromServer(callback) {
       const user = getCurrentUser();
       const operatorUsername = user ? user.username : null;
       
-
-      // Load Pengurus
-      if (typeof supabaseClient !== 'undefined' && supabaseClient) {
-        fetchTablePaginated("pengurus").then(({ data }) => { 
-            if(data) localPengurusList = data; 
-            if (document.getElementById("section-pengurus") && document.getElementById("section-pengurus").style.display !== "none") {
-              if (typeof renderPengurusTable === 'function') renderPengurusTable();
-            }
-        });
-      }
-
-          google.script.run
-        .withSuccessHandler(function(data) {
-          localJamaahList = (data.jamaahList || []).map(j => {
-            const age = calculateAge(j.tanggalLahir);
-            const peramutan = getKelompokPeramutan(age, j.statusPernikahan, j.tingkatPendidikan);
-            return { ...j, umur: age, kelompokPeramutan: peramutan };
-          });
-          localKepalaKeluargaList = data.kepalaKeluargaList || [];
-          localKartuKeluargaMappings = data.kartuKeluargaMappings || [];
-          localAuditLogs = data.auditLogs || [];
-          localUsersList = data.usersList || [];
-          
-          // Populate dynamic master lists from sheets
-          localMasterKelompok = (data.masterKelompok || []).map(m => m.nama);
-          localMasterPendidikan = (data.masterPendidikan || []).map(m => m.nama);
-          localMasterDapuan = (data.masterDapuan || []).map(m => m.nama);
-          localMasterPekerjaan = (data.masterPekerjaan || []).map(m => m.nama);
-          localMasterHubungan = (data.masterHubungan || []).map(m => m.nama);
-          localMasterMateri = (data.masterMateri || []).map(m => m.nama);
-          localMasterJenisPengajian = (data.masterJenisPengajian || []).map(item => {
-            if (typeof item === 'string') {
-              let p = '';
-              const j = item.trim().toLowerCase();
-              if (j === "sambung" || j === "5 unsur") p = "Dewasa, Manula, GUM";
-              else if (j === "gus") p = "GUS";
-              else if (j === "gum") p = "GUM";
-              else if (j === "gabungan gus dan gum") p = "GUS, GUM";
-              else if (j === "caberawit") p = "PAUD, Caberawit";
-              else if (j === "ibu-ibu" || j === "ibu - ibu") p = "Dewasa, Manula";
-              else if (j === "kewanitaan") p = "Dewasa, Manula, GUM";
-              else if (j === "teks" || j === "turba desa" || j === "turba daerah") p = "Dewasa, Manula, GUM, GUS";
-              return { nama: item, peserta_pengajian: p, batasan_gender: "Semua", target_dapuan: "" };
-            }
-            return {
-              nama: item.nama,
-              peserta_pengajian: item.peserta_pengajian || "",
-              batasan_gender: item.batasan_gender || "Semua",
-              target_dapuan: item.target_dapuan || ""
-            };
-          });
-          localMasterPesertaPengajian = data.masterPesertaPengajian || [];
-          localMasterGrupKustom = data.masterGrupKustom || [];
-          localMasterPengajar = data.masterPengajar || [];
-          localMasterTempatKegiatan = (data.masterTempatKegiatan || []).map(m => m.nama);
-          localJadwalPengajian = data.jadwalPengajian || [];
-          localPresensiKehadiran = data.presensiKehadiran || [];
-          localDataHaji = data.dataHaji || [];
-          
+      if (useSupabase && supabaseClient) {
+        supabaseGetAllData(operatorUsername).then(data => {
+          if (data) {
+            localJamaahList = (data.jamaahList || []).map(j => {
+              const age = calculateAge ? calculateAge(j.tanggalLahir) : 0;
+              const peramutan = getKelompokPeramutan ? getKelompokPeramutan(age, j.statusPernikahan, j.tingkatPendidikan) : "";
+              return { ...j, umur: age, kelompokPeramutan: peramutan };
+            });
+            localKepalaKeluargaList = data.kepalaKeluargaList || [];
+            localKartuKeluargaMappings = data.kartuKeluargaMappings || [];
+            localAuditLogs = data.auditLogs || [];
+            localUsersList = data.usersList || [];
+            localMasterKelompok = data.masterKelompok || [];
+            localMasterPendidikan = data.masterPendidikan || [];
+            localMasterDapuan = data.masterDapuan || [];
+            localMasterPekerjaan = data.masterPekerjaan || [];
+            localMasterHubungan = data.masterHubungan || [];
+            localMasterMateri = data.masterMateri || [];
+            localMasterJenisPengajian = data.masterJenisPengajian || [];
+            localMasterPesertaPengajian = data.masterPesertaPengajian || [];
+            localMasterGrupKustom = data.masterGrupKustom || [];
+            localMasterPengajar = data.masterPengajar || [];
+            localMasterTempatKegiatan = data.masterTempatKegiatan || [];
+            localJadwalPengajian = data.jadwalPengajian || [];
+            localPresensiKehadiran = data.presensiKehadiran || [];
+          }
+          if (typeof renderMonitoringKetertiban === 'function') {
+            try { renderMonitoringKetertiban(); } catch(e) {}
+          }
           if (callback) callback();
-        })
-        .withFailureHandler(function(err) {
-          console.error("Gagal sinkronisasi data dari Google Sheets:", err);
-          showToast("Gagal menyinkronkan data database: " + err.message, "error");
-        })
-        .getAllDataGAS(operatorUsername);
+        }).catch(err => {
+          console.error("Gagal sinkronisasi data dari Supabase:", err);
+          if (callback) callback();
+        });
+      } else {
+        if (callback) callback();
+      }
     }
 
     function getJamaahList() { return localJamaahList; }
@@ -1952,11 +1118,17 @@
     function getKartuKeluargaMappings() { return localKartuKeluargaMappings; }
     function getAuditLogs() { return localAuditLogs; }
     function getUsersList() { return localUsersList; }
+    function getKelompokList() { return localMasterKelompok; }
+    function getPendidikanList() { return localMasterPendidikan; }
+    function getDapuanList() { return localMasterDapuan; }
+    function getPekerjaanList() { return localMasterPekerjaan; }
+    function getHubunganList() { return localMasterHubungan; }
     function getMasterMateriList() { return localMasterMateri; }
     function getMasterPengajarList() { return localMasterPengajar; }
     function getMasterJenisPengajianList() { return localMasterJenisPengajian; }
     function getMasterPesertaPengajianList() { return localMasterPesertaPengajian; }
     function getMasterGrupKustomList() { return localMasterGrupKustom; }
+    function getTempatKegiatanList() { return localMasterTempatKegiatan; }
     function getJadwalPengajianList() { return localJadwalPengajian; }
     function getPresensiKehadiranList() { return localPresensiKehadiran; }
 
@@ -1967,137 +1139,71 @@
 
     function logoutUser() {
       const user = getCurrentUser();
-      if (user) {
-        try {
-          if (typeof google !== "undefined" && google.script && google.script.run && typeof google.script.run.logActionGAS === "function") {
-            google.script.run.logActionGAS(user.username, "LOGOUT", `Pengguna ${user.username} logout dari aplikasi.`);
-          }
-        } catch (e) {
-          console.warn("Gagal mencatat log logout:", e);
-        }
+      if (user && typeof supabaseLogAction === "function") {
+        supabaseLogAction(user.username, "LOGOUT", `Pengguna ${user.username} logout dari aplikasi.`);
       }
       sessionStorage.removeItem("aji_session_user");
     }
 
     function saveJamaah(jamaahData, operatorUsername) {
       const saveBtn = document.getElementById("modal-save-btn");
-      const oldHtml = saveBtn.innerHTML;
-      saveBtn.disabled = true;
-      saveBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...`;
+      const oldHtml = saveBtn ? saveBtn.innerHTML : "";
+      if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...`; }
       
-      google.script.run
-        .withSuccessHandler(function(savedItem) {
-          saveBtn.disabled = false;
-          saveBtn.innerHTML = oldHtml;
+      supabaseSaveJamaah(jamaahData, operatorUsername)
+        .then(function(savedItem) {
+          if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = oldHtml; }
           closeJamaahModal();
           fetchDatabaseFromServer(function() {
             refreshActivePage();
-            showToast(`Data jamaah ${jamaahData.namaLengkap} berhasil disimpan ke Google Sheets!`, "success");
+            showToast(`Data jamaah ${jamaahData.namaLengkap} berhasil disimpan!`, "success");
           });
         })
-        .withFailureHandler(function(err) {
-          saveBtn.disabled = false;
-          saveBtn.innerHTML = oldHtml;
-          showToast("Gagal menyimpan data ke Google Sheets: " + err.message, "error");
-        })
-        .saveJamaahGAS(jamaahData, operatorUsername);
+        .catch(function(err) {
+          if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = oldHtml; }
+          showToast("Gagal menyimpan data: " + err.message, "error");
+        });
     }
 
     function deleteJamaah(id, operatorUsername) {
       const item = getJamaahList().find(j => j.id === id);
       if (!item) return;
       if (confirm(`Apakah Anda yakin ingin menghapus Jamaah: "${item.namaLengkap}" (${id})?`)) {
-        google.script.run
-          .withSuccessHandler(function() {
+        supabaseDeleteJamaah(id, operatorUsername)
+          .then(function() {
             fetchDatabaseFromServer(function() {
               refreshActivePage();
-              showToast(`Data jamaah ${item.namaLengkap} berhasil dihapus dari Google Sheets!`, "success");
+              showToast(`Data jamaah ${item.namaLengkap} berhasil dihapus!`, "success");
             });
           })
-          .withFailureHandler(function(err) {
+          .catch(function(err) {
             showToast("Gagal menghapus data: " + err.message, "error");
-          })
-          .deleteJamaahGAS(id, operatorUsername);
+          });
       }
     }
 
     function saveUser(userData, operatorUsername, callback, errorCallback) {
-      if (useSupabase && supabaseClient) {
-        const pgUser = {
-          username: userData.username,
-          email: userData.email,
-          role: userData.role,
-          kelompok: userData.kelompok
-        };
-        if (userData.passwordHash) {
-          pgUser.password_hash = userData.passwordHash;
-        }
-        
-        supabaseClient.from("app_users").select("username").eq("username", userData.username).then(({ data }) => {
-          const isEdit = data && data.length > 0;
-          let req;
-          if (isEdit) {
-            req = supabaseClient.from("app_users").update(pgUser).eq("username", pgUser.username);
-          } else {
-            req = supabaseClient.from("app_users").insert([pgUser]);
-          }
-          return req.then(({ error }) => {
-            if (error) throw error;
-            const action = isEdit ? "UPDATE_USER" : "CREATE_USER";
-            const desc = isEdit 
-              ? "Memperbarui akun pengguna: " + userData.username + " (" + userData.role + ")"
-              : "Membuat akun pengguna baru: " + userData.username + " (" + userData.role + ")";
-            supabaseLogAction(operatorUsername, action, desc);
-            fetchDatabaseFromServer(function() {
-              if (callback) callback();
-            });
+      supabaseSaveUser(userData, operatorUsername)
+        .then(function() {
+          fetchDatabaseFromServer(function() {
+            if (callback) callback();
           });
-        }).catch(err => {
+        })
+        .catch(function(err) {
           if (errorCallback) errorCallback(err);
         });
-      } else {
-        const users = JSON.parse(localStorage.getItem("aji_users") || "[]");
-        const idx = users.findIndex(u => u.username.toLowerCase() === userData.username.toLowerCase());
-        
-        if (idx !== -1) {
-          if (!userData.passwordHash) {
-            userData.passwordHash = users[idx].passwordHash;
-          }
-          users[idx] = userData;
-          localStorage.setItem("aji_users", JSON.stringify(users));
-        } else {
-          users.push(userData);
-          localStorage.setItem("aji_users", JSON.stringify(users));
-        }
-        fetchDatabaseFromServer(function() {
-          if (callback) callback();
-        });
-      }
     }
 
     function deleteUser(username, operatorUsername, callback, errorCallback) {
-      if (useSupabase && supabaseClient) {
-        supabaseClient.from("app_users")
-          .delete()
-          .eq("username", username)
-          .then(({ error }) => {
-            if (error) throw error;
-            supabaseLogAction(operatorUsername, "DELETE_USER", "Menghapus akun pengguna: " + username);
-            fetchDatabaseFromServer(function() {
-              if (callback) callback();
-            });
-          })
-          .catch(err => {
-            if (errorCallback) errorCallback(err);
+      supabaseDeleteUser(username, operatorUsername)
+        .then(function() {
+          fetchDatabaseFromServer(function() {
+            if (callback) callback();
           });
-      } else {
-        let users = JSON.parse(localStorage.getItem("aji_users") || "[]");
-        users = users.filter(u => u.username.toLowerCase() !== username.toLowerCase());
-        localStorage.setItem("aji_users", JSON.stringify(users));
-        fetchDatabaseFromServer(function() {
-          if (callback) callback();
+        })
+        .catch(function(err) {
+          if (errorCallback) errorCallback(err);
         });
-      }
     }
 
     window.saveUser = saveUser;
@@ -2106,70 +1212,93 @@
     window.supabaseDeleteUser = supabaseDeleteUser;
 
     function saveJadwalPengajian(jadwalData, operatorUsername, callback, errorCallback) {
-      google.script.run
-        .withSuccessHandler(function(savedItem) {
+      supabaseSaveJadwalPengajian(jadwalData, operatorUsername)
+        .then(function(savedItem) {
           fetchDatabaseFromServer(function() {
             if (callback) callback(savedItem);
           });
         })
-        .withFailureHandler(function(err) {
+        .catch(function(err) {
           if (errorCallback) errorCallback(err);
-        })
-        .saveJadwalPengajianGAS(jadwalData, operatorUsername);
+        });
     }
 
     function deleteJadwalPengajian(id, operatorUsername, callback, errorCallback) {
-      google.script.run
-        .withSuccessHandler(function() {
+      supabaseDeleteJadwalPengajian(id, operatorUsername)
+        .then(function() {
           fetchDatabaseFromServer(function() {
             if (callback) callback();
           });
         })
-        .withFailureHandler(function(err) {
+        .catch(function(err) {
           if (errorCallback) errorCallback(err);
-        })
-        .deleteJadwalPengajianGAS(id, operatorUsername);
+        });
     }
 
     function savePresensiKehadiran(idPengajian, presensiList, operatorUsername, callback, errorCallback) {
-      google.script.run
-        .withSuccessHandler(function() {
+      supabaseSavePresensiKehadiran(idPengajian, presensiList, operatorUsername)
+        .then(function() {
           fetchDatabaseFromServer(function() {
             if (callback) callback();
           });
         })
-        .withFailureHandler(function(err) {
+        .catch(function(err) {
           if (errorCallback) errorCallback(err);
-        })
-        .savePresensiKehadiranGAS(idPengajian, presensiList, operatorUsername);
+        });
     }
 
     function saveMasterPengajar(pengajarData, operatorUsername, callback, errorCallback) {
-      google.script.run
-        .withSuccessHandler(function(savedItem) {
+      supabaseSaveMasterPengajar(pengajarData, operatorUsername)
+        .then(function(savedItem) {
           fetchDatabaseFromServer(function() {
             if (callback) callback(savedItem);
           });
         })
-        .withFailureHandler(function(err) {
+        .catch(function(err) {
           if (errorCallback) errorCallback(err);
-        })
-        .saveMasterPengajarGAS(pengajarData, operatorUsername);
+        });
     }
 
     function deleteMasterPengajar(id_pengajar, operatorUsername, callback, errorCallback) {
-      google.script.run
-        .withSuccessHandler(function() {
+      supabaseDeleteMasterPengajar(id_pengajar, operatorUsername)
+        .then(function() {
           fetchDatabaseFromServer(function() {
             if (callback) callback();
           });
         })
-        .withFailureHandler(function(err) {
+        .catch(function(err) {
           if (errorCallback) errorCallback(err);
-        })
-        .deleteMasterPengajarGAS(id_pengajar, operatorUsername);
+        });
     }
 
-
+    window.getJamaahList = getJamaahList;
+    window.getPengurusList = getPengurusList;
+    window.getKepalaKeluargaList = getKepalaKeluargaList;
+    window.getKartuKeluargaMappings = getKartuKeluargaMappings;
+    window.getAuditLogs = getAuditLogs;
+    window.getUsersList = getUsersList;
+    window.getKelompokList = getKelompokList;
+    window.getPendidikanList = getPendidikanList;
+    window.getDapuanList = getDapuanList;
+    window.getPekerjaanList = getPekerjaanList;
+    window.getHubunganList = getHubunganList;
+    window.getMasterMateriList = getMasterMateriList;
+    window.getMasterPengajarList = getMasterPengajarList;
+    window.getMasterJenisPengajianList = getMasterJenisPengajianList;
+    window.getMasterPesertaPengajianList = getMasterPesertaPengajianList;
+    window.getMasterGrupKustomList = getMasterGrupKustomList;
+    window.getMasterTempatKegiatanList = getTempatKegiatanList;
+    window.getJadwalPengajianList = getJadwalPengajianList;
+    window.getPresensiKehadiranList = getPresensiKehadiranList;
+    window.getCurrentUser = getCurrentUser;
+    window.logoutUser = logoutUser;
+    window.saveJamaah = saveJamaah;
+    window.deleteJamaah = deleteJamaah;
+    window.saveJadwalPengajian = saveJadwalPengajian;
+    window.deleteJadwalPengajian = deleteJadwalPengajian;
+    window.savePresensiKehadiran = savePresensiKehadiran;
+    window.saveMasterPengajar = saveMasterPengajar;
+    window.deleteMasterPengajar = deleteMasterPengajar;
+    window.fetchDatabaseFromServer = fetchDatabaseFromServer;
     window.getSupabaseClient = function() { return supabaseClient; };
     window.getUseSupabase = function() { return useSupabase; };

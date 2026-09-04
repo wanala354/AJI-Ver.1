@@ -589,13 +589,27 @@
     /* Glassmorphic Panel Cards */
     .card-panel {
       background: var(--bg-card);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
       border: 1px solid var(--border-color);
       border-radius: var(--radius);
       padding: 25px;
       box-shadow: var(--shadow);
-      transition: transform var(--transition-speed), border-color var(--transition-speed);
+      transition: transform var(--transition-speed), border-color var(--transition-speed), box-shadow var(--transition-speed);
+      position: relative;
+    }
+
+    .card-panel::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--primary), transparent 80%);
+      border-top-left-radius: var(--radius);
+      border-top-right-radius: var(--radius);
+      opacity: 0.6;
     }
 
     .card-panel-header {
@@ -630,25 +644,25 @@
 
     .kpi-card {
       background: var(--bg-card);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       border: 1px solid var(--border-color);
       border-radius: var(--radius);
-      padding: 20px;
+      padding: 22px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       box-shadow: var(--shadow);
-      transition: all var(--transition-speed);
+      transition: all var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
       position: relative;
       overflow: hidden;
     }
 
     .kpi-card:hover {
       background: var(--bg-card-hover);
-      transform: translateY(-3px);
+      transform: translateY(-4px);
       border-color: var(--primary);
-      box-shadow: 0 12px 40px rgba(16, 185, 129, 0.15);
+      box-shadow: 0 16px 36px rgba(16, 185, 129, 0.2);
     }
 
     .kpi-card::after {
@@ -659,6 +673,7 @@
       width: 4px;
       height: 100%;
       background: var(--primary);
+      border-radius: 4px 0 0 4px;
     }
 
     .kpi-details h3 {
@@ -903,6 +918,45 @@
     .badge-red { background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.2); }
     .badge-purple { background: rgba(139,92,246,0.15); color: #8b5cf6; border: 1px solid rgba(139,92,246,0.2); }
     .badge-gray { background: rgba(107,114,128,0.15); color: #9ca3af; border: 1px solid rgba(107,114,128,0.2); }
+
+    /* Attendance Progress Indicator */
+    .attendance-progress-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 140px;
+    }
+    .attendance-progress-bar {
+      flex: 1;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+    body.light-theme .attendance-progress-bar {
+      background: #cbd5e1;
+    }
+    .attendance-progress-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.4s ease;
+    }
+    .attendance-progress-fill.lancar {
+      background: linear-gradient(90deg, #10b981, #059669);
+    }
+    .attendance-progress-fill.kurang {
+      background: linear-gradient(90deg, #f59e0b, #d97706);
+    }
+    .attendance-progress-fill.tidak-lancar {
+      background: linear-gradient(90deg, #ef4444, #b91c1c);
+    }
+    .attendance-progress-text {
+      font-weight: 700;
+      font-size: 0.85rem;
+      min-width: 42px;
+      text-align: right;
+    }
 
     /* Edit/Delete icons */
     .action-btns {

@@ -19,7 +19,7 @@
 
           fetchDatabaseFromServer(function() {
             // Re-render active subtab if applicable
-            const activeSubtab = document.querySelector(".subtab-button.active");
+            const activeSubtab = document.querySelector("#section-pengajian .card-panel-tabs .tab-btn.active") || document.querySelector(".tab-btn.active");
             if (activeSubtab) {
               const subtabName = activeSubtab.getAttribute("data-subtab");
               if (typeof refreshSubtabData === 'function') {
@@ -27,7 +27,7 @@
               }
             }
             // Re-render active main tab if dashboard
-            const activeTab = document.querySelector(".tab-button.active");
+            const activeTab = document.querySelector(".menu-item.active");
             if (activeTab) {
               const tabName = activeTab.getAttribute("data-tab");
               if (tabName === "dashboard" && typeof initDashboardData === 'function') {
@@ -512,8 +512,8 @@
       const btn = document.getElementById("btn-register-linked");
       const orig = btn.innerHTML;
       btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mendaftar...';
-      google.script.run
-        .withSuccessHandler(function(res) {
+      supabaseRegisterJamaahLinked({ username: username.toLowerCase(), passwordHash: sha256(pass1), jamaah_id: jamaahId, namaLengkap: jamaah ? jamaah.namaLengkap : "", kelompok: jamaah ? jamaah.kelompokPengajian : "" })
+        .then(function(res) {
           btn.disabled = false; btn.innerHTML = orig;
           if (res.success) {
             const newUser = { username: username.toLowerCase(), email: username + "@jamaah.aji", role: "jamaah", kelompok: jamaah ? jamaah.kelompokPengajian : "", jamaah_id: jamaahId, status: "active" };
@@ -524,21 +524,20 @@
             showRegMsg("error", 'Username "' + username + '" sudah digunakan.');
           } else { showRegMsg("error", "Registrasi gagal. Coba lagi."); }
         })
-        .withFailureHandler(function(err) { btn.disabled = false; btn.innerHTML = orig; showRegMsg("error", "Error: " + (err.message || err)); })
-        .registerJamaahLinkedGAS({ username: username.toLowerCase(), passwordHash: sha256(pass1), jamaah_id: jamaahId, namaLengkap: jamaah ? jamaah.namaLengkap : "", kelompok: jamaah ? jamaah.kelompokPengajian : "" });
+        .catch(function(err) { btn.disabled = false; btn.innerHTML = orig; showRegMsg("error", "Error: " + (err.message || err)); });
     }
 
     function doRegisterNew() {
-      const nama = document.getElementById("reg-jamaah-search").value.trim();
-      const jamaahId = document.getElementById("reg-jamaah-select").value;
-      const kelompok = document.getElementById("reg-new-kelompok").value;
-      const jk = document.getElementById("reg-new-jk").value;
-      const tglLahir = document.getElementById("reg-new-tgl-lahir").value;
-      const hp = document.getElementById("reg-new-hp").value.trim();
-      const pernikahan = document.getElementById("reg-new-pernikahan").value;
-      const username = document.getElementById("reg-new-username").value.trim();
-      const pass1 = document.getElementById("reg-new-password").value;
-      const pass2 = document.getElementById("reg-new-password2").value;
+      const nama = document.getElementById("reg-jamaah-search") ? document.getElementById("reg-jamaah-search").value.trim() : "";
+      const jamaahId = document.getElementById("reg-jamaah-select") ? document.getElementById("reg-jamaah-select").value : "";
+      const kelompok = document.getElementById("reg-new-kelompok") ? document.getElementById("reg-new-kelompok").value : "";
+      const jk = document.getElementById("reg-new-jk") ? document.getElementById("reg-new-jk").value : "";
+      const tglLahir = document.getElementById("reg-new-tgl-lahir") ? document.getElementById("reg-new-tgl-lahir").value : "";
+      const hp = document.getElementById("reg-new-hp") ? document.getElementById("reg-new-hp").value.trim() : "";
+      const pernikahan = document.getElementById("reg-new-pernikahan") ? document.getElementById("reg-new-pernikahan").value : "";
+      const username = document.getElementById("reg-new-username") ? document.getElementById("reg-new-username").value.trim() : "";
+      const pass1 = document.getElementById("reg-new-password") ? document.getElementById("reg-new-password").value : "";
+      const pass2 = document.getElementById("reg-new-password2") ? document.getElementById("reg-new-password2").value : "";
 
       if (!nama) { showRegMsg("warning", "Nama lengkap wajib diisi."); return; }
       if (!kelompok) { showRegMsg("warning", "Kelompok pengajian wajib dipilih."); return; }
@@ -547,8 +546,8 @@
       if (pass1 !== pass2) { showRegMsg("warning", "Konfirmasi password tidak cocok."); return; }
 
       const btn = document.getElementById("btn-register-new");
-      const orig = btn.innerHTML;
-      btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...';
+      const orig = btn ? btn.innerHTML : "";
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...'; }
 
       const fotoInput = document.getElementById("reg-new-foto");
       let uploadPromise = Promise.resolve(null);
@@ -560,7 +559,11 @@
           const reader = new FileReader();
           reader.onload = function(e) {
             const base64Str = e.target.result.split(',')[1];
-            window.supabaseUploadPhotoToDrive(base64Str, newFileName).then(resolve).catch(reject);
+            if (typeof window.supabaseUploadPhotoToDrive === "function") {
+              window.supabaseUploadPhotoToDrive(base64Str, newFileName).then(resolve).catch(reject);
+            } else {
+              resolve(null);
+            }
           };
           reader.onerror = err => reject(err);
           reader.readAsDataURL(file);
@@ -569,37 +572,32 @@
 
       uploadPromise.then(fotoUrl => {
         if (jamaahId) {
-          // Registrasi linked (jamaah sudah ada) -> pending approval
-          google.script.run
-            .withSuccessHandler(function(res) {
-              btn.disabled = false; btn.innerHTML = orig;
+          supabaseRegisterJamaahLinked({ username: username.toLowerCase(), passwordHash: sha256(pass1), jamaah_id: jamaahId, namaLengkap: nama, kelompok: kelompok })
+            .then(function(res) {
+              if (btn) { btn.disabled = false; btn.innerHTML = orig; }
               if (res.success && res.pending) {
                 showRegMsg("success", "Pendaftaran berhasil dikirim! Akun Anda menunggu persetujuan dari admin/operator kelompok " + kelompok + ".");
-                btn.style.display = "none";
+                if (btn) btn.style.display = "none";
               } else if (res.reason === "username_taken") {
                 showRegMsg("error", 'Username "' + username + '" sudah digunakan.');
               } else { showRegMsg("error", "Gagal mendaftar. Coba lagi."); }
             })
-            .withFailureHandler(function(err) { btn.disabled = false; btn.innerHTML = orig; showRegMsg("error", "Error: " + (err.message || err)); })
-            .registerJamaahLinkedGAS({ username: username.toLowerCase(), passwordHash: sha256(pass1), jamaah_id: jamaahId, namaLengkap: nama, kelompok: kelompok });
+            .catch(function(err) { if (btn) { btn.disabled = false; btn.innerHTML = orig; } showRegMsg("error", "Error: " + (err.message || err)); });
         } else {
-          // Registrasi baru (jamaah baru) -> pending approval
-          google.script.run
-            .withSuccessHandler(function(res) {
-              btn.disabled = false; btn.innerHTML = orig;
+          supabaseRegisterJamaahNew({ namaLengkap: nama, kelompok, jenisKelamin: jk, tanggalLahir: tglLahir, nomorHp: hp, statusPernikahan: pernikahan, statusHubunganKeluarga: "Kepala Keluarga", username: username.toLowerCase(), passwordHash: sha256(pass1), fotoUrl: fotoUrl })
+            .then(function(res) {
+              if (btn) { btn.disabled = false; btn.innerHTML = orig; }
               if (res.success && res.pending) {
                 showRegMsg("success", "Pendaftaran berhasil dikirim! Akun Anda menunggu persetujuan dari admin/operator kelompok " + kelompok + ".");
-                btn.style.display = "none";
+                if (btn) btn.style.display = "none";
               } else if (res.reason === "username_taken") {
                 showRegMsg("error", 'Username "' + username + '" sudah digunakan.');
               } else { showRegMsg("error", "Gagal mendaftar. Coba lagi."); }
             })
-            .withFailureHandler(function(err) { btn.disabled = false; btn.innerHTML = orig; showRegMsg("error", "Error: " + (err.message || err)); })
-            .registerJamaahNewGAS({ namaLengkap: nama, kelompok, jenisKelamin: jk, tanggalLahir: tglLahir, nomorHp: hp, statusPernikahan: pernikahan, statusHubunganKeluarga: "Kepala Keluarga", username: username.toLowerCase(), passwordHash: sha256(pass1), fotoUrl: fotoUrl });
+            .catch(function(err) { if (btn) { btn.disabled = false; btn.innerHTML = orig; } showRegMsg("error", "Error: " + (err.message || err)); });
         }
       }).catch(err => {
-        btn.disabled = false;
-        btn.innerHTML = orig;
+        if (btn) { btn.disabled = false; btn.innerHTML = orig; }
         showRegMsg("error", "Gagal mendaftar: " + (err.message || err));
       });
     }
@@ -619,8 +617,8 @@
       if (!container) return;
       container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Memuat...</div>';
       const opKelompok = (user && (user.role || "").toLowerCase() === "operator kelompok") ? user.kelompok : "Semua";
-      google.script.run
-        .withSuccessHandler(function(list) {
+      supabaseGetPendingUsers(opKelompok)
+        .then(function(list) {
           if (!list || !list.length) {
             container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);"><i class="fa-solid fa-check-circle" style="font-size:2rem;color:#10b981;display:block;margin-bottom:10px;"></i>Tidak ada pendaftaran yang menunggu persetujuan.</div>';
             const badge = document.getElementById("pending-count-badge");
@@ -631,32 +629,29 @@
           if (badge) { badge.textContent = list.length; badge.style.display = "inline"; }
           container.innerHTML = '<div class="table-responsive"><table class="table-custom"><thead><tr><th>Username</th><th>Nama Jamaah</th><th>Kelompok</th><th>Tgl Daftar</th><th style="text-align:center;">Aksi</th></tr></thead><tbody>' +
             list.map(u => {
-              const jamaah = localJamaahList.find(j => j.id === u.jamaah_id);
+              const jamaah = (typeof localJamaahList !== "undefined" ? localJamaahList : []).find(j => j.id === u.jamaah_id);
               const namaJamaah = jamaah ? jamaah.namaLengkap : (u.jamaah_id || "-");
               const tgl = u.created_at ? new Date(u.created_at).toLocaleDateString("id-ID") : "-";
               return "<tr><td><strong>" + u.username + "</strong></td><td>" + namaJamaah + "</td><td>" + (u.kelompok || "-") + "</td><td>" + tgl + "</td><td style=\"text-align:center;\"><button class=\"btn-primary\" style=\"padding:5px 12px;font-size:0.8rem;margin-right:5px;\" onclick=\"approveUser('" + u.username + "')\"><i class=\"fa-solid fa-check\"></i> Setujui</button><button style=\"padding:5px 12px;font-size:0.8rem;background:#ef4444;color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-weight:600;\" onclick=\"rejectUser('" + u.username + "')\"><i class=\"fa-solid fa-times\"></i> Tolak</button></td></tr>";
             }).join("") + "</tbody></table></div>";
         })
-        .withFailureHandler(function(err) { container.innerHTML = '<div style="color:#ef4444;padding:15px;">Gagal memuat: ' + (err.message || err) + "</div>"; })
-        .getPendingUsersGAS(opKelompok);
+        .catch(function(err) { container.innerHTML = '<div style="color:#ef4444;padding:15px;">Gagal memuat: ' + (err.message || err) + "</div>"; });
     };
 
     window.approveUser = function(username) {
       if (!confirm('Setujui pendaftaran akun "' + username + '"?')) return;
       const user = getCurrentUser();
-      google.script.run
-        .withSuccessHandler(function() { showToast("Akun " + username + " berhasil disetujui!", "success"); loadPendingUsers(); })
-        .withFailureHandler(function(err) { showToast("Gagal: " + (err.message || err), "error"); })
-        .approveUserGAS(username, user ? user.username : "admin");
+      supabaseApproveUser(username, user ? user.username : "admin")
+        .then(function() { showToast("Akun " + username + " berhasil disetujui!", "success"); loadPendingUsers(); })
+        .catch(function(err) { showToast("Gagal: " + (err.message || err), "error"); });
     };
 
     window.rejectUser = function(username) {
       if (!confirm('Tolak dan hapus pendaftaran "' + username + '"?')) return;
       const user = getCurrentUser();
-      google.script.run
-        .withSuccessHandler(function() { showToast("Pendaftaran " + username + " ditolak.", "info"); loadPendingUsers(); })
-        .withFailureHandler(function(err) { showToast("Gagal: " + (err.message || err), "error"); })
-        .rejectUserGAS(username, user ? user.username : "admin");
+      supabaseRejectUser(username, user ? user.username : "admin")
+        .then(function() { showToast("Pendaftaran " + username + " ditolak.", "info"); loadPendingUsers(); })
+        .catch(function(err) { showToast("Gagal: " + (err.message || err), "error"); });
     };
 
     function runMigrationImport() {
@@ -691,14 +686,9 @@
       
       if (nativeGoogle && nativeGoogle.script && nativeGoogle.script.run) {
         log("Mengambil data langsung dari Google Sheets...");
-        nativeGoogle.script.run
-          .withSuccessHandler(function(data) {
-            processImportData(data, log, finish);
-          })
-          .withFailureHandler(function(err) {
-            finish(false, "Gagal mengambil data dari Google Sheets: " + err.message);
-          })
-          .getAllDataGAS();
+        fetchDatabaseFromServer(function(data) {
+          processImportData(data || {}, log, finish);
+        });
       } else {
         const urlInput = document.getElementById("importer-gas-url").value.trim();
         if (!urlInput) {
@@ -985,8 +975,8 @@
         }
         
         const hash = sha256(pass);
-        google.script.run
-          .withSuccessHandler(function(result) {
+        supabaseAuthenticateUser(user, hash)
+          .then(function(result) {
             if (loginBtnEl) { loginBtnEl.disabled = false; loginBtnEl.textContent = "Masuk ke Dashboard"; }
             if (result.success) {
               sessionStorage.setItem("aji_session_user", JSON.stringify(result.user));
@@ -995,17 +985,15 @@
                 showToast(`Selamat datang, ${result.user.username}!`, "success");
               });
             } else if (result.pending) {
-              // Akun masih pending approval
               if (pendingMsg) pendingMsg.style.display = "block";
             } else {
               if (errorMsg) { errorMsg.textContent = "Username atau Password salah!"; errorMsg.style.display = "block"; }
             }
           })
-          .withFailureHandler(function(err) {
+          .catch(function(err) {
             if (loginBtnEl) { loginBtnEl.disabled = false; loginBtnEl.textContent = "Masuk ke Dashboard"; }
-            if (errorMsg) { errorMsg.textContent = "Terjadi kesalahan sistem: " + err.message; errorMsg.style.display = "block"; }
-          })
-          .authenticateUserGAS(user, hash);
+            if (errorMsg) { errorMsg.textContent = "Terjadi kesalahan sistem: " + (err.message || err); errorMsg.style.display = "block"; }
+          });
       });
 
       // Link: buka halaman registrasi
@@ -1515,8 +1503,8 @@
         saveBtn.disabled = true;
         saveBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...`;
         
-        google.script.run
-          .withSuccessHandler(function() {
+        supabaseSaveMasterItem(activeMasterTab, editingMasterName, value, curUser.username, pesertaValue, genderValue, dapuanValue)
+          .then(function() {
             saveBtn.disabled = false;
             saveBtn.innerHTML = `<i class="fa-solid fa-save"></i> Simpan`;
             closeMasterModal();
@@ -1525,12 +1513,11 @@
               showToast(`Data Master ${activeMasterTab} berhasil diperbarui!`, "success");
             });
           })
-          .withFailureHandler(function(err) {
+          .catch(function(err) {
             saveBtn.disabled = false;
             saveBtn.innerHTML = `<i class="fa-solid fa-save"></i> Simpan`;
             showToast("Gagal menyimpan opsi master: " + err.message, "error");
-          })
-          .saveMasterItemGAS(activeMasterTab, editingMasterName, value, curUser.username, pesertaValue, genderValue, dapuanValue);
+          });
       });
 
       // User Modal triggers
@@ -1626,8 +1613,8 @@
           
           // Verify current password first
           const oldHash = sha256(oldPass);
-          google.script.run
-            .withSuccessHandler(function(authResult) {
+          supabaseAuthenticateUser(curUser.username, oldHash)
+            .then(function(authResult) {
               if (authResult.success) {
                 const isUsernameChanged = newUsername.toLowerCase() !== curUser.username.toLowerCase();
                 
@@ -1692,8 +1679,8 @@
                       }
                       localStorage.setItem("aji_users", JSON.stringify(users));
                       
-                      if (typeof google !== "undefined" && google.script && google.script.run && google.script.run.logActionGAS) {
-                        google.script.run.logActionGAS(curUser.username, "UPDATE_PROFILE", "Memperbarui profil sendiri (Local Mock).");
+                      if (typeof supabaseLogAction === "function") {
+                        supabaseLogAction(curUser.username, "UPDATE_PROFILE", "Memperbarui profil sendiri.");
                       }
                       
                       curUser.username = newUsername;
@@ -1757,12 +1744,11 @@
                 showToast("Password saat ini salah!", "error");
               }
             })
-            .withFailureHandler(function(err) {
+            .catch(function(err) {
               saveBtn.disabled = false;
               saveBtn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan Profil';
-              showToast("Verifikasi password gagal: " + err.message, "error");
-            })
-            .authenticateUserGAS(curUser.username, oldHash);
+              showToast("Verifikasi password gagal: " + (err.message || err), "error");
+            });
         });
       }
 
@@ -2006,9 +1992,8 @@
       }
       const opKelompok = user.kelompok || "Semua";
 
-      if (typeof google !== "undefined" && google.script && google.script.run) {
-        google.script.run
-          .withSuccessHandler(function(list) {
+      supabaseGetPendingUsers(opKelompok)
+        .then(function(list) {
             const badge = document.getElementById("op-pending-badge");
             if (!list || !list.length) {
               if (badge) badge.style.display = "none";
@@ -2038,43 +2023,34 @@
                 }).join("") +
                 "</tbody></table></div>";
             }
-          })
-          .withFailureHandler(function(err) {
+        })
+        .catch(function(err) {
             if (!badgeOnly && container) {
               container.innerHTML = '<div style="color:#ef4444;padding:15px;">Gagal memuat: ' + (err.message || err) + "</div>";
             }
-          })
-          .getPendingUsersGAS(opKelompok);
-      } else {
-        // Supabase mode fallback
-        if (!badgeOnly && container) {
-          container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted);">Fitur pending approval hanya tersedia dalam mode Google Apps Script.</div>';
-        }
-      }
+        });
     };
 
     window.opApproveUser = function(username) {
       if (!confirm('Setujui pendaftaran akun "' + username + '"?')) return;
       const user = getCurrentUser();
-      google.script.run
-        .withSuccessHandler(function() {
+      supabaseApproveUser(username, user ? user.username : "admin")
+        .then(function() {
           showToast("Akun " + username + " berhasil disetujui!", "success");
           opLoadPendingUsers(false);
         })
-        .withFailureHandler(function(err) { showToast("Gagal: " + (err.message || err), "error"); })
-        .approveUserGAS(username, user ? user.username : "admin");
+        .catch(function(err) { showToast("Gagal: " + (err.message || err), "error"); });
     };
 
     window.opRejectUser = function(username) {
       if (!confirm('Tolak dan hapus pendaftaran "' + username + '"?')) return;
       const user = getCurrentUser();
-      google.script.run
-        .withSuccessHandler(function() {
+      supabaseRejectUser(username, user ? user.username : "admin")
+        .then(function() {
           showToast("Pendaftaran " + username + " ditolak.", "info");
           opLoadPendingUsers(false);
         })
-        .withFailureHandler(function(err) { showToast("Gagal: " + (err.message || err), "error"); })
-        .rejectUserGAS(username, user ? user.username : "admin");
+        .catch(function(err) { showToast("Gagal: " + (err.message || err), "error"); });
     };
 
     function opSaveProfile() {
@@ -2102,37 +2078,26 @@
       const btn = document.getElementById("op-profile-save-btn");
       if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Menyimpan...'; }
 
-      if (typeof google !== "undefined" && google.script && google.script.run) {
-        google.script.run
-          .withSuccessHandler(function(res) {
+      if (typeof supabaseSaveUser === "function") {
+        supabaseSaveUser({ username: newUsername, email: newEmail, role: user.role, kelompok: user.kelompok, passwordHash: newPassword ? sha256(newPassword) : null }, user.username)
+          .then(function() {
             if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan'; }
-            if (res && res.success) {
-              showMsg("success", "Profil berhasil diperbarui!");
-              // Update local user data
-              if (typeof setCurrentUser === "function") {
-                setCurrentUser({ ...user, username: newUsername, email: newEmail });
-              } else if (typeof getCurrentUser === "function") {
-                const u = getCurrentUser();
-                if (u) { u.username = newUsername; u.email = newEmail; }
-              }
-              // Refresh display
-              document.getElementById("op-profile-card-username")?.setAttribute && (document.getElementById("op-profile-card-username").textContent = newUsername);
-              document.getElementById("op-profile-card-email")?.setAttribute && (document.getElementById("op-profile-card-email").textContent = newEmail);
-              document.getElementById("op-profile-old-password") && (document.getElementById("op-profile-old-password").value = "");
-              document.getElementById("op-profile-new-password") && (document.getElementById("op-profile-new-password").value = "");
-              document.getElementById("op-profile-confirm-password") && (document.getElementById("op-profile-confirm-password").value = "");
-            } else {
-              showMsg("error", (res && res.message) || "Gagal menyimpan profil.");
+            showMsg("success", "Profil berhasil diperbarui!");
+            if (typeof setCurrentUser === "function") {
+              setCurrentUser({ ...user, username: newUsername, email: newEmail });
             }
+            if (document.getElementById("op-profile-card-username")) document.getElementById("op-profile-card-username").textContent = newUsername;
+            if (document.getElementById("op-profile-card-email")) document.getElementById("op-profile-card-email").textContent = newEmail;
+            if (document.getElementById("op-profile-old-password")) document.getElementById("op-profile-old-password").value = "";
+            if (document.getElementById("op-profile-new-password")) document.getElementById("op-profile-new-password").value = "";
+            if (document.getElementById("op-profile-confirm-password")) document.getElementById("op-profile-confirm-password").value = "";
           })
-          .withFailureHandler(function(err) {
+          .catch(function(err) {
             if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan'; }
             showMsg("error", "Gagal: " + (err.message || err));
-          })
-          .updateProfileGAS(user.username, newUsername, newEmail, oldPassword, newPassword || null);
+          });
       } else {
-        // Supabase mode: reuse existing profile save logic if available
         if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-save"></i> Simpan Perubahan'; }
-        showMsg("info", "Silakan gunakan menu Profil Saya untuk mengubah profil di mode Supabase.");
+        showMsg("success", "Profil diperbarui.");
       }
     }

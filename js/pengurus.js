@@ -214,21 +214,11 @@
               document.getElementById('pengurusModal').classList.remove('active'); 
               showToast(id ? 'Data Pengurus berhasil diperbarui' : 'Data Pengurus berhasil disimpan', 'success');
               
-              if (typeof google !== 'undefined' && google && google.script) {
-                fetchDatabaseFromServer(function() {
-                  if (document.getElementById("section-pengurus").classList.contains("active")) {
-                    renderPengurusTable();
-                  }
-                });
-              } else {
-                // If local/mock testing, just refresh manually
-                supabaseClient.from("pengurus").select("*").then(({ data }) => { 
-                  if(data) localPengurusList = data; 
-                  if (document.getElementById("section-pengurus").classList.contains("active")) {
-                    renderPengurusTable();
-                  }
-                });
-              }
+              fetchDatabaseFromServer(function() {
+                if (document.getElementById("section-pengurus") && document.getElementById("section-pengurus").classList.contains("active")) {
+                  renderPengurusTable();
+                }
+              });
             }
           })
           .catch(err => {
@@ -273,20 +263,11 @@
             } else { 
               showToast('Data Pengurus berhasil dihapus', 'success');
               
-              if (typeof google !== 'undefined' && google && google.script) {
-                fetchDatabaseFromServer(function() {
-                  if (document.getElementById("section-pengurus").classList.contains("active")) {
-                    renderPengurusTable();
-                  }
-                });
-              } else {
-                supabaseClient.from("pengurus").select("*").then(({ data }) => { 
-                  if(data) localPengurusList = data; 
-                  if (document.getElementById("section-pengurus").classList.contains("active")) {
-                    renderPengurusTable();
-                  }
-                });
-              }
+              fetchDatabaseFromServer(function() {
+                if (document.getElementById("section-pengurus") && document.getElementById("section-pengurus").classList.contains("active")) {
+                  renderPengurusTable();
+                }
+              });
             }
           })
           .catch(err => {

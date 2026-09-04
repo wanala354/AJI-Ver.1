@@ -774,19 +774,20 @@ window.openPresensiModalPortal = function(jadwalId, status) {
 window.doSelfCheckIn = function(jadwalId, status, keterangan) {
   const user = getCurrentUser();
   if (!user || !localCurrentJamaahId) return;
-  google.script.run
-    .withSuccessHandler(function() {
-      fetchDatabaseFromServer(function() {
-        alert("Alhamdulillah Jazakumullahu khoiro, Anda sudah mengisi Presensi");
-        loadJamaahJadwal();
-        loadJamaahDashboard();
-        if (typeof showToast === 'function') showToast('Check-in berhasil: ' + status, 'success');
+  if (typeof supabaseSelfCheckIn === 'function') {
+    supabaseSelfCheckIn(jadwalId, localCurrentJamaahId, status, keterangan || '', user.username)
+      .then(() => {
+        fetchDatabaseFromServer(function() {
+          alert("Alhamdulillah Jazakumullahu khoiro, Anda sudah mengisi Presensi");
+          loadJamaahJadwal();
+          loadJamaahDashboard();
+          if (typeof showToast === 'function') showToast('Check-in berhasil: ' + status, 'success');
+        });
+      })
+      .catch(err => {
+        if (typeof showToast === 'function') showToast('Gagal check-in: ' + (err.message || err), 'error');
       });
-    })
-    .withFailureHandler(function(err) {
-      if (typeof showToast === 'function') showToast('Gagal check-in: ' + (err.message || err), 'error');
-    })
-    .selfCheckInGAS(jadwalId, localCurrentJamaahId, status, keterangan || '', user.username);
+  }
 };
 
 window.openJamaahPresensiModal = function(jadwalId, status = 'Hadir Fisik') {

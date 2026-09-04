@@ -455,16 +455,78 @@
         }
       });
 
-      // Sambung composition
-      const kelancaranOpts = ["Lancar", "Kurang Lancar", "Perlu Perhatian"];
-      const sambungCounts = kelancaranOpts.map(p => jamaah.filter(j => j.kelancaranSambung === p).length);
+      // Sambung composition (Tingkat Kelancaran Sambung berdasarkan rekap kehadiran 1 bulan)
+      // Kategori: 51% - 100% = Lancar, 21% - 50% = Kurang Lancar, 1% - 20% / <=20% = Tidak Lancar
+      const kelancaranOpts = ["Lancar", "Kurang Lancar", "Tidak Lancar"];
+      
+      const allJadwal = typeof getJadwalPengajianList === 'function' ? (getJadwalPengajianList() || []) : (typeof localJadwalPengajian !== 'undefined' ? localJadwalPengajian : []);
+      const allPresensi = typeof getPresensiKehadiranList === 'function' ? (getPresensiKehadiranList() || []) : (typeof localPresensiKehadiran !== 'undefined' ? localPresensiKehadiran : []);
+      
+      const monthFilterEl = document.getElementById("dashboard-bulan-filter");
+      const todayStr = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
+      const currentYearMonth = monthFilterEl && monthFilterEl.value ? monthFilterEl.value : todayStr.substring(0, 7);
+
+      const monthSessions = allJadwal.filter(s => s && s.tanggal && s.tanggal.startsWith(currentYearMonth));
+
+      // Build presensi lookup set: key = `${id_pengajian}_${id_jamaah}`
+      const presensiSet = new Set();
+      allPresensi.forEach(p => {
+        if (p && p.id_pengajian && p.id_jamaah) {
+          const statusLower = (p.status || "").trim().toLowerCase();
+          if (statusLower === "hadir fisik" || statusLower === "online" || statusLower === "hadir") {
+            presensiSet.add(`${String(p.id_pengajian).trim()}_${String(p.id_jamaah).trim()}`);
+          }
+        }
+      });
+
+      let countLancar = 0;
+      let countKurangLancar = 0;
+      let countTidakLancar = 0;
+
+      jamaah.forEach(j => {
+        // Find sessions in month filter that apply to this jamaah
+        const eligibleSessions = monthSessions.filter(s => {
+          if (!localIsJamaahEligibleForJenis(j, s.jenis_pengajian)) return false;
+
+          const sessionKelompok = (s.kelompok_pengajian || "").trim();
+          if (sessionKelompok && sessionKelompok !== "Semua" && sessionKelompok !== "Desa" && sessionKelompok !== "Daerah") {
+            if (j.kelompokPengajian !== sessionKelompok) return false;
+          }
+          return true;
+        });
+
+        if (eligibleSessions.length === 0) {
+          // Jika tidak ada sesi dalam bulan ini untuk jamaah tersebut
+          countTidakLancar++;
+        } else {
+          let attendedCount = 0;
+          eligibleSessions.forEach(s => {
+            if (presensiSet.has(`${String(s.id).trim()}_${String(j.id).trim()}`)) {
+              attendedCount++;
+            }
+          });
+
+          const pct = Math.round((attendedCount / eligibleSessions.length) * 100);
+
+          if (pct > 50) {
+            countLancar++;
+          } else if (pct >= 21) {
+            countKurangLancar++;
+          } else {
+            countTidakLancar++;
+          }
+        }
+      });
+
+      const sambungCounts = [countLancar, countKurangLancar, countTidakLancar];
+
       const ctxSambung = document.getElementById("chart-sambung").getContext("2d");
       charts.sambung = new Chart(ctxSambung, {
         type: "bar",
         data: {
           labels: kelancaranOpts,
           datasets: [{
-            label: "Tingkat Kelancaran",
+            label: "Jumlah Jamaah",
             data: sambungCounts,
             backgroundColor: ["rgba(16, 185, 129, 0.65)", "rgba(245, 158, 11, 0.65)", "rgba(239, 68, 68, 0.65)"],
             borderColor: ["#10b981", "#f59e0b", "#ef4444"],
@@ -475,7 +537,19 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const val = context.raw || 0;
+                  const total = sambungCounts.reduce((a, b) => a + b, 0);
+                  const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                  return ` ${val} Jamaah (${pct}%)`;
+                }
+              }
+            }
+          },
           scales: {
             y: { ticks: { color: textColor }, grid: { color: gridColor }, beginAtZero: true },
             x: { ticks: { color: textColor }, grid: { display: false } }
@@ -982,8 +1056,9 @@
       link.click();
       document.body.removeChild(link);
       
-      const currUser = getCurrentUser();
-      google.script.run.logActionGAS(currUser.username, "EXPORT", `Mengekspor Laporan data jamaah kelompok '${groupLabel}' ke CSV.`);
+      if (typeof supabaseLogAction === 'function') {
+        supabaseLogAction(currUser.username, "EXPORT", `Mengekspor Laporan data jamaah kelompok '${groupLabel}' ke CSV.`);
+      }
       showToast(`Laporan untuk kelompok ${groupLabel} berhasil diunduh dalam bentuk CSV!`, "success");
     }
 
