@@ -218,8 +218,20 @@
         });
         const eligibleTeksIds = new Set(eligibleTeksJamaah.map(j => j.id));
         
+        const isConductedSessionKPI = (s) => {
+          if (!s || !s.tanggal) return false;
+          if (s.tanggal < todayStr) return true;
+          const now = new Date();
+          const timeNow = String(now.getHours()).padStart(2, '0') + ":" + String(now.getMinutes()).padStart(2, '0');
+          if (s.tanggal === todayStr) {
+            return timeNow >= (s.waktu_selesai || "23:59") || allPresensi.some(p => p && String(p.id_pengajian) === String(s.id));
+          }
+          return allPresensi.some(p => p && String(p.id_pengajian) === String(s.id));
+        };
+
         const teksSessions = allJadwal.filter(s => {
           if (!s || !s.tanggal) return false;
+          if (!isConductedSessionKPI(s)) return false;
           const isTeks = (s.jenis_pengajian || "").trim().toLowerCase() === "teks";
           const isCurrentMonth = s.tanggal.startsWith(currentYearMonth);
           return isTeks && isCurrentMonth;
@@ -512,9 +524,20 @@
         
         const monthFilterEl = document.getElementById("dashboard-bulan-filter");
         const todayStr = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
+        const now = new Date();
+        const timeNow = String(now.getHours()).padStart(2, '0') + ":" + String(now.getMinutes()).padStart(2, '0');
         const currentYearMonth = monthFilterEl && monthFilterEl.value ? monthFilterEl.value : todayStr.substring(0, 7);
 
-        const monthSessions = allJadwal.filter(s => s && s.tanggal && s.tanggal.startsWith(currentYearMonth));
+        const isConductedSessionChart = (s) => {
+          if (!s || !s.tanggal) return false;
+          if (s.tanggal < todayStr) return true;
+          if (s.tanggal === todayStr) {
+            return timeNow >= (s.waktu_selesai || "23:59") || allPresensi.some(p => p && String(p.id_pengajian) === String(s.id));
+          }
+          return allPresensi.some(p => p && String(p.id_pengajian) === String(s.id));
+        };
+
+        const monthSessions = allJadwal.filter(s => s && s.tanggal && s.tanggal.startsWith(currentYearMonth) && isConductedSessionChart(s));
 
         // Build presensi lookup set: key = `${id_pengajian}_${id_jamaah}`
         const presensiSet = new Set();
@@ -849,15 +872,27 @@
       try {
         const monthFilterEl = document.getElementById("report-filter-bulan");
         const todayStr = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
+        const now = new Date();
+        const timeNow = String(now.getHours()).padStart(2, '0') + ":" + String(now.getMinutes()).padStart(2, '0');
         const currentYearMonth = monthFilterEl && monthFilterEl.value ? monthFilterEl.value : todayStr.substring(0, 7);
         
         const allJadwal = getJadwalPengajianList() || [];
         const allPresensi = getPresensiKehadiranList() || [];
+
+        const isConductedSessionGauge = (s) => {
+          if (!s || !s.tanggal) return false;
+          if (s.tanggal < todayStr) return true;
+          if (s.tanggal === todayStr) {
+            return timeNow >= (s.waktu_selesai || "23:59") || allPresensi.some(p => p && String(p.id_pengajian) === String(s.id));
+          }
+          return allPresensi.some(p => p && String(p.id_pengajian) === String(s.id));
+        };
         
         // --- 1. Pengajian Sambung (Tingkat Daerah, Desa, Kelompok) ---
         const calculateSambungForTingkat = (tingkatKey) => {
           const sessions = allJadwal.filter(s => {
             if (!s || !s.tanggal || !s.jenis_pengajian || !s.tingkat_pengajian) return false;
+            if (!isConductedSessionGauge(s)) return false;
             const isCurrentMonth = s.tanggal.startsWith(currentYearMonth);
             const isSambung = s.jenis_pengajian.trim().toLowerCase() === "sambung";
             const tkLower = s.tingkat_pengajian.toLowerCase();
@@ -916,6 +951,7 @@
           const cleanTarget = jenisKey.toLowerCase().replace(/[^a-z0-9]/g, '');
           const sessions = allJadwal.filter(s => {
             if (!s || !s.tanggal || !s.jenis_pengajian) return false;
+            if (!isConductedSessionGauge(s)) return false;
             const isCurrentMonth = s.tanggal.startsWith(currentYearMonth);
             const cleanJenis = s.jenis_pengajian.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
             const isTargetJenis = cleanJenis === cleanTarget;
@@ -977,6 +1013,7 @@
         // --- 2. Pengajian Teks (Unique Attendee per Month) ---
         const teksSessions = allJadwal.filter(s => {
           if (!s || !s.tanggal || !s.jenis_pengajian) return false;
+          if (!isConductedSessionGauge(s)) return false;
           const isCurrentMonth = s.tanggal.startsWith(currentYearMonth);
           const isTeks = s.jenis_pengajian.trim().toLowerCase() === "teks";
           

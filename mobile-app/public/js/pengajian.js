@@ -1513,10 +1513,25 @@ window.calculateAndRenderMonitoring = function(isSesiChange = false) {
     }
   }
   
+  const todayStr = formatDateForCompare(tzDate);
+  const timeNowStr = String(tzDate.getHours()).padStart(2, '0') + ":" + String(tzDate.getMinutes()).padStart(2, '0');
+
+  const isConductedSession = (s) => {
+    if (!s || !s.tanggal) return false;
+    if (s.tanggal < todayStr) return true;
+    if (s.tanggal === todayStr) {
+      if (timeNowStr >= (s.waktu_selesai || "23:59")) return true;
+      return presensiDb.some(p => p && String(p.id_pengajian) === String(s.id));
+    }
+    return presensiDb.some(p => p && String(p.id_pengajian) === String(s.id));
+  };
+
   const selectedSesiId = sesiSelect ? sesiSelect.value : "";
   let filteredSchedules = periodSchedules;
   if (selectedSesiId) {
     filteredSchedules = periodSchedules.filter(s => s.id == selectedSesiId);
+  } else {
+    filteredSchedules = periodSchedules.filter(isConductedSession);
   }
   
   const totalSesi = filteredSchedules.length;
@@ -1654,6 +1669,23 @@ window.updateAttendanceTrendChart = function() {
   if (filterJenis) {
     targetSchedules = targetSchedules.filter(s => s.jenis_pengajian === filterJenis);
   }
+
+  const tzDateTrend = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Jakarta" }));
+  const y = tzDateTrend.getFullYear();
+  const m = String(tzDateTrend.getMonth() + 1).padStart(2, '0');
+  const day = String(tzDateTrend.getDate()).padStart(2, '0');
+  const todayStrTrend = y + '-' + m + '-' + day;
+  const timeNowTrend = String(tzDateTrend.getHours()).padStart(2, '0') + ":" + String(tzDateTrend.getMinutes()).padStart(2, '0');
+
+  targetSchedules = targetSchedules.filter(s => {
+    if (!s || !s.tanggal) return false;
+    if (s.tanggal < todayStrTrend) return true;
+    if (s.tanggal === todayStrTrend) {
+      if (timeNowTrend >= (s.waktu_selesai || "23:59")) return true;
+      return presensiDb.some(p => p && String(p.id_pengajian) === String(s.id));
+    }
+    return presensiDb.some(p => p && String(p.id_pengajian) === String(s.id));
+  });
   
   // Sort schedules by date ascending for chronological order
   targetSchedules.sort((a, b) => a.tanggal.localeCompare(b.tanggal));

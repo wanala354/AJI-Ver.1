@@ -111,8 +111,7 @@ window.loadJamaahDashboard = function() {
   });
 
   const sudahLewat = filteredJadwal.filter(j => {
-    const pr = allPresensi.find(p => p && p.id_pengajian == j.id && p.id_jamaah === jamaahId);
-    const hasPresensi = pr && (pr.status === 'Hadir Fisik' || pr.status === 'Online' || pr.status === 'Izin');
+    const hasPresensi = allPresensi.some(p => p && String(p.id_pengajian) === String(j.id));
     if (hasPresensi) return true;
     if (j.tanggal < todayStr) return true;
     if (j.tanggal === todayStr) {
@@ -267,8 +266,14 @@ window.loadJamaahKeluarga = function() {
     const isKK = m.statusHubunganKeluarga === 'Kepala Keluarga';
     
     const todayStr = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
+    const now = new Date();
+    const timeNow = String(now.getHours()).padStart(2, '0') + ":" + String(now.getMinutes()).padStart(2, '0');
     const jadwalM = allJdwl.filter(j => {
-      if (!j || j.tanggal > todayStr) return false;
+      if (!j) return false;
+      const isPast = j.tanggal < todayStr;
+      const isTodayEnded = j.tanggal === todayStr && timeNow >= (j.waktu_selesai || "23:59");
+      const hasPresensi = allPr.some(p => p && String(p.id_pengajian) === String(j.id));
+      if (!isPast && !isTodayEnded && !hasPresensi) return false;
       return isJamaahEligibleForSchedule(m, j);
     });
     
@@ -774,20 +779,19 @@ window.openPresensiModalPortal = function(jadwalId, status) {
 window.doSelfCheckIn = function(jadwalId, status, keterangan) {
   const user = getCurrentUser();
   if (!user || !localCurrentJamaahId) return;
-  if (typeof supabaseSelfCheckIn === 'function') {
-    supabaseSelfCheckIn(jadwalId, localCurrentJamaahId, status, keterangan || '', user.username)
-      .then(() => {
-        fetchDatabaseFromServer(function() {
-          alert("Alhamdulillah Jazakumullahu khoiro, Anda sudah mengisi Presensi");
-          loadJamaahJadwal();
-          loadJamaahDashboard();
-          if (typeof showToast === 'function') showToast('Check-in berhasil: ' + status, 'success');
-        });
-      })
-      .catch(err => {
-        if (typeof showToast === 'function') showToast('Gagal check-in: ' + (err.message || err), 'error');
+  google.script.run
+    .withSuccessHandler(function() {
+      fetchDatabaseFromServer(function() {
+        alert("Alhamdulillah Jazakumullahu khoiro, Anda sudah mengisi Presensi");
+        loadJamaahJadwal();
+        loadJamaahDashboard();
+        if (typeof showToast === 'function') showToast('Check-in berhasil: ' + status, 'success');
       });
-  }
+    })
+    .withFailureHandler(function(err) {
+      if (typeof showToast === 'function') showToast('Gagal check-in: ' + (err.message || err), 'error');
+    })
+    .selfCheckInGAS(jadwalId, localCurrentJamaahId, status, keterangan || '', user.username);
 };
 
 window.openJamaahPresensiModal = function(jadwalId, status = 'Hadir Fisik') {
