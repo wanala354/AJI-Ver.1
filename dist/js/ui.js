@@ -1823,6 +1823,7 @@
       } else if (sectionId === "section-report") {
         populateReportFilterOptions();
         calculateAndRenderReport();
+        if (typeof initLaporanBulananModule === 'function') initLaporanBulananModule();
       } else if (sectionId === "section-master") {
         renderMasterTable();
       } else if (sectionId === "section-pengurus") { 

@@ -763,7 +763,22 @@
 
         <!-- PAGE 4: REPORT & REKAPITULASI (REVISED) -->
         <section id="section-report" class="page-section">
-          <div class="report-filter-bar">
+          <!-- SUBTAB SWITCHER HEADER -->
+          <div class="card-panel-tabs"
+            style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; flex-wrap: wrap;">
+            <button class="tab-btn active" data-subtab="report-rekap-umum"
+              style="padding: 10px 20px; background: transparent; border: none; border-bottom: 3px solid var(--primary); color: var(--primary); font-weight: 600; cursor: pointer; transition: all 0.3s; font-size: 0.9rem;">
+              <i class="fa-solid fa-chart-pie" style="margin-right: 5px;"></i> Rekapitulasi Umum
+            </button>
+            <button class="tab-btn" data-subtab="report-laporan-bulanan"
+              style="padding: 10px 20px; background: transparent; border: none; border-bottom: 3px solid transparent; color: var(--text-secondary); font-weight: 500; cursor: pointer; transition: all 0.3s; font-size: 0.9rem;">
+              <i class="fa-solid fa-file-contract" style="margin-right: 5px;"></i> Laporan Bulanan
+            </button>
+          </div>
+
+          <!-- SUBTAB 1: REKAPITULASI UMUM (EXISTING) -->
+          <div id="subtab-report-rekap-umum" class="subtab-content active-tab">
+            <div class="report-filter-bar">
             <div style="display:flex; align-items:center; gap: 15px; flex-wrap:wrap;">
               <span style="font-weight:700;"><i class="fa-solid fa-filter"></i> Rekap Kelompok Pengajian:</span>
               <select id="report-filter-kelompok" class="select-filter">
@@ -1028,6 +1043,250 @@
                 </table>
               </div>
             </div>
+          </div>
+        </div> <!-- End subtab-report-rekap-umum -->
+
+        <!-- SUBTAB 2: LAPORAN BULANAN (FITUR BARU v3.2) -->
+        <div id="subtab-report-laporan-bulanan" class="subtab-content" style="display: none;">
+            <!-- HEADER TOOLBAR LAPORAN BULANAN -->
+            <div class="laporan-bulanan-header" style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px;">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <i class="fa-solid fa-file-contract" style="font-size: 1.6rem; color: var(--primary);"></i>
+                    <h2 style="font-size: 1.4rem; font-weight: 800; color: var(--text-primary); margin: 0; text-transform: uppercase; letter-spacing: 0.5px;">LAPORAN KEGIATAN BULANAN</h2>
+                  </div>
+                  <div style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 4px; font-weight: 500;" id="laporan-org-subtitle">
+                    <i class="fa-solid fa-building-columns" style="color: var(--primary);"></i> Yayasan Assalam Barokah Jamiul Huda &bull; Kelompok Chandra
+                  </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                  <span class="badge badge-success" id="laporan-sync-badge" style="padding: 6px 12px; font-size: 0.8rem;"><i class="fa-solid fa-database"></i> Database: Terhubung (Sync Aktif)</span>
+                  <button type="button" class="btn-secondary" id="btn-toggle-mode-edit" onclick="toggleModeEditLaporan()" style="padding: 6px 14px; font-size: 0.82rem; font-weight: 600;">
+                    <i class="fa-solid fa-pen-to-square"></i> Mode Edit: <span id="mode-edit-label">Mati</span>
+                  </button>
+                  <button type="button" class="btn-secondary" onclick="exportLaporanBulananExcel()" style="padding: 6px 14px; font-size: 0.82rem; font-weight: 600; background: #059669; color: white; border: none;">
+                    <i class="fa-solid fa-file-excel"></i> Unduh Excel
+                  </button>
+                  <button type="button" class="btn-primary" onclick="printLaporanBulananPDF()" style="padding: 6px 14px; font-size: 0.82rem; font-weight: 600;">
+                    <i class="fa-solid fa-file-pdf"></i> Cetak / Ekspor PDF
+                  </button>
+                </div>
+              </div>
+
+              <!-- FILTER CONTROL BAR -->
+              <div class="hide-on-print" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; background: rgba(0,0,0,0.15); padding: 12px; border-radius: 8px;">
+                <div>
+                  <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; display: block; margin-bottom: 4px;">KELOMPOK</label>
+                  <select id="laporan-filter-kelompok" class="select-filter" style="width: 100%; font-weight: 600;" onchange="loadLaporanBulananData()"></select>
+                </div>
+                <div>
+                  <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; display: block; margin-bottom: 4px;">PERIODE KEGIATAN</label>
+                  <div style="display: flex; gap: 6px;">
+                    <select id="laporan-filter-bulan" class="select-filter" style="flex: 1; font-weight: 600;" onchange="loadLaporanBulananData()"></select>
+                    <select id="laporan-filter-tahun" class="select-filter" style="width: 90px; font-weight: 600;" onchange="loadLaporanBulananData()"></select>
+                  </div>
+                </div>
+                <div>
+                  <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; display: block; margin-bottom: 4px;">TINGKATAN MUSYAWARAH</label>
+                  <select id="laporan-filter-tingkatan" class="select-filter" style="width: 100%; font-weight: 600;" onchange="loadLaporanBulananData()">
+                    <option value="Kelompok">Kelompok</option>
+                    <option value="Desa" selected>Desa</option>
+                    <option value="Daerah">Daerah</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; display: block; margin-bottom: 4px;">TANGGAL MUSYAWARAH</label>
+                  <input type="date" id="laporan-filter-tgl-musyawarah" class="select-filter" style="width: 100%; font-weight: 600;">
+                </div>
+              </div>
+            </div>
+
+            <!-- ACTION BAR: SAVE TO DATABASE (Only visible in Mode Edit) -->
+            <div id="laporan-save-bar-box" style="display: none; justify-content: flex-end; margin-bottom: 20px; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 8px; padding: 12px 18px; align-items: center; gap: 15px;">
+              <span style="font-size: 0.88rem; color: #f59e0b; font-weight: 600;"><i class="fa-solid fa-circle-info"></i> Mode Edit Aktif. Jangan lupa simpan perubahan ke database.</span>
+              <button type="button" class="btn-primary" style="background: #10b981; border: none; font-weight: 700; padding: 8px 18px;" onclick="saveLaporanBulananToDB()">
+                <i class="fa-solid fa-cloud-arrow-up"></i> Simpan ke Database
+              </button>
+            </div>
+
+            <!-- SECTION 1: INDIKATOR KEHADIRAN & EFEKTIVITAS (11 SPEEDOMETER GAUGES) -->
+            <div class="card-panel" style="margin-bottom: 20px; padding: 20px;">
+              <div class="card-panel-header" style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);">
+                <span class="card-panel-title"><i class="fa-solid fa-gauge-high"></i> Indikator Kehadiran & Efektivitas (Speedometer Gauge)</span>
+                <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">Target Ideal: &ge; 75%</span>
+              </div>
+              <div id="laporan-gauges-grid" style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
+                <!-- Dynamically rendered via laporan_bulanan.js -->
+              </div>
+            </div>
+
+            <!-- MAIN CONTENT LAYOUT (1 KOLOM FULL WIDTH AGAR TIDAK TERPOTONG) -->
+            <div style="display: flex; flex-direction: column; gap: 20px; width: 100%;">
+              
+              <!-- 1. TABEL MUSYAWARAH -->
+              <div class="card-panel" style="padding: 20px;">
+                <div class="card-panel-header" style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                  <span class="card-panel-title"><i class="fa-solid fa-users-rectangle"></i> 1. MUSYAWARAH</span>
+                  <span class="badge badge-success" style="font-size: 0.78rem;">4 Kegiatan</span>
+                </div>
+                <div class="table-responsive">
+                  <table class="table-custom" style="font-size: 0.85rem; width: 100%;">
+                    <thead>
+                      <tr>
+                        <th style="min-width: 200px;">URAIAN KEGIATAN</th>
+                        <th style="width: 130px;">STATUS</th>
+                        <th style="width: 130px;">% KEHADIRAN</th>
+                        <th>POINT PEMBAHASAN / KETERANGAN</th>
+                      </tr>
+                    </thead>
+                    <tbody id="laporan-musyawarah-tbody">
+                      <!-- Dynamically populated -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- 2. TABEL SAMBUNG PENGAJIAN -->
+              <div class="card-panel" style="padding: 20px;">
+                <div class="card-panel-header" style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                  <span class="card-panel-title"><i class="fa-solid fa-book-open-reader"></i> 2. SAMBUNG PENGAJIAN</span>
+                  <span class="badge badge-success" style="font-size: 0.78rem;">5 Tingkatan Pengajian</span>
+                </div>
+                <div class="table-responsive">
+                  <table class="table-custom" style="font-size: 0.85rem; width: 100%;">
+                    <thead>
+                      <tr>
+                        <th style="min-width: 240px;">TINGKAT PENGAJIAN</th>
+                        <th style="width: 140px;">STATUS</th>
+                        <th style="width: 110px;">% KEHADIRAN</th>
+                        <th style="width: 140px;">VISUAL RASIO</th>
+                        <th>CATATAN EVALUASI (DAPAT DIEDIT)</th>
+                      </tr>
+                    </thead>
+                    <tbody id="laporan-pengajian-tbody">
+                      <!-- Dynamically populated -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- 3. TABEL KEUANGAN KELOMPOK -->
+              <div class="card-panel" style="padding: 20px;">
+                <div class="card-panel-header" style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                  <span class="card-panel-title"><i class="fa-solid fa-wallet"></i> 3. KEUANGAN KELOMPOK</span>
+                  <span class="badge badge-success" style="font-size: 0.78rem;">2 Uraian Keuangan</span>
+                </div>
+                <div class="table-responsive">
+                  <table class="table-custom" style="font-size: 0.85rem; width: 100%;">
+                    <thead>
+                      <tr>
+                        <th style="min-width: 240px;">URAIAN KEUANGAN</th>
+                        <th style="width: 160px;">STATUS</th>
+                        <th>KETERANGAN (DAPAT DIEDIT)</th>
+                      </tr>
+                    </thead>
+                    <tbody id="laporan-keuangan-tbody">
+                      <!-- 2 rows dynamically populated -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- 4. TABEL KEGIATAN LAINNYA -->
+              <div class="card-panel" style="padding: 20px;">
+                <div class="card-panel-header" style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                  <span class="card-panel-title"><i class="fa-solid fa-hand-holding-heart"></i> 4. KEGIATAN LAINNYA</span>
+                  <span class="badge badge-info" style="font-size: 0.78rem;">3 Program Pelaporan</span>
+                </div>
+                <div class="table-responsive">
+                  <table class="table-custom" style="font-size: 0.85rem; width: 100%;">
+                    <thead>
+                      <tr>
+                        <th style="min-width: 240px;">NAMA KEGIATAN</th>
+                        <th style="width: 160px;">STATUS</th>
+                        <th>KETERANGAN (DAPAT DIEDIT)</th>
+                      </tr>
+                    </thead>
+                    <tbody id="laporan-kegiatan-lain-tbody">
+                      <!-- 3 rows dynamically populated -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- CARD: LAPORAN TAMBAHAN -->
+              <div class="card-panel" style="padding: 20px;">
+                <div class="card-panel-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                  <span class="card-panel-title"><i class="fa-solid fa-circle-plus"></i> LAPORAN TAMBAHAN</span>
+                </div>
+                <div id="laporan-tambahan-container">
+                  <!-- Populated dynamically -->
+                </div>
+                <button type="button" class="btn-secondary" style="width: 100%; justify-content: center; padding: 10px; font-size: 0.85rem; margin-top: 10px; border: 1px dashed var(--border-color);" onclick="addLaporanTambahanItem()">
+                  <i class="fa-solid fa-plus"></i> Tambah Laporan Tambahan
+                </button>
+              </div>
+
+              <!-- CARD: PERMASALAHAN (Alert Card) -->
+              <div class="card-panel" style="padding: 20px;">
+                <div class="card-panel-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                  <span class="card-panel-title" style="color: #f59e0b;"><i class="fa-solid fa-triangle-exclamation"></i> PERMASALAHAN</span>
+                  <span class="badge badge-warning" style="font-size: 0.72rem;">Catatan Isu</span>
+                </div>
+                <div id="laporan-permasalahan-container">
+                  <!-- Populated dynamically -->
+                </div>
+                <button type="button" class="btn-secondary" style="width: 100%; justify-content: center; padding: 10px; font-size: 0.85rem; margin-top: 10px; border: 1px dashed rgba(245,158,11,0.4); color: #f59e0b;" onclick="addCatatanPermasalahanItem()">
+                  <i class="fa-solid fa-plus"></i> Tambah Catatan Permasalahan
+                </button>
+              </div>
+
+              <!-- CARD: USUL & SARAN -->
+              <div class="card-panel" style="padding: 20px;">
+                <div class="card-panel-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                  <span class="card-panel-title"><i class="fa-solid fa-lightbulb"></i> USUL & SARAN</span>
+                  <span class="badge badge-success" style="font-size: 0.72rem;">Rekomendasi</span>
+                </div>
+                <div id="laporan-usul-saran-container">
+                  <!-- Populated dynamically -->
+                </div>
+                <button type="button" class="btn-secondary" style="width: 100%; justify-content: center; padding: 10px; font-size: 0.85rem; margin-top: 10px; border: 1px dashed var(--border-color);" onclick="addUsulSaranItem()">
+                  <i class="fa-solid fa-plus"></i> Tambah Usul & Saran
+                </button>
+              </div>
+
+              <!-- CARD: DIBUAT DAN DISAHKAN DI (Digital Signature Box) -->
+              <div class="card-panel" style="padding: 25px; text-align: center; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color);">
+                <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px;">Dibuat dan Disahkan di:</div>
+                <h4 style="margin: 0 0 15px 0; font-size: 1.1rem; font-weight: 700; color: var(--text-primary);" id="laporan-sign-date-text">Bekasi, 15 Juli 2026</h4>
+                
+                <div style="display: inline-flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px 24px; border: 2px dashed #10b981; border-radius: 10px; background: rgba(16,185,129,0.05); margin-bottom: 15px;">
+                  <i class="fa-solid fa-shield-check" style="font-size: 2rem; color: #10b981; margin-bottom: 4px;"></i>
+                  <span style="font-size: 0.75rem; font-weight: 800; color: #10b981; letter-spacing: 1px;" id="laporan-sign-stamp-hash">DIGITALLY SIGNED Hash: AJI-2026-CH</span>
+                </div>
+
+                <h3 style="margin: 0; font-size: 1.2rem; font-weight: 800; color: var(--text-primary);" id="laporan-sign-nama">TRI WAHYU W</h3>
+                <div style="font-size: 0.88rem; color: var(--primary); font-weight: 600; margin-top: 4px;" id="laporan-sign-jabatan">Ketua / Pengurus Kelompok Chandra</div>
+                <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">Desa Jatiwarna &bull; Yayasan Assalam Barokah Jamiul Huda</div>
+              </div>
+
+            </div>
+
+            </div>
+
+            <!-- FOOTER LAPORAN BULANAN -->
+            <div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 0.82rem; color: var(--text-muted);">
+              <div>
+                <strong>Yayasan Assalam Barokah Jamiul Huda</strong> &bull; Desa Jatiwarna, Kec. Pondok Melati, Kota Bekasi
+              </div>
+              <div style="display: flex; gap: 15px; align-items: center;">
+                <span>Sistem Pelaporan Bulanan AJI</span>
+                <a href="#section-report" style="color: var(--primary); text-decoration: none; font-weight: 600;"><i class="fa-solid fa-arrow-up"></i> Kembali ke Atas &uarr;</a>
+              </div>
+            </div>
+
           </div>
         </section>
 
@@ -2926,6 +3185,7 @@
   <script src="./js/pengurus.js?v=4.0.0"></script>
   <script src="./js/pengajian.js?v=4.0.0"></script>
   <script src="./js/jamaah_portal.js?v=4.0.0"></script>
+  <script src="./js/laporan_bulanan.js?v=4.0.0"></script>
 </body>
 
 </html>

@@ -2597,3 +2597,92 @@ body.dark-theme .session-card.active {
 .haji-btn-delete:hover {
   background: rgba(239, 68, 68, 0.35);
 }
+
+/* Hidden by default on screen */
+.laporan-print-text {
+  display: none;
+}
+
+/* ----------------------------------------------------
+   @MEDIA PRINT STYLING FOR LAPORAN BULANAN (PDF/A4)
+   ---------------------------------------------------- */
+@media print {
+  /* Sembunyikan Navigasi, Sidebar, Topbar, Filter, & Action Bar */
+  .sidebar, .top-header, .card-panel-tabs, #laporan-save-bar-box,
+  .btn-primary, .btn-secondary, button, #btn-toggle-mode-edit,
+  .fa-trash, .hide-on-print {
+    display: none !important;
+  }
+
+  body, .app-container, .main-content {
+    background: #ffffff !important;
+    color: #111827 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  .page-section {
+    display: none !important;
+  }
+
+  #section-report {
+    display: block !important;
+  }
+
+  #subtab-report-rekap-umum {
+    display: none !important;
+  }
+
+  #subtab-report-laporan-bulanan {
+    display: block !important;
+  }
+
+  .card-panel, .laporan-bulanan-header {
+    background: #ffffff !important;
+    color: #111827 !important;
+    border: 1px solid #d1d5db !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+
+  .table-custom th {
+    background: #f3f4f6 !important;
+    color: #111827 !important;
+    border-bottom: 2px solid #9ca3af !important;
+  }
+
+  .table-custom td {
+    color: #111827 !important;
+    border-bottom: 1px solid #e5e7eb !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+  }
+
+  .badge {
+    border: 1px solid #6b7280 !important;
+    color: #111827 !important;
+    background: #f3f4f6 !important;
+  }
+
+  /* Sembunyikan Input Textbox & Select dalam Mode Cetak */
+  #subtab-report-laporan-bulanan input[type="text"],
+  #subtab-report-laporan-bulanan select {
+    display: none !important;
+  }
+
+  /* Tampilkan Teks Utuh Multiline Tanpa Terpotong saat Cetak */
+  .laporan-print-text {
+    display: block !important;
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    color: #111827 !important;
+    font-size: 0.88rem !important;
+    line-height: 1.4 !important;
+    background: transparent !important;
+    padding: 2px 0 !important;
+    font-family: inherit !important;
+  }
+}
+
