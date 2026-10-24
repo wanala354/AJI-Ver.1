@@ -114,21 +114,31 @@
       function populateKelompokFilterPengurus() {
         const filter = document.getElementById('filter-kelompok-pengurus');
         if (!filter) return;
+        const curVal = filter.value;
         filter.innerHTML = '<option value="">Semua Kelompok Pengajian</option>';
-        (localMasterKelompok || []).forEach(k => {
-          const val = typeof k === 'object' && k !== null ? (k.nama || k.name || k.kelompok || String(k)) : String(k);
-          if (val && val !== '[object Object]') {
-            filter.innerHTML += `<option value="${val}">${val}</option>`;
-          }
+        const rawList = typeof getKelompokList === 'function' ? getKelompokList() : (Array.isArray(localMasterKelompok) ? localMasterKelompok : []);
+        const list = Array.from(new Set(
+          rawList
+            .map(k => typeof k === 'object' && k !== null ? (k.nama || k.name || k.kelompok || String(k)) : String(k || ''))
+            .map(k => k.trim())
+            .filter(val => val && val !== 'undefined' && val !== 'null' && val !== '[object Object]')
+        ));
+        list.forEach(val => {
+          filter.innerHTML += `<option value="${val}">${val}</option>`;
         });
         
         const currentUser = getCurrentUser();
         const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
-        const isOperator = curRoleClean.includes("operator");
-        if (currentUser && isOperator) {
+        const isOperator = curRoleClean === "operator kelompok" || curRoleClean === "pengurus kelompok";
+        if (currentUser && isOperator && currentUser.kelompok) {
           filter.value = currentUser.kelompok;
           filter.disabled = true;
         } else {
+          if (curVal && list.includes(curVal)) {
+            filter.value = curVal;
+          } else {
+            filter.value = "";
+          }
           filter.disabled = false;
         }
       }

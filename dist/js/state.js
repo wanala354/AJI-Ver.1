@@ -18,8 +18,8 @@
     const MASTER_KELANCARAN = ["Lancar", "Kurang Lancar", "Tidak Lancar", "Perlu Perhatian"];
     const MASTER_STATUS_KEAKTIFAN = ["Aktif", "Meninggal", "Pindah Sambung", "Sekolah/Kuliah Luar Daerah", "Non-Aktif Lainnya"];
     
-    // Loaded dynamically from Google Sheets master sheets
-    let localMasterKelompok = [];
+    // Loaded dynamically from database / Google Sheets
+    let localMasterKelompok = ["Pondok Melati", "Pondok Melati Selatan", "Jatiranggon", "Chandra"];
     let localMasterPendidikan = [];
     let localMasterDapuan = [];
     let localMasterPekerjaan = [];

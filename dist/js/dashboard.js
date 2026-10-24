@@ -306,19 +306,21 @@
       const filterDashboardEl = document.getElementById("dashboard-kelompok-filter");
       if (filterDashboardEl && filterDashboardEl.options.length <= 1) {
          filterDashboardEl.innerHTML = '<option value="">Semua Kelompok</option>';
-         (localMasterKelompok || []).forEach(k => {
-            const val = typeof k === 'object' && k !== null ? (k.nama || k.name || k.kelompok || String(k)) : String(k);
-            if (val && val !== '[object Object]') {
-              filterDashboardEl.innerHTML += `<option value="${val}">${val}</option>`;
+         const kelList = typeof getKelompokList === 'function' ? getKelompokList() : (localMasterKelompok || []);
+         kelList.forEach(k => {
+            const val = typeof k === 'object' && k !== null ? (k.nama || k.name || k.kelompok || String(k)) : String(k || '');
+            const cleanVal = val.trim();
+            if (cleanVal && cleanVal !== '[object Object]' && cleanVal !== 'undefined' && cleanVal !== 'null') {
+              filterDashboardEl.innerHTML += `<option value="${cleanVal}">${cleanVal}</option>`;
             }
          });
          const currentUser = getCurrentUser();
          const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
          const isKelompokRestricted = currentUser && (curRoleClean === "operator kelompok" || curRoleClean === "pengurus kelompok");
-         if (isKelompokRestricted) {
+         if (isKelompokRestricted && currentUser.kelompok) {
            filterDashboardEl.value = currentUser.kelompok;
            filterDashboardEl.disabled = true;
-        }
+         }
       }
       
       let jamaah = getFilteredJamaahForDashboard(allJamaah);
@@ -339,8 +341,8 @@
       // 1. Kelompok Chart
       destroyChartIfExists("chart-kelompok");
       try {
-        const kelompokLabels = (localMasterKelompok || []).map(k => typeof k === 'object' && k !== null ? (k.nama || k.name || '') : String(k));
-        const kelompokCounts = kelompokLabels.map(k => jamaah.filter(j => j.kelompokPengajian === k).length);
+        const kelompokLabels = typeof getKelompokList === 'function' ? getKelompokList() : ["Pondok Melati", "Pondok Melati Selatan", "Jatiranggon", "Chandra"];
+        const kelompokCounts = kelompokLabels.map(k => jamaah.filter(j => String(j.kelompokPengajian || '').trim().toLowerCase() === String(k).trim().toLowerCase()).length);
         const elKelompok = document.getElementById("chart-kelompok");
         if (elKelompok) {
           charts.kelompok = new Chart(elKelompok.getContext("2d"), {
@@ -640,10 +642,17 @@
     // ----------------------------------------------------
     function populateReportFilterOptions() {
       const repFilter = document.getElementById("report-filter-kelompok");
+      if (!repFilter) return;
       const savedVal = repFilter.value;
       repFilter.innerHTML = '<option value="">-- Semua Kelompok (PC Pondok Melati) --</option>';
       
-      localMasterKelompok.forEach(k => {
+      const kelList = (typeof getKelompokList === 'function' ? getKelompokList() : (Array.isArray(localMasterKelompok) ? localMasterKelompok : []))
+        .map(k => typeof k === 'object' && k ? (k.nama || k.name || '') : String(k || ''))
+        .map(k => k.trim())
+        .filter(k => k && k !== 'undefined' && k !== 'null' && k !== '[object Object]');
+      
+      const uniqueList = Array.from(new Set(kelList));
+      uniqueList.forEach(k => {
         const opt = document.createElement("option");
         opt.value = k;
         opt.textContent = k;
@@ -657,7 +666,11 @@
         repFilter.value = curUser.kelompok;
         repFilter.disabled = true;
       } else {
-        repFilter.value = savedVal;
+        if (savedVal && uniqueList.includes(savedVal)) {
+          repFilter.value = savedVal;
+        } else {
+          repFilter.value = "";
+        }
         repFilter.disabled = false;
       }
       
@@ -670,9 +683,10 @@
       populateMonthFilterOptions("report-filter-bulan", () => {
         calculateAndRenderReport();
       });
-      const selectedKelompok = document.getElementById("report-filter-kelompok").value;
+      const repFilterEl = document.getElementById("report-filter-kelompok");
+      const selectedKelompok = repFilterEl ? (repFilterEl.value || "").trim().toLowerCase() : "";
       const jamaah = getJamaahList().filter(j => !j.statusKeaktifan || j.statusKeaktifan === "Aktif");
-      const filtered = selectedKelompok === "" ? jamaah : jamaah.filter(j => j.kelompokPengajian === selectedKelompok);
+      const filtered = selectedKelompok === "" ? jamaah : jamaah.filter(j => String(j.kelompokPengajian || "").trim().toLowerCase() === selectedKelompok);
       const totalJamaah = filtered.length;
       const totalKK = filtered.filter(j => j.statusHubunganKeluarga === "Kepala Keluarga").length;
       const avgKKMembers = totalKK > 0 ? (totalJamaah / totalKK).toFixed(1) : "0.0";
@@ -1109,10 +1123,11 @@
     }
 
     function exportReportToCSV() {
-      const selectedKelompok = document.getElementById("report-filter-kelompok").value;
+      const repFilterEl = document.getElementById("report-filter-kelompok");
+      const selectedKelompok = repFilterEl ? (repFilterEl.value || "").trim() : "";
       const groupLabel = selectedKelompok === "" ? "Semua Kelompok" : selectedKelompok;
       const jamaah = getJamaahList();
-      const filtered = selectedKelompok === "" ? jamaah : jamaah.filter(j => j.kelompokPengajian === selectedKelompok);
+      const filtered = selectedKelompok === "" ? jamaah : jamaah.filter(j => String(j.kelompokPengajian || '').trim().toLowerCase() === selectedKelompok.toLowerCase());
       
       let csvContent = "data:text/csv;charset=utf-8,";
       csvContent += `AJI V.1 REPORT - REKAPITULASI DATA JAMAAH\r\n`;

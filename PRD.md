@@ -1,35 +1,38 @@
 # Product Requirement Document (PRD)
-## Aplikasi Jatiwarna Info (AJI) - Versi 3.1
+## Aplikasi Jatiwarna Info (AJI) - Versi 3.2
+### Platform Terpadu Administrasi Jamaah, Presensi Kegiatan & Kurikulum Keilmuan Generus (PPG)
 
 ---
 
 ## 1. Pendahuluan & Ringkasan Proyek
 
-Aplikasi Jatiwarna Info (AJI) adalah platform manajemen data jamaah terpadu, pengelolaan kegiatan (pengajian), serta rekapitulasi data kepengurusan berbasis digital. Aplikasi ini dirancang khusus untuk membantu organisasi keagamaan/kemasyarakatan tingkat lokal (Jatiwarna/Pondok Melati) dalam mengelola anggotanya secara modern, aman, dan efisien.
+Aplikasi Jatiwarna Info (AJI) adalah platform manajemen data jamaah terpadu, pengelolaan kegiatan (pengajian), rekapitulasi data kepengurusan, serta pemantauan capaian kurikulum pembinaan generasi penerus (PPG) berbasis digital. Aplikasi ini dirancang khusus untuk membantu organisasi keagamaan/kemasyarakatan tingkat lokal (Jatiwarna/Pondok Melati) dalam mengelola anggotanya secara modern, aman, dan efisien.
 
-AJI memfasilitasi administrasi jamaah dari tingkat keluarga hingga kelompok, penjadwalan kegiatan keagamaan secara otomatis, pencatatan presensi kehadiran digital, hingga visualisasi metrik penting organisasi melalui dasbor interaktif.
+Pada Versi 3.2, AJI diperluas dengan **Modul PPG (Penggerak Pembina Generus)** yang menyediakan pemantauan keaktifan presensi bulanan generus (PAUD s/d GUM), pencatatan capaian silabus keilmuan secara berkala (batch/individu), buku rapor santri digital, serta pelacak halaman per halaman (*page-by-page tracker*) untuk materi berbasis kitab seperti Hadis Himpunan.
 
 ---
 
 ## 2. Tujuan Proyek
 
-1. **Efisiensi Administrasi**: Mengganti pengelolaan manual dan sistem berbasis berkas fisik menjadi database terpusat yang aman.
+1. **Efisiensi Administrasi Terpusat**: Mengganti pengelolaan manual dan sistem berbasis berkas fisik menjadi database terpusat yang aman.
 2. **Transisi Database Fleksibel**: Menyediakan opsi database hibrida antara **Google Sheets (Google Apps Script)** untuk kemudahan administratif awal dan **Supabase (PostgreSQL)** untuk performa tinggi dan keamanan tingkat lanjut.
 3. **Klasifikasi Jamaah Otomatis**: Mengelompokkan jamaah secara otomatis berdasarkan kelompok usia dan status pernikahan (Kelompok Peramutan) untuk memudahkan koordinasi pembinaan.
-4. **Pemantauan Keaktifan Real-time**: Menyediakan fitur dasbor analisis dan rekapitulasi kehadiran pengajian/kegiatan bulanan yang selalu diperbarui secara otomatis.
-5. **Akses Multi-Platform**: Mendukung akses berbasis Web (Vite + JavaScript), aplikasi web mobile berbasis Capacitor, serta aplikasi mobile native (Kotlin Android) dengan fitur notifikasi pengingat jadwal kegiatan.
+4. **Sistem Terpadu PPG**: Menyediakan evaluasi keaktifan presensi bulanan dan buku rapor/capaian keilmuan generus (PAUD s/d GUM) dalam satu panel.
+5. **Pelacakan Hadis Kitab Digital**: Memantau progres pemaknaan hadis berbasis nomor halaman hingga mencapai status Khatam 100%.
+6. **Akses Multi-Platform**: Mendukung akses berbasis Web (Vite + JavaScript), aplikasi web mobile berbasis Capacitor, serta aplikasi mobile native (Kotlin Android) dengan fitur notifikasi pengingat jadwal kegiatan.
 
 ---
 
 ## 3. Target Pengguna & Peran (Roles)
 
-Sistem otentikasi AJI membagi hak akses ke dalam tiga kategori utama:
+Sistem otentikasi AJI membagi hak akses ke dalam kategori:
 
 | Peran (Role) | Deskripsi Hak Akses | Fitur yang Dapat Diakses |
 | :--- | :--- | :--- |
-| **Administrator** | Memiliki kontrol penuh atas sistem, konfigurasi database, dan data master. | Dasbor Utama, Modul Jamaah (Semua Kelompok), Kartu Keluarga, Data Pengurus, Manajemen Kegiatan, Rekap Laporan, Data Master, Manajemen User global, Konfigurasi Koneksi Database, Audit Trail Log. |
-| **Operator Kelompok** | Operator tingkat rukun/kelompok pengajian. Dibatasi hanya untuk mengelola kelompoknya sendiri. | Dasbor Utama (data terfilter per kelompok), Modul Jamaah (hanya kelompok yang dikelola), Kartu Keluarga (kelompok sendiri), Manajemen Kegiatan kelompok, Persetujuan/Registrasi akun jamaah baru di kelompoknya. |
-| **Jamaah** | Anggota umum/jamaah terdaftar di aplikasi. | Dasbor Jamaah ("Dashboard Saya"), Informasi Keluarga ("Keluarga Saya"), Jadwal Kegiatan, Profil Pribadi. |
+| **Administrator** | Memiliki kontrol penuh atas sistem, konfigurasi database, dan data master. | Dasbor Utama, Modul Jamaah (Semua Kelompok), Kartu Keluarga, Data Pengurus, Manajemen Kegiatan, Rekap Laporan, Modul PPG Penuh, Master Kurikulum PPG, Data Master, Manajemen User global, Konfigurasi Koneksi Database, Audit Trail Log. |
+| **Operator Kelompok** | Operator tingkat rukun/kelompok pengajian. Dibatasi hanya untuk mengelola kelompoknya sendiri. | Dasbor Utama (data terfilter per kelompok), Modul Jamaah (hanya kelompok yang dikelola), Kartu Keluarga (kelompok sendiri), Manajemen Kegiatan kelompok, Modul PPG (Rukun sendiri - input nilai & monitoring), Persetujuan/Registrasi akun jamaah baru di kelompoknya. |
+| **Pendidik PPG** | Guru/muballigh/tim kurikulum PPG yang bertugas menguji materi. | Tab Data PPG (Rukun sasaran), Tab Input Capaian Keilmuan (Batch & Individu), Pelacak Halaman Hadis, Read-only pada Master Silabus. |
+| **Jamaah** | Anggota umum/jamaah terdaftar di aplikasi. | Dasbor Jamaah ("Dashboard Saya"), Informasi Keluarga ("Keluarga Saya"), Jadwal Kegiatan, Rapor Keilmuan Diri/Anak (*Read-only*), Profil Pribadi. |
 
 ---
 
@@ -77,17 +80,40 @@ Sistem otentikasi AJI membagi hak akses ke dalam tiga kategori utama:
   * Pencarian dan penyaringan data keaktifan jamaah menggunakan filter interaktif berdasarkan kelompok peramutan, jenis kelamin (gender), pencarian nama, serta status kehadiran (Semua Status, Hadir Fisik, Online, Izin, Alpha).
   * Penanganan pembatasan pengambilan data Supabase bypass limit 1000 baris dengan teknik pencarian *page-by-page*.
 
-### 4.5. Modul Pengurus & Laporan Rekapitulasi
+### 4.5. Modul PPG (Penggerak Pembina Generus)
+* **Tab 1: Data & Monitoring Generus**:
+  * Filter dinamis: Kelompok, Gender, Kategori Generus (PAUD, Caberawit, GUS, GUM), Pencarian Teks Nama, Bulan & Tahun evaluasi.
+  * Formula Kehadiran Bulanan: $\text{Persentase} = \left(\frac{\sum(\text{Hadir Fisik} + \text{Online})}{\text{Total Sesi Kegiatan Sasaran}}\right) \times 100\%$.
+  * Indikator Warna Status Kehadiran: 🟢 Hijau ($\ge 80\%$), 🟡 Kuning ($50\% - 79\%$), 🔴 Merah ($< 50\%$).
+  * Tombol Ikon Buku (`📖`) untuk membuka **Modal Detail Rapor Keilmuan Santri**.
+* **Modal Detail Keilmuan Santri (Rapor Generus)**:
+  * Header profil santri, bilah kemajuan akumulatif (*14 / 20 Target Materi Lulus - 70%*).
+  * Tabel materi standar per bidang keilmuan (Status, Nilai, Tanggal, Penguji, Catatan).
+  * Daftar Hadis Himpunan (Khusus GUS & GUM) dengan kartu per kitab, persentase khatam, dan tombol pembuka pelacak halaman.
+  * Fitur Cetak Rapor Santri siap print/PDF standar A4.
+* **Tab 2: Input Capaian Keilmuan**:
+  * **Mode 1 (Batch / Massal per Materi)**: Form pemilih Kelompok, Jenjang, Bidang, dan Target Materi. Tabel inline editing santri dengan tombol "Tandai Semua Tuntas" dan "Simpan Semua Perubahan (Batch Upsert)".
+  * **Mode 2 (Individu / Buku Rapor)**: Pemilih santri spesifik dengan matriks silabus lengkap jenjang tersebut.
+* **Sub-fitur Pelacak Progres Hadis Himpunan (Halaman per Halaman)**:
+  * Matriks grid halaman interaktif 1 s/d $N$ dengan kotak bernomor (Hijau = Tuntas, Abu-abu = Belum). Klik kotak untuk toggle status halaman secara langsung.
+  * Panel aksi cepat: Input rentang halaman (`Dari Hal` s/d `Sampai Hal`), tombol `[+ Tandai Terisi]`, `[- Batalkan]`, `[⭐ Khatam Instan]`, dan `[↺ Reset]`.
+  * Auto-kalkulasi persentase dan ringkasan halaman belum dimaknai (contoh: *Halaman belum: 1-12, 18, 45-60*).
+  * Otomatis berstatus `Khatam` dan mencatat tanggal khatam saat mencapai 100%.
+* **Tab 3: Master Kurikulum & Silabus PPG**:
+  * CRUD Master Bidang Keilmuan dan Master Materi Pembelajaran.
+  * Fitur Impor CSV Silabus, Ekspor CSV Silabus, dan Unduh Template CSV Silabus PPG.
+
+### 4.6. Modul Pengurus & Laporan Rekapitulasi
 * **Data Pengurus**: Manajemen terpisah untuk pengurus organisasi berdasarkan data posisi/jabatan (Dapuan).
 * **Cetak Data**: Fitur cetak rekapitulasi data jamaah dan kehadiran kegiatan secara langsung ke format kertas/PDF.
 
-### 4.6. Modul Pengaturan & Log Sistem
+### 4.7. Modul Pengaturan & Log Sistem
 * **Dual-Database Switcher**: 
   * Integrasi data menggunakan **Google Sheets API via Google Apps Script (GAS)** Web App.
   * Migrasi mandiri data lokal/Sheets langsung ke **Supabase** melalui panel pengaturan.
 * **Audit Trail Log**: Pencatatan riwayat perubahan data krusial secara real-time yang mencatat timestamp, operator pelaksana, jenis aksi (`CREATE`, `UPDATE`, `DELETE`, `LOGIN`, `EXPORT`), dan deskripsi perubahan data secara detail.
 * **Manajemen User (User Management)**:
-  * Khusus untuk level Admin/Operator untuk menyetujui, mengedit peran, atau memblokir/menghapus akun pengguna yang tidak aktif.
+  * Khusus untuk level Admin/Operator untuk menyetujui, mengedit peran (termasuk peran Pendidik PPG), atau memblokir/menghapus akun pengguna yang tidak aktif.
 
 ---
 
@@ -170,6 +196,55 @@ CREATE TABLE audit_logs (
     action TEXT NOT NULL,
     description TEXT NOT NULL
 );
+
+-- 5. TABEL KURIKULUM & PROGRESS PPG
+CREATE TABLE master_bidang_keilmuan (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nama_bidang TEXT NOT NULL UNIQUE,
+    deskripsi TEXT,
+    urutan INT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE master_keilmuan_materi (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    bidang_id UUID NOT NULL REFERENCES master_bidang_keilmuan(id) ON DELETE CASCADE,
+    kategori_generus TEXT[] NOT NULL,
+    nama_materi TEXT NOT NULL,
+    tipe_penilaian TEXT NOT NULL DEFAULT 'standar' CHECK (tipe_penilaian IN ('standar', 'halaman')),
+    total_halaman INT DEFAULT NULL,
+    deskripsi_target TEXT,
+    urutan INT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE generus_keilmuan_progress (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    jamaah_id TEXT NOT NULL REFERENCES jamaah(id) ON DELETE CASCADE,
+    materi_id UUID NOT NULL REFERENCES master_keilmuan_materi(id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'Belum' CHECK (status IN ('Belum', 'Proses', 'Tuntas')),
+    nilai_angka NUMERIC(5,2),
+    tanggal_tuntas DATE,
+    penguji_nama TEXT,
+    catatan TEXT,
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT unique_jamaah_materi UNIQUE (jamaah_id, materi_id)
+);
+
+CREATE TABLE generus_hadis_progress (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    jamaah_id TEXT NOT NULL REFERENCES jamaah(id) ON DELETE CASCADE,
+    materi_id UUID NOT NULL REFERENCES master_keilmuan_materi(id) ON DELETE CASCADE,
+    total_halaman INT NOT NULL,
+    halaman_selesai INTEGER[] DEFAULT '{}',
+    persentase_selesai NUMERIC(5,2) DEFAULT 0.00,
+    status TEXT NOT NULL DEFAULT 'Belum' CHECK (status IN ('Belum', 'Proses', 'Khatam')),
+    tanggal_khatam DATE,
+    penguji_terakhir TEXT,
+    catatan TEXT,
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT unique_jamaah_hadis UNIQUE (jamaah_id, materi_id)
+);
 ```
 
 ---
@@ -185,3 +260,13 @@ CREATE TABLE audit_logs (
   * Penambahan auto-refresh background sync 30 detik.
   * Penyelesaian *bypass pagination* di atas 1000 baris untuk data berkapasitas besar di Supabase.
   * Mekanisme cache-busting JS aset di berkas index utama.
+* **v3.2**:
+  * Perluasan **Modul PPG (Penggerak Pembina Generus)**:
+    * Tab Data & Monitoring Generus dengan formula presensi bulanan otomatis, filter dinamis, dan 4 metrik KPI.
+    * Tab Input Capaian Keilmuan dengan 2 mode (Batch per materi / kelas dan Individu per santri).
+    * Sub-fitur Pelacak Halaman Hadis Himpunan interaktif (grid kotak 1-N, quick range action, auto-khatam).
+    * Modal Rapor Keilmuan Santri terpadu dengan fitur cetak PDF/kertas.
+    * Manajemen Master Kurikulum & Silabus (Bidang & Materi) dengan ekspor/impor CSV.
+    * Dukungan hak akses peran baru `Pendidik PPG`.
+    * Akses Rapor PPG santri di Portal Jamaah untuk diri sendiri dan keluarga.
+

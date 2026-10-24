@@ -1901,13 +1901,26 @@
           localAuditLogs = data.auditLogs || [];
           localUsersList = data.usersList || [];
           
+          function sanitizeMasterList(arr, fallback = []) {
+            if (!arr || !Array.isArray(arr)) return fallback;
+            const cleaned = arr
+              .map(item => {
+                if (!item) return '';
+                if (typeof item === 'string') return item.trim();
+                if (typeof item === 'object') return (item.nama || item.name || item.kelompok || item.value || '').trim();
+                return String(item).trim();
+              })
+              .filter(item => item && item !== 'undefined' && item !== 'null' && item !== '[object Object]');
+            return cleaned.length > 0 ? cleaned : fallback;
+          }
+
           // Populate dynamic master lists from sheets
-          localMasterKelompok = (data.masterKelompok || []).map(m => m.nama);
-          localMasterPendidikan = (data.masterPendidikan || []).map(m => m.nama);
-          localMasterDapuan = (data.masterDapuan || []).map(m => m.nama);
-          localMasterPekerjaan = (data.masterPekerjaan || []).map(m => m.nama);
-          localMasterHubungan = (data.masterHubungan || []).map(m => m.nama);
-          localMasterMateri = (data.masterMateri || []).map(m => m.nama);
+          localMasterKelompok = sanitizeMasterList(data.masterKelompok, ["Pondok Melati", "Pondok Melati Selatan", "Jatiranggon", "Chandra"]);
+          localMasterPendidikan = sanitizeMasterList(data.masterPendidikan, ["PAUD", "SD", "SMP", "SLTA/SMK", "Diploma", "S1", "S2", "S3"]);
+          localMasterDapuan = sanitizeMasterList(data.masterDapuan, ["Pengurus Daerah", "Pengurus Desa", "Pengurus Kelompok", "MT", "MS", "Rokyah biasa", "Lainnya"]);
+          localMasterPekerjaan = sanitizeMasterList(data.masterPekerjaan, ["Wiraswasta", "Swasta", "ASN", "TNI", "POLRI", "Guru", "IRT", "Pelajar/Mahasiswa", "Lainnya"]);
+          localMasterHubungan = sanitizeMasterList(data.masterHubungan, ["Kepala Keluarga", "Istri", "Anak", "Ayah", "Ibu"]);
+          localMasterMateri = sanitizeMasterList(data.masterMateri, ["Al-Quran", "Hadis Khotbah", "Hadis Bukhori", "ASAD", "Musyawaroh 5 Unsur", "Teks", "Dalil-dalil"]);
           localMasterJenisPengajian = (data.masterJenisPengajian || []).map(item => {
             if (typeof item === 'string') {
               let p = '';
@@ -1932,7 +1945,7 @@
           localMasterPesertaPengajian = data.masterPesertaPengajian || [];
           localMasterGrupKustom = data.masterGrupKustom || [];
           localMasterPengajar = data.masterPengajar || [];
-          localMasterTempatKegiatan = (data.masterTempatKegiatan || []).map(m => m.nama);
+          localMasterTempatKegiatan = sanitizeMasterList(data.masterTempatKegiatan, ["Masjid Al-Fatah", "Aula Serbaguna", "Masjid Baitul Makmur", "Daring (Online)"]);
           localJadwalPengajian = data.jadwalPengajian || [];
           localPresensiKehadiran = data.presensiKehadiran || [];
           localDataHaji = data.dataHaji || [];
@@ -2173,3 +2186,13 @@
 
     window.getSupabaseClient = function() { return supabaseClient; };
     window.getUseSupabase = function() { return useSupabase; };
+    window.getKelompokList = function() {
+      if (typeof localMasterKelompok !== 'undefined' && Array.isArray(localMasterKelompok)) {
+        const clean = localMasterKelompok
+          .map(k => typeof k === 'object' && k ? (k.nama || k.name || '') : String(k || ''))
+          .map(k => k.trim())
+          .filter(k => k && k !== 'undefined' && k !== 'null' && k !== '[object Object]');
+        if (clean.length > 0) return Array.from(new Set(clean));
+      }
+      return ["Pondok Melati", "Pondok Melati Selatan", "Jatiranggon", "Chandra"];
+    };

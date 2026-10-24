@@ -337,17 +337,18 @@
     function deleteMasterItem(name) {
       const curUser = getCurrentUser();
       if (confirm(`Apakah Anda yakin ingin menghapus opsi "${name}" dari tabel master ${activeMasterTab}? Semua data yang terkait akan ikut dibersihkan.`)) {
-        google.script.run
-          .withSuccessHandler(function() {
-            fetchDatabaseFromServer(function() {
-              renderMasterTable();
-              showToast(`Opsi ${name} berhasil dihapus dari master ${activeMasterTab}!`, "success");
+        if (typeof supabaseDeleteMasterItem === 'function') {
+          supabaseDeleteMasterItem(activeMasterTab, name, curUser.username)
+            .then(() => {
+              fetchDatabaseFromServer(function() {
+                renderMasterTable();
+                showToast(`Opsi ${name} berhasil dihapus dari master ${activeMasterTab}!`, "success");
+              });
+            })
+            .catch(err => {
+              showToast("Gagal menghapus opsi master: " + err.message, "error");
             });
-          })
-          .withFailureHandler(function(err) {
-            showToast("Gagal menghapus opsi master: " + err.message, "error");
-          })
-          .deleteMasterItemGAS(activeMasterTab, name, curUser.username);
+        }
       }
     }
 
@@ -442,14 +443,27 @@
     // ----------------------------------------------------
     function populateUserFilterKelompok() {
       const select = document.getElementById("user-filter-kelompok");
-      if (!select || select.children.length > 1) return;
-      const list = typeof localMasterKelompok !== 'undefined' ? localMasterKelompok : [];
+      if (!select) return;
+      const savedVal = select.value;
+      select.innerHTML = '<option value="">Semua Kelompok</option>';
+      const rawList = typeof getKelompokList === 'function' ? getKelompokList() : (Array.isArray(localMasterKelompok) ? localMasterKelompok : []);
+      const list = Array.from(new Set(
+        rawList
+          .map(k => typeof k === 'object' && k ? (k.nama || k.name || '') : String(k || ''))
+          .map(k => k.trim())
+          .filter(k => k && k !== 'undefined' && k !== 'null' && k !== '[object Object]')
+      ));
       list.forEach(k => {
         const opt = document.createElement("option");
         opt.value = k;
         opt.textContent = k;
         select.appendChild(opt);
       });
+      if (savedVal && list.includes(savedVal)) {
+        select.value = savedVal;
+      } else {
+        select.value = "";
+      }
     }
 
     function initUserTableFilters() {
@@ -516,7 +530,7 @@
         if (roleVal && (u.role || '').trim().toLowerCase() !== roleVal) {
           return;
         }
-        if (kelompokVal && (u.kelompok || 'Semua').trim().toLowerCase() !== kelompokVal) {
+        if (kelompokVal && String(u.kelompok || '').trim().toLowerCase() !== kelompokVal) {
           return;
         }
         if (searchVal) {
@@ -589,8 +603,16 @@
 
     function populateUserKelompokDropdown() {
       const select = document.getElementById("user-form-kelompok");
+      if (!select) return;
       select.innerHTML = '<option value="" disabled selected>-- Pilih Kelompok --</option>';
-      localMasterKelompok.forEach(k => {
+      const rawList = typeof getKelompokList === 'function' ? getKelompokList() : (Array.isArray(localMasterKelompok) ? localMasterKelompok : []);
+      const list = Array.from(new Set(
+        rawList
+          .map(k => typeof k === 'object' && k ? (k.nama || k.name || '') : String(k || ''))
+          .map(k => k.trim())
+          .filter(k => k && k !== 'undefined' && k !== 'null' && k !== '[object Object]')
+      ));
+      list.forEach(k => {
         const opt = document.createElement("option");
         opt.value = k;
         opt.textContent = k;

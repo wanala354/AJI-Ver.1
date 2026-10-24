@@ -20,12 +20,17 @@ function populateHajiKelompokFilter() {
 
   const currentUser = typeof getCurrentUser === "function" ? getCurrentUser() : null;
   const userRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
+  const savedVal = filterKelompok.value;
 
   filterKelompok.innerHTML = '<option value="">Semua Kelompok</option>';
 
-  const kelompokList = typeof localMasterKelompok !== "undefined" && Array.isArray(localMasterKelompok)
-    ? localMasterKelompok.map(k => typeof k === "string" ? k : k.nama)
-    : [];
+  const rawList = typeof getKelompokList === 'function' ? getKelompokList() : (Array.isArray(localMasterKelompok) ? localMasterKelompok : []);
+  const kelompokList = Array.from(new Set(
+    rawList
+      .map(k => typeof k === 'object' && k ? (k.nama || k.name || '') : String(k || ''))
+      .map(k => k.trim())
+      .filter(k => k && k !== 'undefined' && k !== 'null' && k !== '[object Object]')
+  ));
 
   kelompokList.forEach(kNama => {
     const opt = document.createElement("option");
@@ -39,6 +44,11 @@ function populateHajiKelompokFilter() {
     filterKelompok.value = currentUser.kelompok;
     filterKelompok.disabled = true;
   } else {
+    if (savedVal && kelompokList.includes(savedVal)) {
+      filterKelompok.value = savedVal;
+    } else {
+      filterKelompok.value = "";
+    }
     filterKelompok.disabled = false;
   }
 }
@@ -334,7 +344,7 @@ function renderHajiTable() {
   // Filter Data
   const filtered = mappedList.filter(h => {
     // Filter Kelompok
-    if (kelompokVal && h.kelompokPengajian !== kelompokVal) return false;
+    if (kelompokVal && String(h.kelompokPengajian || '').trim().toLowerCase() !== String(kelompokVal).trim().toLowerCase()) return false;
     // Filter Status Haji
     if (statusVal && h.statusHaji !== statusVal) return false;
     // Filter Search (Nama / ID Jamaah / No Kursi)

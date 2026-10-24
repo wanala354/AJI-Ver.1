@@ -338,6 +338,17 @@
           accessNote.textContent = `Hak Akses: Operator Desa (CRUD Semua Tingkat)`;
           accessNote.style.color = "#10b981";
         }
+      } else if (userRoleClean === "pendidik ppg") {
+        roleLabel = `PENDIDIK PPG (${user.kelompok})`;
+        if (menuMaster) menuMaster.style.display = "none";
+        if (menuUsers) menuUsers.style.display = "none";
+        if (menuDatabaseSettings) menuDatabaseSettings.style.display = "none";
+        if (menuAudit) menuAudit.style.display = "none";
+        if (btnAdd) btnAdd.style.display = "none";
+        if (btnAddJadwal) btnAddJadwal.style.display = "none";
+        if (btnAddHaji) btnAddHaji.style.display = "none";
+        accessNote.textContent = `Hak Akses: Pendidik PPG ${user.kelompok} (Monitoring & Evaluasi Keilmuan)`;
+        accessNote.style.color = "#10b981";
       } else if (userRoleClean === "pengurus desa" || userRoleClean === "pengurus kelompok") {
         if (menuMaster) menuMaster.style.display = "none";
         if (menuUsers) menuUsers.style.display = "none";
@@ -408,6 +419,9 @@
         } else if (r === "operator kelompok") {
           roleLabel = "Operator Kelompok";
           cRole.className = "badge badge-warning";
+        } else if (r === "pendidik ppg") {
+          roleLabel = "Pendidik PPG";
+          cRole.className = "badge badge-green";
         } else {
           cRole.className = "badge badge-blue";
         }
@@ -1017,9 +1031,17 @@
             const selKelompok = document.getElementById("reg-new-kelompok");
             if (selKelompok) {
               selKelompok.innerHTML = '<option value="">-- Pilih Kelompok --</option>';
-              (localMasterKelompok || []).forEach(k => {
+              const rawList = typeof getKelompokList === 'function' ? getKelompokList() : (Array.isArray(localMasterKelompok) ? localMasterKelompok : []);
+              const list = Array.from(new Set(
+                rawList
+                  .map(k => typeof k === 'object' && k ? (k.nama || k.name || '') : String(k || ''))
+                  .map(k => k.trim())
+                  .filter(k => k && k !== 'undefined' && k !== 'null' && k !== '[object Object]')
+              ));
+              list.forEach(k => {
                 const o = document.createElement("option");
-                o.value = k.nama || k; o.textContent = k.nama || k;
+                o.value = k;
+                o.textContent = k;
                 selKelompok.appendChild(o);
               });
             }
@@ -1784,9 +1806,11 @@
         "section-profile": { title: "Profil Saya & Keamanan", icon: "fa-user-circle" },
         "section-database-settings": { title: "Koneksi Database Supabase", icon: "fa-database" },
         "section-audit": { title: "Riwayat Aktivitas & Audit Logs", icon: "fa-history" },
+        "section-ppg": { title: "Modul PPG (Penggerak Pembina Generus)", icon: "fa-graduation-cap" },
         "section-jamaah-dashboard": { title: "Dashboard Saya", icon: "fa-gauge-high" },
         "section-jamaah-keluarga": { title: "Keluarga Saya", icon: "fa-house-user" },
-        "section-jamaah-jadwal": { title: "Jadwal Pengajian", icon: "fa-calendar-check" }
+        "section-jamaah-jadwal": { title: "Jadwal Pengajian", icon: "fa-calendar-check" },
+        "section-jamaah-rapor-ppg": { title: "Rapor Keilmuan PPG", icon: "fa-graduation-cap" }
       };
       
       const titleInfo = titleMap[sectionId] || { title: "Modul AJI", icon: "fa-mosque" };
@@ -1834,6 +1858,8 @@
         }
       } else if (sectionId === "section-audit") {
         renderAuditLogs();
+      } else if (sectionId === "section-ppg") {
+        if (typeof initPpgModule === 'function') initPpgModule();
       } else if (sectionId === "section-jamaah-dashboard") {
         if (typeof loadJamaahDashboard === 'function') loadJamaahDashboard();
       } else if (sectionId === "section-jamaah-keluarga") {
@@ -1841,6 +1867,8 @@
       } else if (sectionId === "section-jamaah-jadwal") {
         if (typeof initPortalCalendarFilters === 'function') initPortalCalendarFilters();
         if (typeof switchPortalJadwalTab === 'function') switchPortalJadwalTab('kalender');
+      } else if (sectionId === "section-jamaah-rapor-ppg") {
+        if (typeof initJamaahPortalPpgRapor === 'function') initJamaahPortalPpgRapor();
       }
     }
 

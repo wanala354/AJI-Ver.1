@@ -1024,9 +1024,17 @@
             const selKelompok = document.getElementById("reg-new-kelompok");
             if (selKelompok) {
               selKelompok.innerHTML = '<option value="">-- Pilih Kelompok --</option>';
-              (localMasterKelompok || []).forEach(k => {
+              const rawList = typeof getKelompokList === 'function' ? getKelompokList() : (Array.isArray(localMasterKelompok) ? localMasterKelompok : []);
+              const list = Array.from(new Set(
+                rawList
+                  .map(k => typeof k === 'object' && k ? (k.nama || k.name || '') : String(k || ''))
+                  .map(k => k.trim())
+                  .filter(k => k && k !== 'undefined' && k !== 'null' && k !== '[object Object]')
+              ));
+              list.forEach(k => {
                 const o = document.createElement("option");
-                o.value = k.nama || k; o.textContent = k.nama || k;
+                o.value = k;
+                o.textContent = k;
                 selKelompok.appendChild(o);
               });
             }

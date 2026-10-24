@@ -3,23 +3,29 @@
     function populateFilterOptions() {
       // Kelompok Filter
       const filterK = document.getElementById("filter-kelompok");
+      if (!filterK) return;
       const savedSelK = filterK.value;
       filterK.innerHTML = '<option value="">-- Semua Kelompok --</option>';
       
-      localMasterKelompok.forEach(k => {
-        const opt = document.createElement("option");
-        opt.value = k;
-        opt.textContent = k;
-        filterK.appendChild(opt);
+      const kelList = typeof getKelompokList === 'function' ? getKelompokList() : (localMasterKelompok || []);
+      kelList.forEach(k => {
+        const val = typeof k === 'object' && k !== null ? (k.nama || k.name || k.kelompok || String(k)) : String(k || '');
+        const cleanVal = val.trim();
+        if (cleanVal && cleanVal !== '[object Object]' && cleanVal !== 'undefined' && cleanVal !== 'null') {
+          const opt = document.createElement("option");
+          opt.value = cleanVal;
+          opt.textContent = cleanVal;
+          filterK.appendChild(opt);
+        }
       });
       
       const currentUser = getCurrentUser();
       const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
-      if (currentUser && curRoleClean === "operator kelompok") {
+      if (currentUser && (curRoleClean === "operator kelompok" || curRoleClean === "pengurus kelompok") && currentUser.kelompok) {
         filterK.value = currentUser.kelompok;
         filterK.disabled = true; // Lock down groups selection
       } else {
-        filterK.value = savedSelK;
+        if (savedSelK) filterK.value = savedSelK;
         filterK.disabled = false;
       }
       
@@ -55,7 +61,7 @@
       const list = getJamaahList();
       filteredJamaahList = list.filter(j => {
         const matchSearch = j.namaLengkap.toLowerCase().includes(searchVal) || j.id.toLowerCase().includes(searchVal);
-        const matchKelompok = kelompokVal === "" || j.kelompokPengajian === kelompokVal;
+        const matchKelompok = kelompokVal === "" || String(j.kelompokPengajian || '').trim().toLowerCase() === String(kelompokVal || '').trim().toLowerCase();
         let matchPeramutan = true;
         if (peramutanVal !== "") {
           if (peramutanVal === "PAUD & Balita" || peramutanVal === "PAUD dan Balita" || peramutanVal === "PAUD" || peramutanVal === "Balita" || peramutanVal === "PAUD_BALITA") {
@@ -400,14 +406,21 @@
         p.innerHTML = `<i class="fa-solid fa-lock"></i> Kelompok Anda: ${myKelompok}`;
         radioGroup.appendChild(p);
       } else {
-        localMasterKelompok.forEach((k, idx) => {
-          const label = document.createElement("label");
-          label.className = "radio-label";
-          label.innerHTML = `<input type="radio" name="form-kelompok" value="${k}" ${idx === 0 ? "checked" : ""}> ${k}`;
-          radioGroup.appendChild(label);
-          label.querySelector("input").addEventListener("change", (e) => {
-            populateFormKKDropdown(e.target.value);
-          });
+        const kelList = typeof getKelompokList === 'function' ? getKelompokList() : (localMasterKelompok || []);
+        let idx = 0;
+        kelList.forEach(k => {
+          const val = typeof k === 'object' && k !== null ? (k.nama || k.name || k.kelompok || String(k)) : String(k || '');
+          const cleanVal = val.trim();
+          if (cleanVal && cleanVal !== '[object Object]' && cleanVal !== 'undefined' && cleanVal !== 'null') {
+            const label = document.createElement("label");
+            label.className = "radio-label";
+            label.innerHTML = `<input type="radio" name="form-kelompok" value="${cleanVal}" ${idx === 0 ? "checked" : ""}> ${cleanVal}`;
+            radioGroup.appendChild(label);
+            label.querySelector("input").addEventListener("change", (e) => {
+              populateFormKKDropdown(e.target.value);
+            });
+            idx++;
+          }
         });
       }
     }
@@ -463,23 +476,29 @@
     // ----------------------------------------------------
     function populateKKFilterOptions() {
       const kkFilter = document.getElementById("kk-filter-kelompok");
+      if (!kkFilter) return;
       const savedVal = kkFilter.value;
       kkFilter.innerHTML = `<option value="">-- Pilih Kelompok --</option>`;
       
-      localMasterKelompok.forEach(k => {
-        const opt = document.createElement("option");
-        opt.value = k;
-        opt.textContent = k;
-        kkFilter.appendChild(opt);
+      const kelList = typeof getKelompokList === 'function' ? getKelompokList() : (localMasterKelompok || []);
+      kelList.forEach(k => {
+        const val = typeof k === 'object' && k !== null ? (k.nama || k.name || k.kelompok || String(k)) : String(k || '');
+        const cleanVal = val.trim();
+        if (cleanVal && cleanVal !== '[object Object]' && cleanVal !== 'undefined' && cleanVal !== 'null') {
+          const opt = document.createElement("option");
+          opt.value = cleanVal;
+          opt.textContent = cleanVal;
+          kkFilter.appendChild(opt);
+        }
       });
       
       const curUser = getCurrentUser();
       const curRoleClean = curUser ? (curUser.role || "").trim().toLowerCase() : "";
-      if (curUser && curRoleClean === "operator kelompok") {
+      if (curUser && (curRoleClean === "operator kelompok" || curRoleClean === "pengurus kelompok") && curUser.kelompok) {
         kkFilter.value = curUser.kelompok;
         kkFilter.disabled = true;
       } else {
-        kkFilter.value = savedVal;
+        if (savedVal) kkFilter.value = savedVal;
         kkFilter.disabled = false;
       }
     }
@@ -487,7 +506,7 @@
     function populateKKList() {
       const selectedKelompok = document.getElementById("kk-filter-kelompok").value;
       const list = getKepalaKeluargaList();
-      const filtered = selectedKelompok === "" ? list : list.filter(kk => kk.kelompokPengajian === selectedKelompok);
+      const filtered = selectedKelompok === "" ? list : list.filter(kk => String(kk.kelompokPengajian || '').trim().toLowerCase() === String(selectedKelompok).trim().toLowerCase());
       const listContainer = document.getElementById("kk-sidebar-list");
       listContainer.innerHTML = "";
       

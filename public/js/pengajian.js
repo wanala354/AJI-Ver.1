@@ -53,19 +53,22 @@ window.initPengajianModule = function() {
 
   // Populate Kelompok Filter for Kalender Jadwal
   const jadwalKelompokSelect = document.getElementById("filter-jadwal-kelompok");
-  if (jadwalKelompokSelect && (jadwalKelompokSelect.options.length <= 1)) {
+  if (jadwalKelompokSelect) {
     const curVal = jadwalKelompokSelect.value;
     jadwalKelompokSelect.innerHTML = '<option value="">Semua Kelompok</option>';
-    const masterKel = typeof getKelompokList === 'function' ? getKelompokList() : (typeof localMasterKelompok !== 'undefined' ? localMasterKelompok : []);
+    const rawKel = typeof getKelompokList === 'function' ? getKelompokList() : (typeof localMasterKelompok !== 'undefined' ? localMasterKelompok : []);
+    const masterKel = Array.from(new Set(
+      rawKel
+        .map(k => typeof k === 'object' && k ? (k.nama || k.name || '') : String(k || ''))
+        .map(k => k.trim())
+        .filter(k => k && k !== 'undefined' && k !== 'null' && k !== '[object Object]')
+    ));
     masterKel.forEach(k => {
       const opt = document.createElement("option");
       opt.value = k;
       opt.textContent = k;
       jadwalKelompokSelect.appendChild(opt);
     });
-    if (curVal) {
-      jadwalKelompokSelect.value = curVal;
-    }
     const currentUser = getCurrentUser();
     const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
     const isKelompokRestricted = currentUser && (curRoleClean === "operator kelompok" || curRoleClean === "pengurus kelompok");
@@ -73,6 +76,11 @@ window.initPengajianModule = function() {
       jadwalKelompokSelect.value = currentUser.kelompok;
       jadwalKelompokSelect.disabled = true;
     } else {
+      if (curVal && masterKel.includes(curVal)) {
+        jadwalKelompokSelect.value = curVal;
+      } else {
+        jadwalKelompokSelect.value = "";
+      }
       jadwalKelompokSelect.disabled = false;
     }
   }
@@ -98,22 +106,35 @@ window.initPengajianModule = function() {
     teksMonthSelect.value = currentMonthStr;
   }
 
-  if (teksKelompokSelect && teksKelompokSelect.options.length <= 1) {
+  if (teksKelompokSelect) {
+    const curVal = teksKelompokSelect.value;
     teksKelompokSelect.innerHTML = '<option value="">Semua Kelompok</option>';
-    if (typeof localMasterKelompok !== 'undefined') {
-      localMasterKelompok.forEach(k => {
-        const opt = document.createElement("option");
-        opt.value = k;
-        opt.textContent = k;
-        teksKelompokSelect.appendChild(opt);
-      });
-    }
+    const rawKel = typeof getKelompokList === 'function' ? getKelompokList() : (typeof localMasterKelompok !== 'undefined' ? localMasterKelompok : []);
+    const masterKel = Array.from(new Set(
+      rawKel
+        .map(k => typeof k === 'object' && k ? (k.nama || k.name || '') : String(k || ''))
+        .map(k => k.trim())
+        .filter(k => k && k !== 'undefined' && k !== 'null' && k !== '[object Object]')
+    ));
+    masterKel.forEach(k => {
+      const opt = document.createElement("option");
+      opt.value = k;
+      opt.textContent = k;
+      teksKelompokSelect.appendChild(opt);
+    });
     const currentUser = getCurrentUser();
     const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
     const isKelompokRestricted = currentUser && (curRoleClean === "operator kelompok" || curRoleClean === "pengurus kelompok");
-    if (isKelompokRestricted) {
+    if (isKelompokRestricted && currentUser.kelompok) {
       teksKelompokSelect.value = currentUser.kelompok;
       teksKelompokSelect.disabled = true;
+    } else {
+      if (curVal && masterKel.includes(curVal)) {
+        teksKelompokSelect.value = curVal;
+      } else {
+        teksKelompokSelect.value = "";
+      }
+      teksKelompokSelect.disabled = false;
     }
   }
   
@@ -614,7 +635,7 @@ function populateJadwalKelompokDropdown() {
     defOpt.selected = true;
     select.appendChild(defOpt);
     
-    const groups = getMasterKelompokList() || [];
+    const groups = getMasterKelompokList();
     groups.forEach(g => {
       const opt = document.createElement("option");
       opt.value = g;
@@ -625,7 +646,13 @@ function populateJadwalKelompokDropdown() {
 }
 
 function getMasterKelompokList() {
-  return typeof localMasterKelompok !== 'undefined' ? localMasterKelompok : [];
+  const raw = typeof getKelompokList === 'function' ? getKelompokList() : (typeof localMasterKelompok !== 'undefined' ? localMasterKelompok : []);
+  return Array.from(new Set(
+    raw
+      .map(k => typeof k === 'object' && k ? (k.nama || k.name || '') : String(k || ''))
+      .map(k => k.trim())
+      .filter(k => k && k !== 'undefined' && k !== 'null' && k !== '[object Object]')
+  ));
 }
 
 function setJadwalFormReadOnly(isReadOnly) {
@@ -1382,14 +1409,15 @@ function initMonitoringFilters() {
   const selectKelompok = document.getElementById("monitor-kelompok");
   const selectJenis = document.getElementById("monitor-jenis");
   
-  if (selectKelompok && selectKelompok.children.length === 0) {
+  if (selectKelompok) {
+    const curVal = selectKelompok.value;
     selectKelompok.innerHTML = "";
     
     const currentUser = getCurrentUser();
     const curRoleClean = currentUser ? (currentUser.role || "").trim().toLowerCase() : "";
     const isOperator = curRoleClean === "operator kelompok" || curRoleClean === "pengurus kelompok";
     
-    if (isOperator) {
+    if (isOperator && currentUser.kelompok) {
       const opt = document.createElement("option");
       opt.value = currentUser.kelompok;
       opt.textContent = currentUser.kelompok;
@@ -1401,16 +1429,20 @@ function initMonitoringFilters() {
       const defOpt = document.createElement("option");
       defOpt.value = "";
       defOpt.textContent = "Semua Kelompok";
-      defOpt.selected = true;
       selectKelompok.appendChild(defOpt);
       
-      const groups = getMasterKelompokList() || [];
+      const groups = getMasterKelompokList();
       groups.forEach(g => {
         const opt = document.createElement("option");
         opt.value = g;
         opt.textContent = g;
         selectKelompok.appendChild(opt);
       });
+      if (curVal && groups.includes(curVal)) {
+        selectKelompok.value = curVal;
+      } else {
+        selectKelompok.value = "";
+      }
     }
   }
 
@@ -2057,7 +2089,7 @@ function fillMonitoringDOM() {
     filtered = filtered.filter(p => p.nama.toLowerCase().includes(search));
   }
   if (filterKelompok) {
-    filtered = filtered.filter(p => p.kelompokPengajian === filterKelompok);
+    filtered = filtered.filter(p => String(p.kelompokPengajian || '').trim().toLowerCase() === String(filterKelompok).trim().toLowerCase());
   }
   if (filterPeramutan) {
     if (filterPeramutan === "PAUD & Balita" || filterPeramutan === "PAUD dan Balita" || filterPeramutan === "PAUD" || filterPeramutan === "Balita") {
@@ -2296,7 +2328,7 @@ window.loadKehadiranTeksTable = function() {
   // 2. Filter jamaah who are obliged (eligible) for at least one of these Teks sessions
   let obligedJamaah = jamaahList.filter(j => {
     // If kelompok filter is active, jamaah must match the filter
-    if (selectedKelompok && j.kelompokPengajian !== selectedKelompok) {
+    if (selectedKelompok && String(j.kelompokPengajian || '').trim().toLowerCase() !== String(selectedKelompok).trim().toLowerCase()) {
       return false;
     }
     // Must be eligible for at least one Teks session

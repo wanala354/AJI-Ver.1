@@ -29,7 +29,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4"></script>
 
   <!-- Embedded Stylesheet -->
-  <link rel="stylesheet" crossorigin href="./assets/index-r6Hd1ubS.css">
+  <link rel="stylesheet" crossorigin href="./assets/index-D0u3SSdH.css">
 </head>
 
 <body class="dark-theme">
@@ -277,6 +277,9 @@
         <li class="menu-item" data-target="section-report">
           <a href="#"><i class="fa-solid fa-file-contract"></i> Laporan & Rekap</a>
         </li>
+        <li class="menu-item" data-target="section-ppg" id="menu-ppg">
+          <a href="#"><i class="fa-solid fa-graduation-cap"></i> Modul PPG</a>
+        </li>
 
         <li class="menu-item has-submenu" id="menu-pengaturan-parent">
           <a href="#" class="menu-toggle"><i class="fa-solid fa-gear"></i> Pengaturan <i
@@ -311,6 +314,9 @@
         </li>
         <li class="menu-item" data-target="section-jamaah-jadwal">
           <a href="#"><i class="fa-solid fa-calendar-check"></i> Jadwal Kegiatan</a>
+        </li>
+        <li class="menu-item" data-target="section-jamaah-rapor-ppg" id="menu-jamaah-ppg">
+          <a href="#"><i class="fa-solid fa-graduation-cap"></i> Rapor PPG</a>
         </li>
       </ul>
 
@@ -1287,8 +1293,7 @@
               </div>
             </div>
 
-          </div>
-        </section>
+          </section>
 
         <!-- PAGE 5: DATABASE SUPABASE SETTINGS -->
         <section id="section-database-settings" class="page-section">
@@ -1972,8 +1977,568 @@
                 
                 <button class="btn-primary" id="btn-print-qr" style="display: none; padding: 10px; font-weight: 600; border-radius: 6px; background: #10b981; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="printStaticQRCode()"><i class="fa-solid fa-print"></i> Cetak QR Code</button>
               </div>
+            </div>
           </div>
         </section>
+
+        <!-- ====================================================
+             SECTION MODUL PPG (PENGGERAK PEMBINA GENERUS)
+             ==================================================== -->
+        <section id="section-ppg" class="page-section">
+          <!-- CARD PANEL TABS -->
+          <div class="card-panel-tabs" style="display:flex; gap:10px; margin-bottom:20px; border-bottom:1px solid var(--border-color); padding-bottom:10px; overflow-x:auto;">
+            <button class="tab-btn active" data-subtab="data-ppg" style="padding:10px 20px; background:transparent; border:none; border-bottom:3px solid var(--primary); color:var(--primary); font-weight:600; cursor:pointer; font-size:0.95rem; font-family:inherit; white-space:nowrap;">
+              <i class="fa-solid fa-users-viewfinder"></i> Data &amp; Monitoring Generus
+            </button>
+            <button class="tab-btn" data-subtab="input-capaian" style="padding:10px 20px; background:transparent; border:none; border-bottom:3px solid transparent; color:var(--text-secondary); font-weight:500; cursor:pointer; font-size:0.95rem; font-family:inherit; white-space:nowrap;">
+              <i class="fa-solid fa-pen-to-square"></i> Input Capaian Keilmuan
+            </button>
+            <button class="tab-btn" data-subtab="monitoring-hadis" style="padding:10px 20px; background:transparent; border:none; border-bottom:3px solid transparent; color:var(--text-secondary); font-weight:500; cursor:pointer; font-size:0.95rem; font-family:inherit; white-space:nowrap;">
+              <i class="fa-solid fa-book-quran"></i> Monitoring Hadis Himpunan
+            </button>
+            <button class="tab-btn" data-subtab="master-kurikulum" style="padding:10px 20px; background:transparent; border:none; border-bottom:3px solid transparent; color:var(--text-secondary); font-weight:500; cursor:pointer; font-size:0.95rem; font-family:inherit; white-space:nowrap;">
+              <i class="fa-solid fa-book-bookmark"></i> Master Kurikulum &amp; Silabus
+            </button>
+          </div>
+
+          <!-- SUBTAB 1: DATA & MONITORING GENERUS -->
+          <div id="subtab-data-ppg" class="subtab-content active-tab">
+            <!-- Filter Bar -->
+            <div class="filter-panel" style="margin-bottom:20px; display:flex; flex-wrap:wrap; gap:12px; align-items:center; background:var(--bg-card); padding:16px; border-radius:10px; border:1px solid var(--border-color);">
+              <div style="flex:1; min-width:200px;">
+                <label style="font-size:0.8rem; color:var(--text-secondary); display:block; margin-bottom:4px;">Cari Generus (Nama / ID)</label>
+                <input type="text" id="ppg-filter-search" placeholder="Ketik nama atau ID generus..." style="width:100%; padding:8px 12px; border-radius:6px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); color:var(--text-primary); font-size:0.9rem;">
+              </div>
+              <div style="min-width:160px;">
+                <label style="font-size:0.8rem; color:var(--text-secondary); display:block; margin-bottom:4px;">Kelompok / Rukun</label>
+                <select id="ppg-filter-kelompok" class="select-filter" style="width:100%; padding:8px 12px; font-size:0.9rem;">
+                  <option value="">Semua Kelompok</option>
+                </select>
+              </div>
+              <div style="min-width:130px;">
+                <label style="font-size:0.8rem; color:var(--text-secondary); display:block; margin-bottom:4px;">Jenjang Generus</label>
+                <select id="ppg-filter-kategori" class="select-filter" style="width:100%; padding:8px 12px; font-size:0.9rem;">
+                  <option value="">Semua Jenjang</option>
+                  <option value="PAUD">PAUD (4-5 Thn)</option>
+                  <option value="Caberawit">Caberawit (6-12 Thn)</option>
+                  <option value="GUS">GUS (13-18 Thn)</option>
+                  <option value="GUM">GUM (19-29 Thn)</option>
+                </select>
+              </div>
+              <div style="min-width:120px;">
+                <label style="font-size:0.8rem; color:var(--text-secondary); display:block; margin-bottom:4px;">Jenis Kelamin</label>
+                <select id="ppg-filter-gender" class="select-filter" style="width:100%; padding:8px 12px; font-size:0.9rem;">
+                  <option value="">Semua Gender</option>
+                  <option value="Laki-laki">Laki-laki</option>
+                  <option value="Perempuan">Perempuan</option>
+                </select>
+              </div>
+              <div style="min-width:120px;">
+                <label style="font-size:0.8rem; color:var(--text-secondary); display:block; margin-bottom:4px;">Bulan</label>
+                <select id="ppg-filter-bulan" class="select-filter" style="width:100%; padding:8px 12px; font-size:0.9rem;"></select>
+              </div>
+              <div style="min-width:100px;">
+                <label style="font-size:0.8rem; color:var(--text-secondary); display:block; margin-bottom:4px;">Tahun</label>
+                <select id="ppg-filter-tahun" class="select-filter" style="width:100%; padding:8px 12px; font-size:0.9rem;"></select>
+              </div>
+              <div style="align-self:flex-end;">
+                <button type="button" id="btn-reset-ppg-filter" class="btn-secondary" style="padding:8px 14px; font-size:0.88rem; height:38px;">
+                  <i class="fa-solid fa-rotate-left"></i> Reset
+                </button>
+              </div>
+            </div>
+
+            <!-- KPI Metrik PPG -->
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:16px; margin-bottom:20px;">
+              <div class="card-glass" style="padding:16px; border-radius:10px; border:1px solid var(--border-color); display:flex; align-items:center; gap:14px;">
+                <div style="width:48px; height:48px; border-radius:10px; background:rgba(59,130,246,0.15); color:#60a5fa; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
+                  <i class="fa-solid fa-users"></i>
+                </div>
+                <div>
+                  <div style="font-size:0.8rem; color:var(--text-secondary);">Total Generus Aktif</div>
+                  <div id="ppg-kpi-total-generus" style="font-size:1.6rem; font-weight:800; color:var(--text-primary);">0</div>
+                </div>
+              </div>
+              <div class="card-glass" style="padding:16px; border-radius:10px; border:1px solid var(--border-color); display:flex; align-items:center; gap:14px;">
+                <div style="width:48px; height:48px; border-radius:10px; background:rgba(16,185,129,0.15); color:#34d399; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
+                  <i class="fa-solid fa-award"></i>
+                </div>
+                <div>
+                  <div style="font-size:0.8rem; color:var(--text-secondary);">Sangat Aktif (&ge;80%)</div>
+                  <div id="ppg-kpi-sangat-aktif" style="font-size:1.6rem; font-weight:800; color:#10b981;">0</div>
+                </div>
+              </div>
+              <div class="card-glass" style="padding:16px; border-radius:10px; border:1px solid var(--border-color); display:flex; align-items:center; gap:14px;">
+                <div style="width:48px; height:48px; border-radius:10px; background:rgba(245,158,11,0.15); color:#fbbf24; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
+                  <i class="fa-solid fa-chart-line"></i>
+                </div>
+                <div>
+                  <div style="font-size:0.8rem; color:var(--text-secondary);">Rata-rata Presensi</div>
+                  <div id="ppg-kpi-avg-kehadiran" style="font-size:1.6rem; font-weight:800; color:var(--text-primary);">-</div>
+                </div>
+              </div>
+              <div class="card-glass" style="padding:16px; border-radius:10px; border:1px solid var(--border-color); display:flex; align-items:center; gap:14px;">
+                <div style="width:48px; height:48px; border-radius:10px; background:rgba(168,85,247,0.15); color:#c084fc; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
+                  <i class="fa-solid fa-book-open"></i>
+                </div>
+                <div>
+                  <div style="font-size:0.8rem; color:var(--text-secondary);">Target Materi Tuntas</div>
+                  <div id="ppg-kpi-total-tuntas" style="font-size:1.6rem; font-weight:800; color:var(--text-primary);">0</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tabel Data Generus -->
+            <div class="table-responsive" style="background:var(--bg-card); border-radius:10px; border:1px solid var(--border-color); padding:16px;">
+              <table class="table-custom" style="width:100%;">
+                <thead>
+                  <tr>
+                    <th style="width:40px; text-align:center;">No</th>
+                    <th>Nama Generus &amp; ID</th>
+                    <th style="width:50px; text-align:center;">L/P</th>
+                    <th>Kelompok</th>
+                    <th style="width:110px;">Jenjang</th>
+                    <th style="width:170px;">Presensi Bulan Ini</th>
+                    <th style="width:180px;">Capaian Keilmuan</th>
+                    <th style="width:90px; text-align:center;">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="ppg-santri-table-body">
+                  <tr><td colspan="8" style="text-align:center; padding:30px;">Memuat data generus...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- SUBTAB 2: INPUT CAPAIAN KEILMUAN -->
+          <div id="subtab-input-capaian" class="subtab-content" style="display:none;">
+            <!-- Mode Switcher -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px; background:var(--bg-card); padding:14px 18px; border-radius:10px; border:1px solid var(--border-color);">
+              <div style="display:flex; gap:10px;">
+                <button type="button" id="btn-ppg-mode-batch" class="btn-primary" style="padding:8px 16px; font-size:0.9rem; border-radius:6px; cursor:pointer;">
+                  <i class="fa-solid fa-layer-group"></i> Mode 1: Input per Materi (Batch / Massal)
+                </button>
+                <button type="button" id="btn-ppg-mode-individu" class="btn-secondary" style="padding:8px 16px; font-size:0.9rem; border-radius:6px; cursor:pointer; background:transparent; border:1px solid var(--border-color); color:var(--text-secondary);">
+                  <i class="fa-solid fa-user-pen"></i> Mode 2: Input per Individu (Buku Rapor)
+                </button>
+              </div>
+              <div style="font-size:0.85rem; color:var(--text-secondary);">
+                Pilih mode input yang paling sesuai untuk evaluasi pembelajaran kelas atau perorangan generus.
+              </div>
+            </div>
+
+            <!-- MODE 1: BATCH / MASSAL AREA -->
+            <div id="ppg-input-mode-batch-area">
+              <div class="card-glass" style="padding:18px; border-radius:10px; border:1px solid var(--border-color); margin-bottom:20px;">
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:14px; margin-bottom:14px;">
+                  <div>
+                    <label style="font-size:0.8rem; color:var(--text-secondary); display:block; margin-bottom:4px;">Kelompok / Rukun</label>
+                    <select id="ppg-batch-kelompok" class="select-filter" style="width:100%; padding:8px 12px; font-size:0.9rem;">
+                      <option value="">Semua Kelompok</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style="font-size:0.8rem; color:var(--text-secondary); display:block; margin-bottom:4px;">Jenjang Peramutan</label>
+                    <select id="ppg-batch-jenjang" class="select-filter" style="width:100%; padding:8px 12px; font-size:0.9rem;">
+                      <option value="PAUD">PAUD (4-5 Thn)</option>
+                      <option value="Caberawit" selected>Caberawit (6-12 Thn)</option>
+                      <option value="GUS">GUS (13-18 Thn)</option>
+                      <option value="GUM">GUM (19-29 Thn)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style="font-size:0.8rem; color:var(--text-secondary); display:block; margin-bottom:4px;">Bidang Keilmuan</label>
+                    <select id="ppg-batch-bidang" class="select-filter" style="width:100%; padding:8px 12px; font-size:0.9rem;"></select>
+                  </div>
+                  <div>
+                    <label style="font-size:0.8rem; color:var(--text-secondary); display:block; margin-bottom:4px;">Target Materi</label>
+                    <select id="ppg-batch-materi" class="select-filter" style="width:100%; padding:8px 12px; font-size:0.9rem;"></select>
+                  </div>
+                </div>
+                <button type="button" class="btn-primary" onclick="loadBatchSantriList()" style="padding:8px 18px; font-size:0.9rem; border-radius:6px;">
+                  <i class="fa-solid fa-search"></i> Muat Daftar Generus
+                </button>
+              </div>
+
+              <!-- Tabel Batch Generus (Muncul setelah klik Muat) -->
+              <div id="ppg-batch-table-container" style="display:none; background:var(--bg-card); border-radius:10px; border:1px solid var(--border-color); padding:18px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+                  <div id="ppg-batch-materi-info" style="font-size:1rem; color:var(--text-primary);">
+                    Target: <strong>-</strong>
+                  </div>
+                  <div style="display:flex; gap:10px;">
+                    <button type="button" class="btn-secondary" onclick="markAllBatchTuntas()" style="padding:8px 14px; font-size:0.85rem; border-radius:6px; background:rgba(16,185,129,0.15); border:1px solid #10b981; color:#10b981;">
+                      <i class="fa-solid fa-check-double"></i> Tandai Semua Tuntas
+                    </button>
+                    <button type="button" class="btn-primary" onclick="saveAllBatchProgress()" style="padding:8px 18px; font-size:0.85rem; border-radius:6px;">
+                      <i class="fa-solid fa-floppy-disk"></i> Simpan Semua Perubahan
+                    </button>
+                  </div>
+                </div>
+
+                <div class="table-responsive">
+                  <table class="table-custom" style="width:100%;">
+                    <thead>
+                      <tr>
+                        <th style="width:40px; text-align:center;">No</th>
+                        <th>Generus</th>
+                        <th style="width:100px; text-align:center;">Status Saat Ini</th>
+                        <th style="width:130px;">Ubah Status</th>
+                        <th style="width:85px; text-align:center;">Nilai (0-100)</th>
+                        <th style="width:140px;">Tgl Tuntas</th>
+                        <th style="width:130px;">Penguji</th>
+                        <th>Catatan Pembimbing</th>
+                      </tr>
+                    </thead>
+                    <tbody id="ppg-batch-table-body">
+                      <!-- Rendered dynamically -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- MODE 2: INDIVIDU AREA -->
+            <div id="ppg-input-mode-individu-area" style="display:none;">
+              <div class="card-glass" style="padding:18px; border-radius:10px; border:1px solid var(--border-color); margin-bottom:20px;">
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:14px; margin-bottom:14px;">
+                  <div>
+                    <label style="font-size:0.8rem; color:var(--text-secondary); display:block; margin-bottom:4px;">Filter Kelompok / Rukun</label>
+                    <select id="ppg-individu-kelompok" class="select-filter" style="width:100%; padding:8px 12px; font-size:0.9rem;" onchange="updateIndividuGenerusDropdown()">
+                      <option value="">Semua Kelompok</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style="font-size:0.8rem; color:var(--text-secondary); display:block; margin-bottom:4px;">Filter Jenjang Generus</label>
+                    <select id="ppg-individu-jenjang" class="select-filter" style="width:100%; padding:8px 12px; font-size:0.9rem;" onchange="updateIndividuGenerusDropdown()">
+                      <option value="">Semua Jenjang</option>
+                      <option value="PAUD">PAUD (4-5 Thn)</option>
+                      <option value="Caberawit">Caberawit (6-12 Thn)</option>
+                      <option value="GUS">GUS (13-18 Thn)</option>
+                      <option value="GUM">GUM (19-29 Thn)</option>
+                    </select>
+                  </div>
+                  <div style="grid-column: span 2;">
+                    <label style="font-size:0.8rem; color:var(--text-secondary); display:block; margin-bottom:4px;">Pilih Generus</label>
+                    <select id="ppg-individu-santri-select" class="select-filter" style="width:100%; padding:8px 12px; font-size:0.9rem;" onchange="loadIndividuRapor()">
+                      <option value="">-- Cari / Pilih Generus --</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Content Rapor Individu -->
+              <div id="ppg-individu-content" style="display:none; background:var(--bg-card); border-radius:10px; border:1px solid var(--border-color); padding:20px;">
+                <div id="ppg-individu-profile-card" style="margin-bottom:20px; padding-bottom:15px; border-bottom:1px solid var(--border-color);">
+                  <!-- Profile Header Rendered Dynamically -->
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                  <h4 style="margin:0; color:var(--text-primary); font-size:1.1rem;">
+                    <i class="fa-solid fa-list-check" style="color:var(--primary); margin-right:6px;"></i> Matriks Kurikulum &amp; Capaian Generus
+                  </h4>
+                  <button type="button" class="btn-primary" onclick="saveIndividuRapor()" style="padding:8px 18px; font-size:0.85rem; border-radius:6px;">
+                    <i class="fa-solid fa-floppy-disk"></i> Simpan Capaian Generus
+                  </button>
+                </div>
+
+                <div class="table-responsive">
+                  <table class="table-custom" style="width:100%;">
+                    <thead>
+                      <tr>
+                        <th style="width:40px; text-align:center;">No</th>
+                        <th style="width:140px;">Bidang</th>
+                        <th>Target Materi</th>
+                        <th style="width:120px;">Status</th>
+                        <th style="width:85px; text-align:center;">Nilai</th>
+                        <th style="width:130px;">Penguji</th>
+                        <th>Catatan</th>
+                      </tr>
+                    </thead>
+                    <tbody id="ppg-individu-table-body">
+                      <!-- Rendered dynamically -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUBTAB 3: MONITORING HADIS HIMPUNAN -->
+          <div id="subtab-monitoring-hadis" class="subtab-content" style="display:none;">
+            <!-- Filter Bar Monitoring Hadis -->
+            <div class="filter-panel" style="margin-bottom:20px; display:flex; flex-wrap:wrap; gap:12px; align-items:center; background:var(--bg-card); padding:16px; border-radius:10px; border:1px solid var(--border-color);">
+              <div style="flex:1; min-width:220px;">
+                <label style="font-size:0.8rem; color:var(--text-secondary); display:block; margin-bottom:4px;">Cari Kitab / Generus</label>
+                <input type="text" id="hadis-mon-filter-search" placeholder="Ketik nama kitab atau nama generus..." style="width:100%; padding:8px 12px; border-radius:6px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); color:var(--text-primary); font-size:0.9rem;" oninput="applyMonitoringHadisFilter()">
+              </div>
+              <div style="min-width:170px;">
+                <label style="font-size:0.8rem; color:var(--text-secondary); display:block; margin-bottom:4px;">Kelompok / Rukun</label>
+                <select id="hadis-mon-filter-kelompok" class="select-filter" style="width:100%; padding:8px 12px; font-size:0.9rem;" onchange="applyMonitoringHadisFilter()">
+                  <option value="">Semua Kelompok</option>
+                </select>
+              </div>
+              <div style="min-width:150px;">
+                <label style="font-size:0.8rem; color:var(--text-secondary); display:block; margin-bottom:4px;">Jenjang Generus</label>
+                <select id="hadis-mon-filter-jenjang" class="select-filter" style="width:100%; padding:8px 12px; font-size:0.9rem;" onchange="applyMonitoringHadisFilter()">
+                  <option value="">Semua Jenjang</option>
+                  <option value="Caberawit">Caberawit (6-12 Thn)</option>
+                  <option value="GUS" selected>GUS (13-18 Thn)</option>
+                  <option value="GUM">GUM (19-29 Thn)</option>
+                </select>
+              </div>
+              <div style="align-self:flex-end;">
+                <button type="button" class="btn-secondary" onclick="resetMonitoringHadisFilter()" style="padding:8px 14px; font-size:0.88rem; height:38px;">
+                  <i class="fa-solid fa-rotate-left"></i> Reset
+                </button>
+              </div>
+            </div>
+
+            <!-- Ringkasan Statistik Hadis Himpunan -->
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:16px; margin-bottom:20px;">
+              <div class="card-glass" style="padding:16px; border-radius:10px; border:1px solid var(--border-color); display:flex; align-items:center; gap:14px;">
+                <div style="width:48px; height:48px; border-radius:10px; background:rgba(99,102,241,0.15); color:#818cf8; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
+                  <i class="fa-solid fa-book-bookmark"></i>
+                </div>
+                <div>
+                  <div style="font-size:0.8rem; color:var(--text-secondary);">Total Kitab Hadis</div>
+                  <div id="hadis-mon-kpi-total-kitab" style="font-size:1.6rem; font-weight:800; color:var(--text-primary);">0</div>
+                </div>
+              </div>
+              <div class="card-glass" style="padding:16px; border-radius:10px; border:1px solid var(--border-color); display:flex; align-items:center; gap:14px;">
+                <div style="width:48px; height:48px; border-radius:10px; background:rgba(59,130,246,0.15); color:#60a5fa; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
+                  <i class="fa-solid fa-users"></i>
+                </div>
+                <div>
+                  <div style="font-size:0.8rem; color:var(--text-secondary);">Total Generus Sasaran</div>
+                  <div id="hadis-mon-kpi-total-generus" style="font-size:1.6rem; font-weight:800; color:var(--text-primary);">0</div>
+                </div>
+              </div>
+              <div class="card-glass" style="padding:16px; border-radius:10px; border:1px solid var(--border-color); display:flex; align-items:center; gap:14px;">
+                <div style="width:48px; height:48px; border-radius:10px; background:rgba(16,185,129,0.15); color:#34d399; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
+                  <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+                <div>
+                  <div style="font-size:0.8rem; color:var(--text-secondary);">Generus Khatam 100%</div>
+                  <div id="hadis-mon-kpi-total-khatam" style="font-size:1.6rem; font-weight:800; color:#10b981;">0</div>
+                </div>
+              </div>
+              <div class="card-glass" style="padding:16px; border-radius:10px; border:1px solid var(--border-color); display:flex; align-items:center; gap:14px;">
+                <div style="width:48px; height:48px; border-radius:10px; background:rgba(245,158,11,0.15); color:#fbbf24; display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
+                  <i class="fa-solid fa-chart-pie"></i>
+                </div>
+                <div>
+                  <div style="font-size:0.8rem; color:var(--text-secondary);">Rata-rata Pengkhataman</div>
+                  <div id="hadis-mon-kpi-avg-progress" style="font-size:1.6rem; font-weight:800; color:#fbbf24;">0%</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bagian Pemilihan Materi / Kitab Hadis Himpunan (Cards Grid) -->
+            <div style="margin-bottom:24px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <div>
+                  <h3 style="margin:0; font-size:1.15rem; color:var(--text-primary);">
+                    <i class="fa-solid fa-book-quran" style="color:var(--primary); margin-right:8px;"></i> Daftar Kitab Makna Hadis Himpunan
+                  </h3>
+                  <div style="font-size:0.82rem; color:var(--text-secondary);">Klik salah satu kitab untuk menganalisis generus khatam 100% dan daftar halaman yang belum diisi.</div>
+                </div>
+              </div>
+              <div id="hadis-mon-kitab-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:16px;">
+                <!-- Kitab cards rendered dynamically -->
+              </div>
+            </div>
+
+            <!-- Panel Analisis & Rincian Materi Terpilih -->
+            <div id="hadis-mon-detail-panel" style="display:none; background:var(--bg-card); border-radius:12px; border:1px solid var(--border-color); padding:20px; margin-top:20px;">
+              <!-- Header Materi Terpilih -->
+              <div id="hadis-mon-selected-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; padding-bottom:18px; border-bottom:1px solid var(--border-color); margin-bottom:20px;">
+                <!-- Dynamic Header -->
+              </div>
+
+              <!-- Navigasi Sub-Bagian: Bagian 1 (Khatam 100%) vs Bagian 2 (Halaman Kosong) -->
+              <div style="display:flex; gap:12px; margin-bottom:20px; border-bottom:1px solid var(--border-color); padding-bottom:10px;">
+                <button type="button" id="btn-hadis-view-khatam" class="tab-btn active" onclick="switchMonitoringHadisView('khatam')" style="padding:8px 18px; background:transparent; border:none; border-bottom:3px solid var(--primary); color:var(--primary); font-weight:600; cursor:pointer; font-size:0.92rem; font-family:inherit;">
+                  <i class="fa-solid fa-award"></i> 1. Generus Khatam 100% (<span id="hadis-mon-badge-khatam-count">0</span>)
+                </button>
+                <button type="button" id="btn-hadis-view-halaman" class="tab-btn" onclick="switchMonitoringHadisView('halaman')" style="padding:8px 18px; background:transparent; border:none; border-bottom:3px solid transparent; color:var(--text-secondary); font-weight:500; cursor:pointer; font-size:0.92rem; font-family:inherit;">
+                  <i class="fa-solid fa-file-circle-exclamation"></i> 2. Halaman Kosong / Belum Diisi (<span id="hadis-mon-badge-deficit-count">0</span> Hal)
+                </button>
+              </div>
+
+              <!-- VIEW 1: DAFTAR GENERUS SUDAH KHATAM 100% -->
+              <div id="hadis-mon-view-khatam">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+                  <h4 style="margin:0; font-size:1.05rem; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
+                    <i class="fa-solid fa-circle-check" style="color:#10b981;"></i> Generus yang Telah Khatam 100%
+                  </h4>
+                  <span id="hadis-mon-khatam-summary-text" style="font-size:0.85rem; color:var(--text-secondary);"></span>
+                </div>
+                <div class="table-responsive">
+                  <table class="table-custom" style="width:100%;">
+                    <thead>
+                      <tr>
+                        <th style="width:40px; text-align:center;">No</th>
+                        <th>Generus</th>
+                        <th style="width:160px;">Kelompok / Rukun</th>
+                        <th style="width:110px; text-align:center;">Jenjang</th>
+                        <th style="width:120px; text-align:center;">Status</th>
+                        <th style="width:120px; text-align:center;">Tgl Khatam</th>
+                        <th style="width:140px;">Penguji</th>
+                        <th style="width:130px; text-align:center;">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody id="hadis-mon-khatam-tbody">
+                      <!-- Rendered dynamically -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- VIEW 2: HALAMAN-HALAMAN KOSONG / BELUM DIISI BESERTA DAFTAR GENERUS -->
+              <div id="hadis-mon-view-halaman" style="display:none;">
+                <!-- Header View 2 & Matriks Visual -->
+                <div style="margin-bottom:20px;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
+                    <div>
+                      <h4 style="margin:0; font-size:1.05rem; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-map" style="color:#f59e0b;"></i> Peta Visual Keterisian Halaman
+                      </h4>
+                      <div style="font-size:0.82rem; color:var(--text-secondary); margin-top:2px;">
+                        Klik kotak halaman di bawah untuk melihat rincian generus yang belum mengisi halaman tersebut.
+                      </div>
+                    </div>
+                    <!-- Legend -->
+                    <div style="display:flex; align-items:center; gap:12px; font-size:0.8rem; color:var(--text-secondary);">
+                      <div style="display:flex; align-items:center; gap:5px;">
+                        <span style="width:12px; height:12px; border-radius:3px; background:#10b981; display:inline-block;"></span> 100% Terisi
+                      </div>
+                      <div style="display:flex; align-items:center; gap:5px;">
+                        <span style="width:12px; height:12px; border-radius:3px; background:#f59e0b; display:inline-block;"></span> Sebagian Belum
+                      </div>
+                      <div style="display:flex; align-items:center; gap:5px;">
+                        <span style="width:12px; height:12px; border-radius:3px; background:rgba(239,68,68,0.7); display:inline-block;"></span> 0% Terisi (Kosong Total)
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Visual Page Grid -->
+                  <div id="hadis-mon-page-matrix" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(36px, 1fr)); gap:6px; max-height:220px; overflow-y:auto; padding:12px; background:rgba(0,0,0,0.25); border-radius:8px; border:1px solid var(--border-color);">
+                    <!-- Page boxes rendered dynamically -->
+                  </div>
+                </div>
+
+                <!-- Filter & Search Halaman Defisit -->
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px; background:rgba(0,0,0,0.2); padding:10px 14px; border-radius:8px;">
+                  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <label style="font-size:0.82rem; color:var(--text-secondary);">Filter Halaman:</label>
+                    <button type="button" class="btn-secondary hadis-page-filter-btn active" data-filter="all" onclick="filterDeficitPages('all')" style="padding:4px 10px; font-size:0.8rem; border-radius:4px;">Semua Halaman Belum Tuntas</button>
+                    <button type="button" class="btn-secondary hadis-page-filter-btn" data-filter="filled" onclick="filterDeficitPages('filled')" style="padding:4px 10px; font-size:0.8rem; border-radius:4px;"><i class="fa-solid fa-circle-check" style="color:#10b981; margin-right:4px;"></i> Sudah Isi</button>
+                    <button type="button" class="btn-secondary hadis-page-filter-btn" data-filter="empty" onclick="filterDeficitPages('empty')" style="padding:4px 10px; font-size:0.8rem; border-radius:4px;">Kosong Total (0%)</button>
+                    <button type="button" class="btn-secondary hadis-page-filter-btn" data-filter="majority" onclick="filterDeficitPages('majority')" style="padding:4px 10px; font-size:0.8rem; border-radius:4px;">&gt;50% Generus Belum Isi</button>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <label style="font-size:0.82rem; color:var(--text-secondary);">Cari No. Hal:</label>
+                    <input type="number" id="hadis-mon-page-search-input" placeholder="No..." min="1" style="width:75px; padding:4px 8px; font-size:0.82rem; border-radius:4px; background:var(--bg-card); border:1px solid var(--border-color); color:var(--text-primary);" oninput="searchDeficitPageNumber(this.value)">
+                  </div>
+                </div>
+
+                <!-- Rincian Daftar Halaman & Generus -->
+                <div class="table-responsive">
+                  <table class="table-custom" style="width:100%;">
+                    <thead>
+                      <tr>
+                        <th style="width:90px; text-align:center;">Halaman</th>
+                        <th id="hadis-col-status-title" style="width:160px; text-align:center;">Status Keterisian</th>
+                        <th id="hadis-col-generus-title">Daftar Generus yang Belum Mengisi Halaman Ini</th>
+                        <th id="hadis-col-count-title" style="width:120px; text-align:center;">Jumlah Belum</th>
+                      </tr>
+                    </thead>
+                    <tbody id="hadis-mon-deficit-tbody">
+                      <!-- Rendered dynamically -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUBTAB 4: MASTER KURIKULUM & SILABUS -->
+          <div id="subtab-master-kurikulum" class="subtab-content" style="display:none;">
+            <!-- Header Actions -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+              <div>
+                <h3 style="margin:0 0 4px 0; color:var(--text-primary); font-size:1.25rem;">Kurikulum &amp; Silabus Pembinaan Generus</h3>
+                <div style="font-size:0.85rem; color:var(--text-secondary);">Kelola bidang keilmuan, materi standar, dan kitab hadis himpunan santri.</div>
+              </div>
+              <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                <button type="button" class="btn-secondary" onclick="downloadSilabusTemplateCsv()" style="padding:8px 12px; font-size:0.85rem; border-radius:6px;">
+                  <i class="fa-solid fa-download"></i> Template CSV
+                </button>
+                <button type="button" class="btn-secondary" onclick="exportSilabusCsv()" style="padding:8px 12px; font-size:0.85rem; border-radius:6px;">
+                  <i class="fa-solid fa-file-export"></i> Ekspor CSV
+                </button>
+                <button type="button" class="btn-secondary" onclick="openImportSilabusModal()" style="padding:8px 12px; font-size:0.85rem; border-radius:6px;">
+                  <i class="fa-solid fa-file-import"></i> Impor CSV
+                </button>
+                <button type="button" class="btn-primary" onclick="openAddMateriModal()" style="padding:8px 14px; font-size:0.85rem; border-radius:6px;">
+                  <i class="fa-solid fa-plus"></i> Tambah Materi
+                </button>
+              </div>
+            </div>
+
+            <!-- Section 1: Master Bidang Keilmuan -->
+            <div class="card-glass" style="padding:18px; border-radius:10px; border:1px solid var(--border-color); margin-bottom:24px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <h4 style="margin:0; font-size:1.05rem; color:var(--text-primary);">
+                  <i class="fa-solid fa-folder-open" style="color:var(--primary); margin-right:6px;"></i> Master Bidang Keilmuan
+                </h4>
+                <button type="button" class="btn-secondary" onclick="openAddBidangModal()" style="padding:6px 12px; font-size:0.8rem; border-radius:6px;">
+                  <i class="fa-solid fa-plus"></i> Tambah Bidang
+                </button>
+              </div>
+              <div class="table-responsive">
+                <table class="table-custom" style="width:100%;">
+                  <thead>
+                    <tr>
+                      <th style="width:50px; text-align:center;">Urutan</th>
+                      <th>Nama Bidang</th>
+                      <th>Deskripsi</th>
+                      <th style="width:100px; text-align:center;">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ppg-master-bidang-tbody">
+                    <!-- Rendered dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Section 2: Master Materi Keilmuan -->
+            <div class="card-glass" style="padding:18px; border-radius:10px; border:1px solid var(--border-color);">
+              <h4 style="margin:0 0 14px 0; font-size:1.05rem; color:var(--text-primary);">
+                <i class="fa-solid fa-book" style="color:var(--primary); margin-right:6px;"></i> Master Materi Pembelajaran &amp; Kitab Hadis
+              </h4>
+              <div class="table-responsive">
+                <table class="table-custom" style="width:100%;">
+                  <thead>
+                    <tr>
+                      <th style="width:50px; text-align:center;">Urutan</th>
+                      <th>Nama Materi</th>
+                      <th>Bidang</th>
+                      <th>Jenjang Generus</th>
+                      <th style="width:100px; text-align:center;">Tipe</th>
+                      <th>Target Pembelajaran</th>
+                      <th style="width:100px; text-align:center;">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ppg-master-materi-tbody">
+                    <!-- Rendered dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </section>
 
         <section id="section-users" class="page-section">
@@ -2427,6 +2992,23 @@
           <!-- Content tab Presensi -->
           <div id="portal-tab-content-presensi" class="portal-tab-content" style="display: none;">
             <div id="portal-jadwal-container"></div>
+          </div>
+        </section>
+
+        <!-- ====================================================
+             SECTION PORTAL JAMAAH: RAPOR KEILMUAN PPG
+             ==================================================== -->
+        <section id="section-jamaah-rapor-ppg" class="page-section portal-section">
+          <div style="margin-bottom:20px;">
+            <h2 style="margin:0 0 6px 0; color:var(--text-primary); font-size:1.5rem;">
+              <i class="fa-solid fa-graduation-cap" style="color:var(--primary); margin-right:8px;"></i> Rapor Keilmuan Generus (PPG)
+            </h2>
+            <div style="font-size:0.9rem; color:var(--text-secondary);">
+              Buku rapor digital pemantauan capaian silabus, hafalan doa, dan pengkhataman kitab hadis untuk Anda dan keluarga.
+            </div>
+          </div>
+          <div id="jamaah-portal-ppg-content">
+            <!-- Rendered dynamically by initJamaahPortalPpgRapor -->
           </div>
         </section>
 
@@ -3173,6 +3755,310 @@
     </div>
   </div>
 
+  <!-- ====================================================
+       MODAL 1: DETAIL RAPOR KEILMUAN GENERUS (PPG)
+       ==================================================== -->
+  <div class="modal-overlay" id="modal-ppg-rapor-santri" style="display: none; z-index: 10500;">
+    <div class="modal-container" style="max-width: 850px; width: 95%;">
+      <div class="modal-header">
+        <h3 style="margin: 0; color: var(--text-primary);"><i class="fa-solid fa-book-open" style="color: var(--primary); margin-right: 8px;"></i> Buku Rapor Keilmuan Generus</h3>
+        <button class="modal-close-btn" type="button" onclick="closeRaporSantriModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 20px; max-height: 80vh; overflow-y: auto;">
+        
+        <!-- Header Info Generus -->
+        <div id="rapor-santri-header-info" style="margin-bottom: 20px; padding: 16px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 10px;">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <!-- Bilah Kemajuan Akumulatif -->
+        <div style="margin-bottom: 24px; padding: 16px; background: rgba(16,185,129,0.06); border: 1px solid rgba(16,185,129,0.2); border-radius: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem;">Total Capaian Kurikulum Jenjang</span>
+            <span id="rapor-progress-ratio" style="font-weight: 600; color: var(--text-secondary); font-size: 0.88rem;">0 / 0 Materi Lulus</span>
+            <span id="rapor-progress-percentage" style="font-weight: 800; color: var(--primary); font-size: 1.1rem;">0%</span>
+          </div>
+          <div style="width: 100%; height: 10px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden;">
+            <div id="rapor-progress-bar-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #10b981, #059669); border-radius: 10px; transition: width 0.4s ease;"></div>
+          </div>
+        </div>
+
+        <!-- Bagian 1: Materi Standar (Al-Qur'an, Doa, Ibadah, Karakter 6 Thobiat) -->
+        <div style="margin-bottom: 24px;">
+          <h4 style="margin: 0 0 12px 0; color: var(--text-primary); font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-list-check" style="color: var(--primary);"></i> Capaian Materi Standar Silabus
+          </h4>
+          <div id="rapor-materi-standar-container">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Bagian 2: Hadis Himpunan (Khusus GUS & GUM) -->
+        <div id="rapor-hadis-section" style="margin-bottom: 20px;">
+          <h4 style="margin: 0 0 12px 0; color: var(--text-primary); font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-book-quran" style="color: var(--primary);"></i> Pengkhataman Kitab Hadis Himpunan
+          </h4>
+          <div id="rapor-hadis-cards-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <button type="button" class="btn-secondary" onclick="printRaporSantri()" style="display: inline-flex; align-items: center; gap: 6px;">
+          <i class="fa-solid fa-print"></i> Cetak Rapor Generus
+        </button>
+        <button type="button" class="btn-primary" onclick="closeRaporSantriModal()">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================
+       MODAL 2: PELACAK HALAMAN HADIS HIMPUNAN
+       ==================================================== -->
+  <div class="modal-overlay" id="modal-ppg-hadis-tracker" style="display: none; z-index: 11000;">
+    <div class="modal-container" style="max-width: 780px; width: 95%;">
+      <div class="modal-header">
+        <div>
+          <h3 id="hadis-modal-title" style="margin: 0; color: var(--text-primary); font-size: 1.25rem;">Pelacak Halaman Hadis</h3>
+          <div id="hadis-modal-subtitle" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 3px;">Generus &bull; Kelompok</div>
+        </div>
+        <button class="modal-close-btn" type="button" onclick="closeHadisTrackerModal()">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 20px; max-height: 80vh; overflow-y: auto;">
+        
+        <!-- Summary Stats Card -->
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 8px;">
+            <div>
+              <span style="font-size: 0.82rem; color: var(--text-muted);">Progres Pemaknaan:</span>
+              <div style="font-size: 1.15rem; font-weight: 800; color: var(--text-primary);">
+                <span id="hadis-stat-pages-done" style="color: var(--primary);">0</span> / <span id="hadis-stat-total-pages">0</span> Halaman Selesai
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span id="hadis-stat-status-badge" class="badge badge-red" style="font-size: 0.88rem; font-weight: 700;">Belum</span>
+              <span id="hadis-stat-percentage" style="font-size: 1.3rem; font-weight: 800; color: var(--primary);">0%</span>
+            </div>
+          </div>
+          
+          <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; margin-bottom: 10px;">
+            <div id="hadis-progress-bar-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #10b981, #059669); border-radius: 10px; transition: width 0.3s ease;"></div>
+          </div>
+
+          <div id="hadis-unread-summary" style="font-size: 0.82rem;">
+            <!-- Summary range rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Quick Action Panel -->
+        <div style="background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span style="font-size: 0.82rem; color: var(--text-secondary); font-weight: 600;">Tandai Rentang:</span>
+            <input type="number" id="hadis-range-from" min="1" placeholder="Dari" style="width: 65px; padding: 6px; border-radius: 4px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); text-align: center; font-size: 0.85rem;">
+            <span style="color: var(--text-muted); font-size: 0.85rem;">s/d</span>
+            <input type="number" id="hadis-range-to" min="1" placeholder="Sampai" style="width: 65px; padding: 6px; border-radius: 4px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); text-align: center; font-size: 0.85rem;">
+            <button type="button" class="btn-primary" onclick="applyHadisRangeAction(true)" style="padding: 6px 10px; font-size: 0.8rem; border-radius: 4px;">
+              <i class="fa-solid fa-check"></i> + Tandai Terisi
+            </button>
+            <button type="button" class="btn-secondary" onclick="applyHadisRangeAction(false)" style="padding: 6px 10px; font-size: 0.8rem; border-radius: 4px;">
+              <i class="fa-solid fa-xmark"></i> - Batalkan
+            </button>
+          </div>
+
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn-secondary" onclick="markHadisInstantKhatam()" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 4px; background: rgba(16,185,129,0.15); border: 1px solid #10b981; color: #10b981;" title="Tandai seluruh halaman tuntas">
+              <i class="fa-solid fa-star"></i> Khatam Instan
+            </button>
+            <button type="button" class="btn-secondary" onclick="resetHadisPages()" style="padding: 6px 10px; font-size: 0.8rem; border-radius: 4px; color: var(--danger);" title="Kosongkan seluruh halaman">
+              <i class="fa-solid fa-rotate-left"></i> Reset
+            </button>
+          </div>
+        </div>
+
+        <!-- Matriks Grid Kotak Halaman Interaktif -->
+        <div style="margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label style="font-weight: 600; font-size: 0.85rem; color: var(--text-secondary);">
+              Matriks Halaman (Klik nomor kotak untuk toggle status)
+            </label>
+            <div style="display: flex; gap: 12px; font-size: 0.78rem;">
+              <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 10px; height: 10px; background: #10b981; border-radius: 2px; display: inline-block;"></span> Sudah Tuntas</span>
+              <span style="display: flex; align-items: center; gap: 4px;"><span style="width: 10px; height: 10px; background: rgba(255,255,255,0.1); border-radius: 2px; display: inline-block;"></span> Belum</span>
+            </div>
+          </div>
+          <div id="hadis-pages-grid" class="hadis-grid-container">
+            <!-- Page boxes rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Penguji & Catatan Evaluasi -->
+        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 14px;">
+          <div class="form-group">
+            <label for="hadis-penguji-input" style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 4px;">Nama Penguji Terakhir</label>
+            <input type="text" id="hadis-penguji-input" placeholder="Nama guru / muballigh" style="width: 100%; padding: 8px 12px; border-radius: 6px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); font-size: 0.88rem;">
+          </div>
+          <div class="form-group">
+            <label for="hadis-catatan-input" style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 4px;">Catatan Pembimbing</label>
+            <input type="text" id="hadis-catatan-input" placeholder="Catatan kelancaran makna/keterangan..." style="width: 100%; padding: 8px 12px; border-radius: 6px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); font-size: 0.88rem;">
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn-secondary" onclick="closeHadisTrackerModal()">Batal</button>
+        <button type="button" class="btn-primary" onclick="saveHadisProgress()"><i class="fa-solid fa-save"></i> Simpan Progres Hadis</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================================================
+       MODAL 3: MASTER MATERI KURIKULUM PPG
+       ==================================================== -->
+  <div class="modal-overlay" id="modal-ppg-master-materi" style="display: none; z-index: 10600;">
+    <div class="modal-container" style="max-width: 600px; width: 95%;">
+      <div class="modal-header">
+        <h3 id="materi-modal-title" style="margin: 0; color: var(--text-primary);"><i class="fa-solid fa-book"></i> Tambah Materi Kurikulum</h3>
+        <button class="modal-close-btn" type="button" onclick="closeMasterMateriModal()">&times;</button>
+      </div>
+      <form id="form-ppg-master-materi" onsubmit="event.preventDefault(); saveMasterMateriForm();">
+        <input type="hidden" id="materi-edit-id">
+        <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px; padding: 20px;">
+          
+          <div class="form-group">
+            <label for="materi-nama-input" style="font-weight: 600; display: block; margin-bottom: 4px;">Nama Materi Keilmuan*</label>
+            <input type="text" id="materi-nama-input" required placeholder="Contoh: Kitabu Sholah / Iqro Jilid 1-6" style="width: 100%; padding: 10px; border-radius: 6px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);">
+          </div>
+
+          <div class="form-group">
+            <label for="materi-bidang-select" style="font-weight: 600; display: block; margin-bottom: 4px;">Bidang Keilmuan*</label>
+            <select id="materi-bidang-select" required class="select-filter" style="width: 100%; padding: 10px;">
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label style="font-weight: 600; display: block; margin-bottom: 6px;">Jenjang Sasaran Generus*</label>
+            <div style="display: flex; gap: 16px; flex-wrap: wrap; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.9rem;">
+                <input type="checkbox" id="cb-jenjang-paud" value="PAUD"> PAUD
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.9rem;">
+                <input type="checkbox" id="cb-jenjang-caberawit" value="Caberawit" checked> Caberawit
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.9rem;">
+                <input type="checkbox" id="cb-jenjang-gus" value="GUS"> GUS
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.9rem;">
+                <input type="checkbox" id="cb-jenjang-gum" value="GUM"> GUM
+              </label>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+            <div class="form-group">
+              <label for="materi-tipe-select" style="font-weight: 600; display: block; margin-bottom: 4px;">Tipe Penilaian*</label>
+              <select id="materi-tipe-select" class="select-filter" style="width: 100%; padding: 10px;" onchange="toggleTotalHalamanInput()">
+                <option value="standar">Standar (Belum/Proses/Tuntas)</option>
+                <option value="halaman">Halaman (Kitab Hadis Himpunan)</option>
+              </select>
+            </div>
+            <div class="form-group" id="materi-total-hal-group" style="display: none;">
+              <label for="materi-total-hal-input" style="font-weight: 600; display: block; margin-bottom: 4px;">Total Halaman Kitab*</label>
+              <input type="number" id="materi-total-hal-input" min="1" placeholder="Contoh: 150" style="width: 100%; padding: 10px; border-radius: 6px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="materi-urutan-input" style="font-weight: 600; display: block; margin-bottom: 4px;">Urutan Tampilan</label>
+            <input type="number" id="materi-urutan-input" min="1" value="1" style="width: 100%; padding: 10px; border-radius: 6px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);">
+          </div>
+
+          <div class="form-group">
+            <label for="materi-deskripsi-input" style="font-weight: 600; display: block; margin-bottom: 4px;">Deskripsi / Target Pembelajaran</label>
+            <textarea id="materi-deskripsi-input" rows="2" placeholder="Keterangan standar capaian kelulusan..." style="width: 100%; padding: 10px; border-radius: 6px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); resize: none;"></textarea>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeMasterMateriModal()">Batal</button>
+          <button type="submit" class="btn-primary"><i class="fa-solid fa-save"></i> Simpan Materi</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ====================================================
+       MODAL 4: MASTER BIDANG KEILMUAN PPG
+       ==================================================== -->
+  <div class="modal-overlay" id="modal-ppg-master-bidang" style="display: none; z-index: 10600;">
+    <div class="modal-container" style="max-width: 500px; width: 95%;">
+      <div class="modal-header">
+        <h3 id="bidang-modal-title" style="margin: 0; color: var(--text-primary);"><i class="fa-solid fa-folder-open"></i> Tambah Bidang Keilmuan</h3>
+        <button class="modal-close-btn" type="button" onclick="closeMasterBidangModal()">&times;</button>
+      </div>
+      <form id="form-ppg-master-bidang" onsubmit="event.preventDefault(); saveMasterBidangForm();">
+        <input type="hidden" id="bidang-edit-id">
+        <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px; padding: 20px;">
+          
+          <div class="form-group">
+            <label for="bidang-nama-input" style="font-weight: 600; display: block; margin-bottom: 4px;">Nama Bidang Keilmuan*</label>
+            <input type="text" id="bidang-nama-input" required placeholder="Contoh: Al-Qur'an &amp; Tajwid" style="width: 100%; padding: 10px; border-radius: 6px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);">
+          </div>
+
+          <div class="form-group">
+            <label for="bidang-urutan-input" style="font-weight: 600; display: block; margin-bottom: 4px;">Urutan</label>
+            <input type="number" id="bidang-urutan-input" min="1" value="1" style="width: 100%; padding: 10px; border-radius: 6px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary);">
+          </div>
+
+          <div class="form-group">
+            <label for="bidang-deskripsi-input" style="font-weight: 600; display: block; margin-bottom: 4px;">Deskripsi Singkat</label>
+            <textarea id="bidang-deskripsi-input" rows="2" placeholder="Uraian bidang keilmuan..." style="width: 100%; padding: 10px; border-radius: 6px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); resize: none;"></textarea>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" onclick="closeMasterBidangModal()">Batal</button>
+          <button type="submit" class="btn-primary"><i class="fa-solid fa-save"></i> Simpan Bidang</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ====================================================
+       MODAL 5: IMPOR SILABUS CSV
+       ==================================================== -->
+  <div class="modal-overlay" id="modal-ppg-import-csv" style="display: none; z-index: 10600;">
+    <div class="modal-container" style="max-width: 520px; width: 95%;">
+      <div class="modal-header">
+        <h3 style="margin: 0; color: var(--text-primary);"><i class="fa-solid fa-file-import" style="color: var(--primary); margin-right: 8px;"></i> Impor Silabus Kurikulum (CSV)</h3>
+        <button class="modal-close-btn" type="button" onclick="closeImportSilabusModal()">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 20px;">
+        <p style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 0;">
+          Unggah berkas CSV silabus kurikulum PPG. Kolom yang didukung: <code>Urutan, Nama Materi, Nama Bidang, Jenjang Generus (pisahkan titik koma), Tipe Penilaian (standar/halaman), Total Halaman, Deskripsi</code>.
+        </p>
+
+        <div style="border: 2px dashed var(--border-color); border-radius: 8px; padding: 25px; text-align: center; background: rgba(255,255,255,0.02); margin-bottom: 16px;">
+          <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2.2rem; color: var(--primary); margin-bottom: 10px;"></i>
+          <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">Pilih File CSV Silabus</div>
+          <input type="file" id="ppg-csv-file-input" accept=".csv" onchange="handleSilabusCsvUpload(event)" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 10px;">
+        </div>
+
+        <div style="text-align: right;">
+          <a href="#" onclick="downloadSilabusTemplateCsv(); return false;" style="color: var(--primary); font-size: 0.85rem; text-decoration: none;">
+            <i class="fa-solid fa-download"></i> Unduh format template CSV
+          </a>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" onclick="closeImportSilabusModal()">Tutup</button>
+      </div>
+    </div>
+  </div>
+
   <!-- EMBEDDED CODE LOGIC -->
   <script src="./js/state.js?v=4.0.0"></script>
   <script src="./js/api.js?v=4.0.0"></script>
@@ -3186,6 +4072,7 @@
   <script src="./js/pengajian.js?v=4.0.0"></script>
   <script src="./js/jamaah_portal.js?v=4.0.0"></script>
   <script src="./js/laporan_bulanan.js?v=4.0.0"></script>
+  <script src="./js/ppg.js?v=4.0.0"></script>
 </body>
 
 </html>
