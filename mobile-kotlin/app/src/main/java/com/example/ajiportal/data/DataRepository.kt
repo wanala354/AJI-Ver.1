@@ -64,8 +64,15 @@ class DefaultDataRepository(private val context: Context) : DataRepository {
     override suspend fun login(username: String, passwordHash: String): Boolean = withContext(Dispatchers.IO) {
         val user = api.authenticate(username, passwordHash)
         if (user != null && user.status == "active") {
-            sessionManager.saveSession(user, passwordHash)
-            api.logAction(username, "LOGIN", "Pengguna ${user.username} dengan role ${user.role} (${user.kelompok}) login ke Android App.")
+            var effectiveUser = user
+            if ((user.kelompok.isBlank() || user.kelompok.equals("semua", ignoreCase = true)) && !user.jamaahId.isNullOrBlank()) {
+                val profile = api.getJamaah(user.jamaahId)
+                if (profile != null && !profile.kelompokPengajian.isNullOrBlank()) {
+                    effectiveUser = user.copy(kelompok = profile.kelompokPengajian.trim())
+                }
+            }
+            sessionManager.saveSession(effectiveUser, passwordHash)
+            api.logAction(username, "LOGIN", "Pengguna ${effectiveUser.username} dengan role ${effectiveUser.role} (${effectiveUser.kelompok}) login ke Android App.")
             true
         } else {
             false

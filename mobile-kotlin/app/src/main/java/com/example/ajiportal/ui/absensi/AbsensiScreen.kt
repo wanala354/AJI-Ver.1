@@ -78,12 +78,20 @@ class AbsensiViewModel(private val repository: DataRepository) : ViewModel() {
                 val jamaahList = repository.getAllJamaah()
                 val pengurus = repository.getMyPengurusRoles()
                 val role = repository.sessionManager.getRole() ?: "jamaah"
-                val userKelompok = repository.sessionManager.getKelompok() ?: ""
+                var userKelompok = repository.sessionManager.getKelompok() ?: ""
                 
+                // Fallback to linked jamaah's kelompok if userKelompok is blank or "semua"
+                if (userKelompok.isBlank() || userKelompok.equals("semua", ignoreCase = true)) {
+                    val myProfile = repository.getMyProfile()
+                    if (myProfile != null && !myProfile.kelompokPengajian.isNullOrBlank()) {
+                        userKelompok = myProfile.kelompokPengajian.trim()
+                    }
+                }
+
                 val roleLower = role.lowercase().trim()
                 val isRestricted = roleLower == "operator kelompok" || roleLower == "pengurus kelompok" || roleLower == "jamaah" || roleLower == "user"
                 
-                val filteredSchedules = if (isRestricted && userKelompok.isNotBlank()) {
+                val filteredSchedules = if (isRestricted && userKelompok.isNotBlank() && !userKelompok.equals("semua", ignoreCase = true)) {
                     schedules.filter { s ->
                         val tk = (s.tingkatPengajian ?: "").lowercase()
                         val isKelompok = tk.contains("kelompok") || (!tk.contains("desa") && !tk.contains("daerah"))
@@ -438,13 +446,19 @@ fun AbsensiScreen(
                             val roleLower = state.myRole.lowercase().trim()
                             val isRestricted = roleLower == "operator kelompok" || roleLower == "pengurus kelompok" || roleLower == "jamaah" || roleLower == "user"
                             
-                            if (isRestricted && state.userKelompok.isNotBlank()) {
+                            val effectiveKelompok = if (state.userKelompok.isNotBlank() && !state.userKelompok.equals("semua", ignoreCase = true)) {
+                                state.userKelompok.trim().lowercase()
+                            } else {
+                                ""
+                            }
+
+                            if (isRestricted && effectiveKelompok.isNotBlank()) {
                                 state.allJamaah.filter { j ->
-                                    j.kelompokPengajian.trim().lowercase() == state.userKelompok.trim().lowercase()
+                                    j.kelompokPengajian.trim().lowercase() == effectiveKelompok
                                 }
                             } else {
                                 val sessionKelompok = (session.kelompokPengajian ?: "").trim()
-                                if (sessionKelompok.isNotEmpty() && sessionKelompok != "Semua" && sessionKelompok != "Desa" && sessionKelompok != "Daerah") {
+                                if (sessionKelompok.isNotEmpty() && !sessionKelompok.equals("semua", ignoreCase = true) && !sessionKelompok.equals("desa", ignoreCase = true) && !sessionKelompok.equals("daerah", ignoreCase = true)) {
                                     state.allJamaah.filter { j ->
                                         j.kelompokPengajian.trim().lowercase() == sessionKelompok.lowercase()
                                     }
