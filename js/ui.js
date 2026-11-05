@@ -1556,7 +1556,16 @@
         const username = document.getElementById("user-form-username").value.trim();
         const email = document.getElementById("user-form-email").value.trim();
         const role = document.getElementById("user-form-role").value;
-        const kelompok = (role === "Operator Kelompok" || role === "Pengurus Kelompok") ? document.getElementById("user-form-kelompok").value : "Semua";
+        const kelompokSelect = document.getElementById("user-form-kelompok");
+        let kelompok = kelompokSelect ? kelompokSelect.value : "";
+        if (!kelompok) {
+          if (role === "Admin" || role === "Pengurus Desa" || role === "Operator Desa") {
+            kelompok = "Semua";
+          } else {
+            showToast("Kelompok pengajian wajib dipilih!", "warning");
+            return;
+          }
+        }
         const password = document.getElementById("user-form-password").value;
         
         if (!isEdit && !password) {

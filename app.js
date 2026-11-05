@@ -2967,7 +2967,16 @@
         const username = document.getElementById("user-form-username").value.trim();
         const email = document.getElementById("user-form-email").value.trim();
         const role = document.getElementById("user-form-role").value;
-        const kelompok = (role === "Operator Kelompok" || role === "Pengurus Kelompok") ? document.getElementById("user-form-kelompok").value : "Semua";
+        const kelompokSelect = document.getElementById("user-form-kelompok");
+        let kelompok = kelompokSelect ? kelompokSelect.value : "";
+        if (!kelompok) {
+          if (role === "Admin" || role === "Pengurus Desa" || role === "Operator Desa") {
+            kelompok = "Semua";
+          } else {
+            showToast("Kelompok pengajian wajib dipilih!", "warning");
+            return;
+          }
+        }
         const password = document.getElementById("user-form-password").value;
         
         if (!isEdit && !password) {
@@ -6139,7 +6148,7 @@
     function populateUserKelompokDropdown() {
       const select = document.getElementById("user-form-kelompok");
       if (!select) return;
-      select.innerHTML = '<option value="" disabled selected>-- Pilih Kelompok --</option>';
+      select.innerHTML = '<option value="" disabled selected>-- Pilih Kelompok --</option><option value="Semua">Semua (Tingkat Desa)</option>';
       const rawList = typeof getKelompokList === 'function' ? getKelompokList() : (Array.isArray(localMasterKelompok) ? localMasterKelompok : []);
       const list = Array.from(new Set(
         rawList
@@ -6158,10 +6167,15 @@
     function toggleUserKelompokField() {
       const role = (document.getElementById("user-form-role").value || "").trim().toLowerCase();
       const group = document.getElementById("user-form-kelompok-group");
-      if (role === "operator kelompok" || role === "pengurus kelompok") {
-        group.style.display = "block";
-      } else {
-        group.style.display = "none";
+      const kelompokSelect = document.getElementById("user-form-kelompok");
+      if (!group || !kelompokSelect) return;
+      
+      // Always show kelompok field
+      group.style.display = "block";
+      
+      // Auto-suggest "Semua" for Admin / Pengurus Desa / Operator Desa if not yet set
+      if ((role === "admin" || role === "pengurus desa" || role === "operator desa") && !kelompokSelect.value) {
+        kelompokSelect.value = "Semua";
       }
     }
 
@@ -6196,8 +6210,19 @@
             roleSelect.value = userObj.role || "";
           }
           toggleUserKelompokField();
-          if (targetRole === "operator kelompok" || targetRole === "pengurus kelompok") {
-            document.getElementById("user-form-kelompok").value = userObj.kelompok;
+          const kelompokSelect = document.getElementById("user-form-kelompok");
+          if (kelompokSelect) {
+            const userKelompokVal = (userObj.kelompok || "Semua").trim();
+            const matchedKelompokOpt = Array.from(kelompokSelect.options).find(opt => opt.value.trim().toLowerCase() === userKelompokVal.toLowerCase());
+            if (matchedKelompokOpt) {
+              kelompokSelect.value = matchedKelompokOpt.value;
+            } else {
+              const opt = document.createElement("option");
+              opt.value = userKelompokVal;
+              opt.textContent = userKelompokVal;
+              kelompokSelect.appendChild(opt);
+              kelompokSelect.value = userKelompokVal;
+            }
           }
           document.getElementById("user-form-password").placeholder = "Kosongkan jika tidak diubah";
         }
