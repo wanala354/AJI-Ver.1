@@ -259,7 +259,9 @@ function calculateSyncedAttendanceData(selectedKelompok, month, year) {
   const targetKel = normKel(selectedKelompok);
   const allJadwal = typeof getJadwalPengajianList === 'function' ? (getJadwalPengajianList() || []) : (typeof localJadwalPengajian !== 'undefined' ? localJadwalPengajian : []);
   const allPresensi = typeof getPresensiKehadiranList === 'function' ? (getPresensiKehadiranList() || []) : (typeof localPresensiKehadiran !== 'undefined' ? localPresensiKehadiran : []);
-  const jamaah = typeof getJamaahList === 'function' ? (getJamaahList() || []) : (typeof localJamaahList !== 'undefined' ? localJamaahList : []);
+  const rawJamaah = typeof getJamaahList === 'function' ? (getJamaahList() || []) : (typeof localJamaahList !== 'undefined' ? localJamaahList : []);
+  // Saring hanya jamaah aktif sesuai acuan Rekapitulasi Umum (dashboard.js)
+  const jamaah = rawJamaah.filter(j => !j.statusKeaktifan || j.statusKeaktifan === 'Aktif');
 
   const currentYearMonth = `${year}-${String(month).padStart(2, '0')}`;
   const todayStr = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" });
@@ -328,7 +330,7 @@ function calculateSyncedAttendanceData(selectedKelompok, month, year) {
       sessionPresensi.forEach(p => {
         if (p.id_jamaah && targetIds.has(String(p.id_jamaah))) {
           const statusLower = (p.status || "").trim().toLowerCase();
-          if (statusLower === "hadir fisik" || statusLower === "online" || statusLower === "hadir") {
+          if (statusLower === "hadir fisik" || statusLower === "online") {
             hadirCount++;
           }
         }
@@ -349,7 +351,7 @@ function calculateSyncedAttendanceData(selectedKelompok, month, year) {
       if (!isConductedSessionGauge(s)) return false;
       const isCurrentMonth = s.tanggal.startsWith(currentYearMonth);
       const cleanJenis = s.jenis_pengajian.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-      const isTargetJenis = cleanJenis === cleanTarget || cleanJenis.includes(cleanTarget) || cleanTarget.includes(cleanJenis);
+      const isTargetJenis = cleanJenis === cleanTarget;
       
       if (selectedKelompok) {
         const tkLower = (s.tingkat_pengajian || "").toLowerCase();
@@ -385,7 +387,7 @@ function calculateSyncedAttendanceData(selectedKelompok, month, year) {
       sessionPresensi.forEach(p => {
         if (p.id_jamaah && targetIds.has(String(p.id_jamaah))) {
           const statusLower = (p.status || "").trim().toLowerCase();
-          if (statusLower === "hadir fisik" || statusLower === "online" || statusLower === "hadir") {
+          if (statusLower === "hadir fisik" || statusLower === "online") {
             hadirCount++;
           }
         }
@@ -428,7 +430,7 @@ function calculateSyncedAttendanceData(selectedKelompok, month, year) {
   allPresensi.forEach(p => {
     if (p && p.id_jamaah && teksSessionIds.has(String(p.id_pengajian)) && eligibleTeksIds.has(String(p.id_jamaah))) {
       const statusLower = (p.status || "").trim().toLowerCase();
-      if (statusLower === "hadir fisik" || statusLower === "online" || statusLower === "hadir") {
+      if (statusLower === "hadir fisik" || statusLower === "online") {
         attendedTeksJamaahIds.add(String(p.id_jamaah));
       }
     }
