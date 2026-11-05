@@ -10,13 +10,13 @@
 window.ppgState = {
   activeSubtab: "data-ppg",       // 'data-ppg' | 'input-capaian' | 'master-kurikulum'
   inputMode: "batch",             // 'batch' | 'individu'
-  
+
   // Data Master & Transaksional
   masterBidang: [],
   masterMateri: [],
   keilmuanProgress: [],           // array of { id, jamaah_id, materi_id, status, nilai_angka, tanggal_tuntas, penguji_nama, catatan }
   hadisProgress: [],              // array of { id, jamaah_id, materi_id, total_halaman, halaman_selesai: [], persentase_selesai, status, tanggal_khatam, penguji_terakhir, catatan }
-  
+
   // Active Filter Tab 1
   filterKelompok: "",
   filterGender: "",
@@ -24,22 +24,22 @@ window.ppgState = {
   filterSearch: "",
   filterBulan: new Date().getMonth() + 1,
   filterTahun: new Date().getFullYear(),
-  
+
   // Active Input State (Mode 1 Batch)
   batchKelompok: "",
   batchJenjang: "Caberawit",
   batchBidangId: "",
   batchMateriId: "",
   batchSantriRows: [],
-  
+
   // Active Input State (Mode 2 Individu)
   selectedSantriId: null,
-  
+
   // Active Hadis Tracker
   activeHadisSantri: null,
   activeHadisMateri: null,
   activeHadisData: null,
-  
+
   // Active Rapor Modal
   activeRaporSantri: null,
 
@@ -80,7 +80,7 @@ document.addEventListener("DOMContentLoaded", () => {
 /**
  * Inisialisasi Modul PPG saat Tab Dibuka
  */
-window.initPpgModule = async function() {
+window.initPpgModule = async function () {
   const mainWrapper = document.querySelector(".main-wrapper");
   if (mainWrapper) mainWrapper.scrollTop = 0;
   window.scrollTo(0, 0);
@@ -389,7 +389,7 @@ function calculateSantriPresensiStats(jamaahId, targetKelompok, targetPeramutan,
  */
 function calculateSantriKurikulumProgress(santri) {
   const jenjang = santri.kelompokPeramutan;
-  
+
   // Ambil daftar materi yang ditujukan untuk jenjang santri ini
   const relevantMateri = ppgState.masterMateri.filter(m => {
     if (Array.isArray(m.kategori_generus)) {
@@ -488,7 +488,7 @@ async function loadMasterKelompokList() {
     try {
       const stored = localStorage.getItem("aji_master_kelompok");
       if (stored) raw = JSON.parse(stored);
-    } catch (e) {}
+    } catch (e) { }
   }
   if (raw.length === 0 && typeof getJamaahList === 'function') {
     const jList = getJamaahList() || [];
@@ -610,7 +610,7 @@ function renderPpgDataTab() {
   if (!tbody) return;
 
   const allJamaah = typeof getJamaahList === 'function' ? getJamaahList() : (typeof localJamaahList !== 'undefined' ? localJamaahList : []);
-  
+
   // Saring hanya santri Generus (PAUD, Caberawit, GUS, GUM)
   let generusList = allJamaah.filter(j => isGenerusJamaah(j));
 
@@ -867,7 +867,7 @@ function updateBatchMateriDropdown() {
 /**
  * Muat Daftar Generus untuk Evaluasi Batch
  */
-window.loadBatchSantriList = function() {
+window.loadBatchSantriList = function () {
   const kelSelect = document.getElementById("ppg-batch-kelompok");
   const jenjangSelect = document.getElementById("ppg-batch-jenjang");
   const materiSelect = document.getElementById("ppg-batch-materi");
@@ -1004,7 +1004,7 @@ window.loadBatchSantriList = function() {
 /**
  * Tandai Semua Generus Tuntas di Tabel Batch
  */
-window.markAllBatchTuntas = function() {
+window.markAllBatchTuntas = function () {
   const selects = document.querySelectorAll(".batch-status-select");
   const dates = document.querySelectorAll(".batch-tanggal-input");
   const todayStr = new Date().toISOString().split('T')[0];
@@ -1018,7 +1018,7 @@ window.markAllBatchTuntas = function() {
 /**
  * Simpan Seluruh Perubahan Batch ke Database & State
  */
-window.saveAllBatchProgress = async function() {
+window.saveAllBatchProgress = async function () {
   const tbody = document.getElementById("ppg-batch-table-body");
   if (!tbody) return;
 
@@ -1147,7 +1147,7 @@ function initIndividuSelector() {
 /**
  * Update dropdown pilihan generus di Mode 2 dengan filter Kelompok & Jenjang (PAUD, Caberawit, GUS, GUM)
  */
-window.updateIndividuGenerusDropdown = function() {
+window.updateIndividuGenerusDropdown = function () {
   const selectGenerus = document.getElementById("ppg-individu-santri-select");
   if (!selectGenerus) return;
 
@@ -1189,7 +1189,7 @@ window.updateIndividuGenerusDropdown = function() {
 /**
  * Muat Rapor Capaian Individu untuk Editing
  */
-window.loadIndividuRapor = function() {
+window.loadIndividuRapor = function () {
   const selectSantri = document.getElementById("ppg-individu-santri-select");
   const container = document.getElementById("ppg-individu-content");
   if (!selectSantri || !container) return;
@@ -1306,7 +1306,7 @@ window.loadIndividuRapor = function() {
 /**
  * Simpan Capaian Seluruh Baris Individu
  */
-window.saveIndividuRapor = async function() {
+window.saveIndividuRapor = async function () {
   const tbody = document.getElementById("ppg-individu-table-body");
   if (!tbody) return;
 
@@ -1412,7 +1412,7 @@ window.saveIndividuRapor = async function() {
  * MODAL PELACAK PROGRES HADIS HIMPUNAN (HALAMAN PER HALAMAN)
  * ====================================================================
  */
-window.openHadisTrackerModal = function(santriId, materiId) {
+window.openHadisTrackerModal = function (santriId, materiId) {
   const modal = document.getElementById("modal-ppg-hadis-tracker");
   if (!modal) return;
 
@@ -1468,7 +1468,7 @@ window.openHadisTrackerModal = function(santriId, materiId) {
   modal.classList.add("active");
 };
 
-window.closeHadisTrackerModal = function() {
+window.closeHadisTrackerModal = function () {
   const modal = document.getElementById("modal-ppg-hadis-tracker");
   if (modal) {
     modal.classList.remove("active");
@@ -1533,7 +1533,7 @@ function renderHadisGridAndStats() {
       for (let p = 1; p <= totalPages; p++) {
         if (!doneSet.has(p)) unreadPages.push(p);
       }
-      
+
       // Mengelompokkan range
       const ranges = [];
       let start = unreadPages[0];
@@ -1598,7 +1598,7 @@ function toggleHadisSinglePage(page) {
 /**
  * Tandai Rentang Halaman Terisi
  */
-window.applyHadisRangeAction = function(isMarkingDone) {
+window.applyHadisRangeAction = function (isMarkingDone) {
   const data = ppgState.activeHadisData;
   const materi = ppgState.activeHadisMateri;
   if (!data || !materi) return;
@@ -1627,7 +1627,7 @@ window.applyHadisRangeAction = function(isMarkingDone) {
 /**
  * Tandai Khatam Instan (1 s/d N)
  */
-window.markHadisInstantKhatam = function() {
+window.markHadisInstantKhatam = function () {
   const data = ppgState.activeHadisData;
   const materi = ppgState.activeHadisMateri;
   if (!data || !materi) return;
@@ -1645,7 +1645,7 @@ window.markHadisInstantKhatam = function() {
 /**
  * Reset Semua Halaman Hadis
  */
-window.resetHadisPages = function() {
+window.resetHadisPages = function () {
   if (!confirm("Apakah Anda yakin ingin mengosongkan seluruh halaman kitab hadis ini?")) return;
   const data = ppgState.activeHadisData;
   if (!data) return;
@@ -1658,7 +1658,7 @@ window.resetHadisPages = function() {
 /**
  * Simpan Progres Hadis ke Database
  */
-window.saveHadisProgress = async function() {
+window.saveHadisProgress = async function () {
   const data = ppgState.activeHadisData;
   const santri = ppgState.activeHadisSantri;
   const materi = ppgState.activeHadisMateri;
@@ -1704,7 +1704,7 @@ window.saveHadisProgress = async function() {
 
   closeHadisTrackerModal();
   renderPpgDataTab();
-  
+
   // Refresh jika sedang di dalam modal rapor santri
   if (ppgState.activeRaporSantri && ppgState.activeRaporSantri.id === santri.id) {
     openRaporSantriModal(santri.id);
@@ -1716,7 +1716,7 @@ window.saveHadisProgress = async function() {
  * MODAL DETAIL KEILMUAN GENERUS (RAPOR GENERUS)
  * ====================================================================
  */
-window.openRaporSantriModal = function(santriId) {
+window.openRaporSantriModal = function (santriId) {
   const modal = document.getElementById("modal-ppg-rapor-santri");
   if (!modal) return;
 
@@ -1831,7 +1831,7 @@ window.openRaporSantriModal = function(santriId) {
   // Render Hadis Himpunan (Khusus GUS & GUM)
   const hadisSection = document.getElementById("rapor-hadis-section");
   const hadisContainer = document.getElementById("rapor-hadis-cards-container");
-  
+
   if (hadisSection && hadisContainer) {
     const hadisItems = stats.details.filter(d => d.type === "halaman");
     if (hadisItems.length === 0) {
@@ -1882,26 +1882,34 @@ window.openRaporSantriModal = function(santriId) {
   modal.classList.add("active");
 };
 
-window.closeRaporSantriModal = function() {
+window.closeRaporSantriModal = function () {
   const modal = document.getElementById("modal-ppg-rapor-santri");
   if (modal) {
     modal.classList.remove("active");
     modal.style.display = "none";
   }
+  document.body.classList.remove("printing-rapor-santri");
   ppgState.activeRaporSantri = null;
 };
 
 // Aliases for Generus naming
 window.openRaporGenerusModal = window.openRaporSantriModal;
 window.closeRaporGenerusModal = window.closeRaporSantriModal;
-window.printRaporGenerus = window.printRaporSantri;
 
 /**
  * Cetak Dokumen Rapor Generus (Print-friendly)
  */
-window.printRaporSantri = function() {
+window.printRaporSantri = function () {
+  document.body.classList.remove("printing-laporan-bulanan");
+  document.body.classList.add("printing-rapor-santri");
+  const cleanup = () => {
+    document.body.classList.remove("printing-rapor-santri");
+    window.removeEventListener("afterprint", cleanup);
+  };
+  window.addEventListener("afterprint", cleanup);
   window.print();
 };
+window.printRaporGenerus = window.printRaporSantri;
 
 /**
  * ====================================================================
@@ -1984,7 +1992,7 @@ function renderMasterMateriTable() {
 /**
  * Modal Tambah / Edit Master Materi
  */
-window.openAddMateriModal = function() {
+window.openAddMateriModal = function () {
   const form = document.getElementById("form-ppg-master-materi");
   if (form) form.reset();
   document.getElementById("materi-edit-id").value = "";
@@ -2000,7 +2008,7 @@ window.openAddMateriModal = function() {
   }
 };
 
-window.openEditMateriModal = function(materiId) {
+window.openEditMateriModal = function (materiId) {
   const materi = ppgState.masterMateri.find(m => m.id === materiId);
   if (!materi) return;
 
@@ -2042,7 +2050,7 @@ function populateMateriModalBidangSelect() {
   });
 }
 
-window.toggleTotalHalamanInput = function() {
+window.toggleTotalHalamanInput = function () {
   const tipe = document.getElementById("materi-tipe-select").value;
   const halGroup = document.getElementById("materi-total-hal-group");
   if (halGroup) {
@@ -2050,7 +2058,7 @@ window.toggleTotalHalamanInput = function() {
   }
 };
 
-window.closeMasterMateriModal = function() {
+window.closeMasterMateriModal = function () {
   const modal = document.getElementById("modal-ppg-master-materi");
   if (modal) {
     modal.classList.remove("active");
@@ -2058,7 +2066,7 @@ window.closeMasterMateriModal = function() {
   }
 };
 
-window.saveMasterMateriForm = async function() {
+window.saveMasterMateriForm = async function () {
   const editId = document.getElementById("materi-edit-id").value;
   const nama = document.getElementById("materi-nama-input").value.trim();
   const bidangId = document.getElementById("materi-bidang-select").value;
@@ -2130,7 +2138,7 @@ window.saveMasterMateriForm = async function() {
   renderMasterMateriTable();
 };
 
-window.deleteMasterMateri = async function(materiId) {
+window.deleteMasterMateri = async function (materiId) {
   if (!confirm("Apakah Anda yakin ingin menghapus materi kurikulum ini? Semua progres capaian generus terkait materi ini juga akan terhapus.")) return;
 
   if (typeof useSupabase !== 'undefined' && useSupabase && typeof supabaseClient !== 'undefined' && supabaseClient) {
@@ -2151,7 +2159,7 @@ window.deleteMasterMateri = async function(materiId) {
 /**
  * Modal Tambah / Edit Master Bidang
  */
-window.openAddBidangModal = function() {
+window.openAddBidangModal = function () {
   document.getElementById("bidang-edit-id").value = "";
   document.getElementById("bidang-nama-input").value = "";
   document.getElementById("bidang-urutan-input").value = ppgState.masterBidang.length + 1;
@@ -2164,7 +2172,7 @@ window.openAddBidangModal = function() {
   }
 };
 
-window.openEditBidangModal = function(bidangId) {
+window.openEditBidangModal = function (bidangId) {
   const bidang = ppgState.masterBidang.find(b => b.id === bidangId);
   if (!bidang) return;
   document.getElementById("bidang-edit-id").value = bidang.id;
@@ -2179,7 +2187,7 @@ window.openEditBidangModal = function(bidangId) {
   }
 };
 
-window.closeMasterBidangModal = function() {
+window.closeMasterBidangModal = function () {
   const modal = document.getElementById("modal-ppg-master-bidang");
   if (modal) {
     modal.classList.remove("active");
@@ -2187,7 +2195,7 @@ window.closeMasterBidangModal = function() {
   }
 };
 
-window.saveMasterBidangForm = async function() {
+window.saveMasterBidangForm = async function () {
   const editId = document.getElementById("bidang-edit-id").value;
   const nama = document.getElementById("bidang-nama-input").value.trim();
   const urutan = parseInt(document.getElementById("bidang-urutan-input").value) || 1;
@@ -2231,7 +2239,7 @@ window.saveMasterBidangForm = async function() {
   renderMasterBidangTable();
 };
 
-window.deleteMasterBidang = async function(bidangId) {
+window.deleteMasterBidang = async function (bidangId) {
   if (!confirm("Apakah Anda yakin ingin menghapus bidang keilmuan ini beserta seluruh materi di dalamnya?")) return;
 
   if (typeof useSupabase !== 'undefined' && useSupabase && typeof supabaseClient !== 'undefined' && supabaseClient) {
@@ -2256,7 +2264,7 @@ window.deleteMasterBidang = async function(bidangId) {
  * EKSPOR & IMPOR CSV SILABUS PPG
  * ====================================================================
  */
-window.exportSilabusCsv = function() {
+window.exportSilabusCsv = function () {
   if (ppgState.masterMateri.length === 0) {
     if (typeof showToast === 'function') showToast("Belum ada data materi untuk diekspor.", "warning");
     return;
@@ -2284,7 +2292,7 @@ window.exportSilabusCsv = function() {
   document.body.removeChild(link);
 };
 
-window.downloadSilabusTemplateCsv = function() {
+window.downloadSilabusTemplateCsv = function () {
   let csv = "data:text/csv;charset=utf-8,";
   csv += "Urutan,Nama Materi,Nama Bidang,Jenjang Generus,Tipe Penilaian,Total Halaman,Deskripsi Target\n";
   csv += "1,Kitabu Sholah,Hadis Himpunan,GUS;GUM,halaman,150,Khatam 150 Halaman\n";
@@ -2300,7 +2308,7 @@ window.downloadSilabusTemplateCsv = function() {
   document.body.removeChild(link);
 };
 
-window.openImportSilabusModal = function() {
+window.openImportSilabusModal = function () {
   const modal = document.getElementById("modal-ppg-import-csv");
   if (modal) {
     modal.style.display = "flex";
@@ -2308,7 +2316,7 @@ window.openImportSilabusModal = function() {
   }
 };
 
-window.closeImportSilabusModal = function() {
+window.closeImportSilabusModal = function () {
   const modal = document.getElementById("modal-ppg-import-csv");
   if (modal) {
     modal.classList.remove("active");
@@ -2316,12 +2324,12 @@ window.closeImportSilabusModal = function() {
   }
 };
 
-window.handleSilabusCsvUpload = function(event) {
+window.handleSilabusCsvUpload = function (event) {
   const file = event.target.files[0];
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = function (e) {
     const text = e.target.result;
     parseAndImportSilabusCsv(text);
   };
@@ -2394,7 +2402,7 @@ async function parseAndImportSilabusCsv(csvText) {
  * PORTAL JAMAAH: RAPOR PPG DIRI / ANAK
  * ====================================================================
  */
-window.initJamaahPortalPpgRapor = function() {
+window.initJamaahPortalPpgRapor = function () {
   const container = document.getElementById("jamaah-portal-ppg-content");
   if (!container) return;
 
@@ -2506,7 +2514,7 @@ async function populateMonitoringHadisFilterOptions() {
 /**
  * Render Utama Tab Monitoring Hadis Himpunan
  */
-window.renderMonitoringHadisTab = async function() {
+window.renderMonitoringHadisTab = async function () {
   // Pastikan posisi scroll langsung berada di paling atas
   const mainWrapper = document.querySelector(".main-wrapper");
   if (mainWrapper) mainWrapper.scrollTop = 0;
@@ -2551,7 +2559,7 @@ window.renderMonitoringHadisTab = async function() {
   const searchQuery = (ppgState.monitoringHadisFilterSearch || "").trim().toLowerCase();
   let displayMateriList = hadisMateriList;
   if (searchQuery) {
-    displayMateriList = hadisMateriList.filter(m => 
+    displayMateriList = hadisMateriList.filter(m =>
       (m.nama_materi || "").toLowerCase().includes(searchQuery) ||
       (m.deskripsi_target || "").toLowerCase().includes(searchQuery)
     );
@@ -2706,7 +2714,7 @@ window.renderMonitoringHadisTab = async function() {
 /**
  * Memilih Materi Kitab Hadis untuk Dianalisis
  */
-window.selectMonitoringHadisMateri = function(materiId, shouldScroll = true) {
+window.selectMonitoringHadisMateri = function (materiId, shouldScroll = true) {
   ppgState.selectedMonitoringMateriId = materiId;
 
   document.querySelectorAll(".hadis-kitab-card").forEach(c => {
@@ -2736,7 +2744,7 @@ window.selectMonitoringHadisMateri = function(materiId, shouldScroll = true) {
 /**
  * Switch Tampilan Detail Antara View 1 (Khatam 100%) dan View 2 (Halaman Kosong)
  */
-window.switchMonitoringHadisView = function(view) {
+window.switchMonitoringHadisView = function (view) {
   ppgState.monitoringHadisCurrentView = view;
   const btnKhatam = document.getElementById("btn-hadis-view-khatam");
   const btnHalaman = document.getElementById("btn-hadis-view-halaman");
@@ -2761,7 +2769,7 @@ window.switchMonitoringHadisView = function(view) {
  * Bagian 1: Generus Khatam 100%
  * Bagian 2: Data Halaman Kosong & Generus Belum Mengisi
  */
-window.renderMonitoringHadisDetail = function() {
+window.renderMonitoringHadisDetail = function () {
   const materiId = ppgState.selectedMonitoringMateriId;
   const materi = (ppgState.masterMateri || []).find(m => m.id === materiId);
   const detailPanel = document.getElementById("hadis-mon-detail-panel");
@@ -3147,7 +3155,7 @@ function renderDeficitTableOnly() {
 /**
  * Filter Halaman Defisit (Semua / Sudah Isi / Kosong Total / >50% Belum Isi)
  */
-window.filterDeficitPages = function(filterType) {
+window.filterDeficitPages = function (filterType) {
   ppgState.monitoringHadisFilterDeficit = filterType;
   document.querySelectorAll(".hadis-page-filter-btn").forEach(b => {
     if (b.getAttribute("data-filter") === filterType) {
@@ -3166,7 +3174,7 @@ window.filterDeficitPages = function(filterType) {
 /**
  * Cari Halaman Defisit Berdasarkan Nomor Halaman
  */
-window.searchDeficitPageNumber = function(query) {
+window.searchDeficitPageNumber = function (query) {
   ppgState.monitoringHadisPageSearch = query;
   renderDeficitTableOnly();
 };
@@ -3174,7 +3182,7 @@ window.searchDeficitPageNumber = function(query) {
 /**
  * Klik Kotak Halaman untuk Melompat Langsung ke Baris Tabel Halaman Bersangkutan
  */
-window.jumpToDeficitPage = function(pageNum) {
+window.jumpToDeficitPage = function (pageNum) {
   switchMonitoringHadisView('halaman');
 
   // Jika halaman tersebut 100% terisi (tidak ada defisit belum), otomatis switch ke filter 'filled' agar halamannya muncul dan disorot
@@ -3229,7 +3237,7 @@ window.jumpToDeficitPage = function(pageNum) {
 /**
  * Filter Form Events
  */
-window.applyMonitoringHadisFilter = function() {
+window.applyMonitoringHadisFilter = function () {
   const searchInput = document.getElementById("hadis-mon-filter-search");
   const kelSelect = document.getElementById("hadis-mon-filter-kelompok");
   const jenjangSelect = document.getElementById("hadis-mon-filter-jenjang");
@@ -3241,7 +3249,7 @@ window.applyMonitoringHadisFilter = function() {
   renderMonitoringHadisTab();
 };
 
-window.resetMonitoringHadisFilter = function() {
+window.resetMonitoringHadisFilter = function () {
   ppgState.monitoringHadisFilterSearch = "";
   ppgState.monitoringHadisFilterJenjang = "";
   ppgState.monitoringHadisFilterDeficit = "all";

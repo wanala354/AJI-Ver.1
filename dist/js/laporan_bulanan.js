@@ -1254,6 +1254,25 @@ window.printLaporanBulananPDF = function() {
   if (typeof syncDOMInputsToState === 'function') {
     syncDOMInputsToState();
   }
+  document.body.classList.remove("printing-rapor-santri");
+  document.body.classList.add("printing-laporan-bulanan");
+
+  const reportSec = document.getElementById("section-report");
+  if (reportSec) {
+    reportSec.classList.add("active");
+  }
+  const subtabEl = document.getElementById("subtab-report-laporan-bulanan");
+  if (subtabEl) {
+    subtabEl.style.display = "block";
+    subtabEl.classList.add("active-tab");
+  }
+
+  const cleanup = () => {
+    document.body.classList.remove("printing-laporan-bulanan");
+    window.removeEventListener("afterprint", cleanup);
+  };
+  window.addEventListener("afterprint", cleanup);
+
   window.print();
 };
 

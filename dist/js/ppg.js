@@ -1888,20 +1888,28 @@ window.closeRaporSantriModal = function() {
     modal.classList.remove("active");
     modal.style.display = "none";
   }
+  document.body.classList.remove("printing-rapor-santri");
   ppgState.activeRaporSantri = null;
 };
 
 // Aliases for Generus naming
 window.openRaporGenerusModal = window.openRaporSantriModal;
 window.closeRaporGenerusModal = window.closeRaporSantriModal;
-window.printRaporGenerus = window.printRaporSantri;
 
 /**
  * Cetak Dokumen Rapor Generus (Print-friendly)
  */
 window.printRaporSantri = function() {
+  document.body.classList.remove("printing-laporan-bulanan");
+  document.body.classList.add("printing-rapor-santri");
+  const cleanup = () => {
+    document.body.classList.remove("printing-rapor-santri");
+    window.removeEventListener("afterprint", cleanup);
+  };
+  window.addEventListener("afterprint", cleanup);
   window.print();
 };
+window.printRaporGenerus = window.printRaporSantri;
 
 /**
  * ====================================================================
