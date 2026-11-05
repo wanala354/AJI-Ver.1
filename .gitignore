@@ -33,6 +33,7 @@ mockData.js
 scratch/
 .temp/
 *.log
+/backups/
 
 # Clasp / Google Apps Script
 .clasp.json
