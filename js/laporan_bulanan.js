@@ -251,6 +251,12 @@ async function populateLaporanFilterOptions() {
  * Kalkulasi Data Kehadiran Sinkron 100% dengan Rekapitulasi Umum di dashboard.js
  */
 function calculateSyncedAttendanceData(selectedKelompok, month, year) {
+  const normKel = (k) => {
+    if (!k) return "";
+    if (typeof k === "object") return String(k.nama || k.nama_kelompok || k.kelompok || "").trim().toLowerCase();
+    return String(k).trim().toLowerCase();
+  };
+  const targetKel = normKel(selectedKelompok);
   const allJadwal = typeof getJadwalPengajianList === 'function' ? (getJadwalPengajianList() || []) : (typeof localJadwalPengajian !== 'undefined' ? localJadwalPengajian : []);
   const allPresensi = typeof getPresensiKehadiranList === 'function' ? (getPresensiKehadiranList() || []) : (typeof localPresensiKehadiran !== 'undefined' ? localPresensiKehadiran : []);
   const jamaah = typeof getJamaahList === 'function' ? (getJamaahList() || []) : (typeof localJamaahList !== 'undefined' ? localJamaahList : []);
@@ -291,7 +297,8 @@ function calculateSyncedAttendanceData(selectedKelompok, month, year) {
       
       if (selectedKelompok) {
         const isDaerahOrDesa = tkLower.includes("daerah") || tkLower.includes("desa");
-        const matchesKelompok = s.kelompok_pengajian === selectedKelompok || s.kelompok_pengajian === "Semua";
+        const sKel = normKel(s.kelompok_pengajian);
+        const matchesKelompok = sKel === targetKel || sKel === "semua";
         return isCurrentMonth && isSambung && isTargetTingkat && (isDaerahOrDesa || matchesKelompok);
       }
       return isCurrentMonth && isSambung && isTargetTingkat;
@@ -303,12 +310,13 @@ function calculateSyncedAttendanceData(selectedKelompok, month, year) {
     sessions.forEach(session => {
       let sessionTargets = jamaah.filter(j => checkEligibility(j, session.jenis_pengajian));
       
-      if (session.kelompok_pengajian && session.kelompok_pengajian !== "Semua" && session.kelompok_pengajian !== "Desa" && session.kelompok_pengajian !== "Daerah") {
-        sessionTargets = sessionTargets.filter(j => j.kelompokPengajian === session.kelompok_pengajian);
+      const sessKel = normKel(session.kelompok_pengajian);
+      if (session.kelompok_pengajian && sessKel !== "semua" && sessKel !== "desa" && sessKel !== "daerah") {
+        sessionTargets = sessionTargets.filter(j => normKel(j.kelompokPengajian) === sessKel);
       }
       
-      if (selectedKelompok) {
-        sessionTargets = sessionTargets.filter(j => j.kelompokPengajian === selectedKelompok);
+      if (targetKel) {
+        sessionTargets = sessionTargets.filter(j => normKel(j.kelompokPengajian) === targetKel);
       }
       
       if (sessionTargets.length === 0) return;
@@ -346,7 +354,8 @@ function calculateSyncedAttendanceData(selectedKelompok, month, year) {
       if (selectedKelompok) {
         const tkLower = (s.tingkat_pengajian || "").toLowerCase();
         const isDaerahOrDesa = tkLower.includes("daerah") || tkLower.includes("desa");
-        const matchesKelompok = s.kelompok_pengajian === selectedKelompok || s.kelompok_pengajian === "Semua";
+        const sKel = normKel(s.kelompok_pengajian);
+        const matchesKelompok = sKel === targetKel || sKel === "semua";
         return isCurrentMonth && isTargetJenis && (isDaerahOrDesa || matchesKelompok);
       }
       return isCurrentMonth && isTargetJenis;
@@ -358,12 +367,13 @@ function calculateSyncedAttendanceData(selectedKelompok, month, year) {
     sessions.forEach(session => {
       let sessionTargets = jamaah.filter(j => checkEligibility(j, session.jenis_pengajian));
       
-      if (session.kelompok_pengajian && session.kelompok_pengajian !== "Semua" && session.kelompok_pengajian !== "Desa" && session.kelompok_pengajian !== "Daerah") {
-        sessionTargets = sessionTargets.filter(j => j.kelompokPengajian === session.kelompok_pengajian);
+      const sessKel2 = normKel(session.kelompok_pengajian);
+      if (session.kelompok_pengajian && sessKel2 !== "semua" && sessKel2 !== "desa" && sessKel2 !== "daerah") {
+        sessionTargets = sessionTargets.filter(j => normKel(j.kelompokPengajian) === sessKel2);
       }
       
-      if (selectedKelompok) {
-        sessionTargets = sessionTargets.filter(j => j.kelompokPengajian === selectedKelompok);
+      if (targetKel) {
+        sessionTargets = sessionTargets.filter(j => normKel(j.kelompokPengajian) === targetKel);
       }
       
       if (sessionTargets.length === 0) return;
@@ -398,7 +408,8 @@ function calculateSyncedAttendanceData(selectedKelompok, month, year) {
     if (selectedKelompok) {
       const tkLower = (s.tingkat_pengajian || "").toLowerCase();
       const isDaerahOrDesa = tkLower.includes("daerah") || tkLower.includes("desa");
-      const matchesKelompok = s.kelompok_pengajian === selectedKelompok || s.kelompok_pengajian === "Semua";
+      const sKel = normKel(s.kelompok_pengajian);
+      const matchesKelompok = sKel === targetKel || sKel === "semua";
       return isCurrentMonth && isTeks && (isDaerahOrDesa || matchesKelompok);
     }
     return isCurrentMonth && isTeks;
@@ -408,8 +419,8 @@ function calculateSyncedAttendanceData(selectedKelompok, month, year) {
   const attendedTeksJamaahIds = new Set();
   
   let eligibleTeksJamaah = jamaah.filter(j => checkEligibility(j, "Teks"));
-  if (selectedKelompok) {
-    eligibleTeksJamaah = eligibleTeksJamaah.filter(j => j.kelompokPengajian === selectedKelompok);
+  if (targetKel) {
+    eligibleTeksJamaah = eligibleTeksJamaah.filter(j => normKel(j.kelompokPengajian) === targetKel);
   }
   
   const eligibleTeksIds = new Set(eligibleTeksJamaah.map(j => String(j.id)));

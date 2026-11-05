@@ -787,7 +787,7 @@
 
       let filteredPengurusList = selectedKelompok === "" 
         ? pengurusWithJamaah 
-        : pengurusWithJamaah.filter(p => p.kelompok === selectedKelompok);
+        : pengurusWithJamaah.filter(p => String(p.kelompok || "").trim().toLowerCase() === selectedKelompok);
 
       if (currentUser && isOperator) {
         filteredPengurusList = pengurusWithJamaah.filter(p => p.kelompok === currentUser.kelompok);
@@ -914,7 +914,8 @@
             
             if (selectedKelompok) {
               const isDaerahOrDesa = tkLower.includes("daerah") || tkLower.includes("desa");
-              const matchesKelompok = s.kelompok_pengajian === selectedKelompok || s.kelompok_pengajian === "Semua";
+              const sKel = String(s.kelompok_pengajian || "").trim().toLowerCase();
+              const matchesKelompok = sKel === selectedKelompok || sKel === "semua";
               return isCurrentMonth && isSambung && isTargetTingkat && (isDaerahOrDesa || matchesKelompok);
             }
             return isCurrentMonth && isSambung && isTargetTingkat;
@@ -926,12 +927,13 @@
           sessions.forEach(session => {
             let sessionTargets = jamaah.filter(j => localIsJamaahEligibleForJenis(j, session.jenis_pengajian));
             
-            if (session.kelompok_pengajian && session.kelompok_pengajian !== "Semua" && session.kelompok_pengajian !== "Desa" && session.kelompok_pengajian !== "Daerah") {
-              sessionTargets = sessionTargets.filter(j => j.kelompokPengajian === session.kelompok_pengajian);
+            const sessKel = String(session.kelompok_pengajian || "").trim().toLowerCase();
+            if (session.kelompok_pengajian && sessKel !== "semua" && sessKel !== "desa" && sessKel !== "daerah") {
+              sessionTargets = sessionTargets.filter(j => String(j.kelompokPengajian || "").trim().toLowerCase() === sessKel);
             }
             
             if (selectedKelompok) {
-              sessionTargets = sessionTargets.filter(j => j.kelompokPengajian === selectedKelompok);
+              sessionTargets = sessionTargets.filter(j => String(j.kelompokPengajian || "").trim().toLowerCase() === selectedKelompok);
             }
             
             if (sessionTargets.length === 0) return;
@@ -973,7 +975,8 @@
             if (selectedKelompok) {
               const tkLower = (s.tingkat_pengajian || "").toLowerCase();
               const isDaerahOrDesa = tkLower.includes("daerah") || tkLower.includes("desa");
-              const matchesKelompok = s.kelompok_pengajian === selectedKelompok || s.kelompok_pengajian === "Semua";
+              const sKel = String(s.kelompok_pengajian || "").trim().toLowerCase();
+              const matchesKelompok = sKel === selectedKelompok || sKel === "semua";
               return isCurrentMonth && isTargetJenis && (isDaerahOrDesa || matchesKelompok);
             }
             return isCurrentMonth && isTargetJenis;
@@ -985,12 +988,13 @@
           sessions.forEach(session => {
             let sessionTargets = jamaah.filter(j => localIsJamaahEligibleForJenis(j, session.jenis_pengajian));
             
-            if (session.kelompok_pengajian && session.kelompok_pengajian !== "Semua" && session.kelompok_pengajian !== "Desa" && session.kelompok_pengajian !== "Daerah") {
-              sessionTargets = sessionTargets.filter(j => j.kelompokPengajian === session.kelompok_pengajian);
+            const sessKel2 = String(session.kelompok_pengajian || "").trim().toLowerCase();
+            if (session.kelompok_pengajian && sessKel2 !== "semua" && sessKel2 !== "desa" && sessKel2 !== "daerah") {
+              sessionTargets = sessionTargets.filter(j => String(j.kelompokPengajian || "").trim().toLowerCase() === sessKel2);
             }
             
             if (selectedKelompok) {
-              sessionTargets = sessionTargets.filter(j => j.kelompokPengajian === selectedKelompok);
+              sessionTargets = sessionTargets.filter(j => String(j.kelompokPengajian || "").trim().toLowerCase() === selectedKelompok);
             }
             
             if (sessionTargets.length === 0) return;
@@ -1034,7 +1038,8 @@
           if (selectedKelompok) {
             const tkLower = (s.tingkat_pengajian || "").toLowerCase();
             const isDaerahOrDesa = tkLower.includes("daerah") || tkLower.includes("desa");
-            const matchesKelompok = s.kelompok_pengajian === selectedKelompok || s.kelompok_pengajian === "Semua";
+            const sKel = String(s.kelompok_pengajian || "").trim().toLowerCase();
+            const matchesKelompok = sKel === selectedKelompok || sKel === "semua";
             return isCurrentMonth && isTeks && (isDaerahOrDesa || matchesKelompok);
           }
           return isCurrentMonth && isTeks;
@@ -1045,7 +1050,7 @@
         
         let eligibleTeksJamaah = jamaah.filter(j => localIsJamaahEligibleForJenis(j, "Teks"));
         if (selectedKelompok) {
-          eligibleTeksJamaah = eligibleTeksJamaah.filter(j => j.kelompokPengajian === selectedKelompok);
+          eligibleTeksJamaah = eligibleTeksJamaah.filter(j => String(j.kelompokPengajian || "").trim().toLowerCase() === selectedKelompok);
         }
         
         const eligibleTeksIds = new Set(eligibleTeksJamaah.map(j => j.id));

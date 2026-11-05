@@ -2607,43 +2607,81 @@ body.dark-theme .session-card.active {
    @MEDIA PRINT STYLING FOR LAPORAN BULANAN (PDF/A4)
    ---------------------------------------------------- */
 @media print {
-  /* Sembunyikan Navigasi, Sidebar, Topbar, Filter, & Action Bar */
-  .sidebar, .top-header, .card-panel-tabs, #laporan-save-bar-box,
+  /* Sembunyikan Navigasi, Sidebar, Topbar, Filter, Modal Non-Aktif & Action Bar */
+  .sidebar, .top-navbar, .top-header, .card-panel-tabs, #laporan-save-bar-box,
   .btn-primary, .btn-secondary, button, #btn-toggle-mode-edit,
-  .fa-trash, .hide-on-print {
+  .fa-trash, .hide-on-print, .modal-overlay:not(.active),
+  #login-screen, #register-screen, #toast-container {
     display: none !important;
   }
 
-  body, .app-container, .main-content {
+  body, html, #app-container, .app-container, .main-wrapper, .main-content, .content-body {
     background: #ffffff !important;
     color: #111827 !important;
     margin: 0 !important;
     padding: 0 !important;
     width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  body, :root, .dark-theme, .light-theme {
+    --bg-app: #ffffff !important;
+    --bg-sidebar: #ffffff !important;
+    --bg-card: #ffffff !important;
+    --card-bg: #ffffff !important;
+    --text-primary: #111827 !important;
+    --text-secondary: #374151 !important;
+    --text-muted: #4b5563 !important;
+    --border-color: #d1d5db !important;
+    --primary: #059669 !important;
   }
 
   .page-section {
     display: none !important;
   }
 
-  #section-report {
+  .page-section.active {
     display: block !important;
   }
 
-  #subtab-report-rekap-umum {
+  #section-report .subtab-content {
     display: none !important;
   }
 
-  #subtab-report-laporan-bulanan {
+  #section-report .subtab-content.active-tab {
     display: block !important;
   }
 
-  .card-panel, .laporan-bulanan-header {
+  body.printing-laporan-bulanan #section-report {
+    display: block !important;
+  }
+
+  body.printing-laporan-bulanan #subtab-report-rekap-umum {
+    display: none !important;
+  }
+
+  body.printing-laporan-bulanan #subtab-report-laporan-bulanan {
+    display: block !important;
+  }
+
+  #subtab-report-laporan-bulanan,
+  #subtab-report-laporan-bulanan * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .card-panel, .laporan-bulanan-header, .gauge-card {
     background: #ffffff !important;
     color: #111827 !important;
     border: 1px solid #d1d5db !important;
     box-shadow: none !important;
     break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .table-responsive {
+    overflow: visible !important;
   }
 
   .table-custom th {
@@ -2786,20 +2824,18 @@ body.light-theme .badge-generus-gum {
   color: var(--text-primary);
 }
 
-/* Print Style for Rapor Santri */
+/* Print Style for Rapor Santri (Hanya aktif saat modal Rapor Santri dibuka / dicetak) */
 @media print {
-  body * {
-    visibility: hidden;
+  body.printing-rapor-santri #app-container,
+  body.printing-rapor-santri .app-container,
+  body:has(#modal-ppg-rapor-santri.active) #app-container,
+  body:has(#modal-ppg-rapor-santri.active) .app-container {
+    display: none !important;
   }
 
-  #modal-ppg-rapor-santri,
-  #modal-ppg-rapor-santri .modal-container,
-  #modal-ppg-rapor-santri .modal-container * {
-    visibility: visible;
-  }
-
-  #modal-ppg-rapor-santri {
-    position: absolute;
+  body.printing-rapor-santri #modal-ppg-rapor-santri,
+  #modal-ppg-rapor-santri.active {
+    position: static !important;
     left: 0;
     top: 0;
     width: 100%;
@@ -2807,9 +2843,11 @@ body.light-theme .badge-generus-gum {
     padding: 0;
     background: #ffffff !important;
     display: block !important;
+    visibility: visible !important;
   }
 
-  #modal-ppg-rapor-santri .modal-container {
+  body.printing-rapor-santri #modal-ppg-rapor-santri .modal-container,
+  #modal-ppg-rapor-santri.active .modal-container {
     max-width: 100% !important;
     width: 100% !important;
     box-shadow: none !important;
@@ -2818,26 +2856,34 @@ body.light-theme .badge-generus-gum {
     color: #111827 !important;
   }
 
-  #modal-ppg-rapor-santri .modal-header,
-  #modal-ppg-rapor-santri .modal-footer,
-  #modal-ppg-rapor-santri .modal-close-btn {
+  body.printing-rapor-santri #modal-ppg-rapor-santri .modal-header,
+  body.printing-rapor-santri #modal-ppg-rapor-santri .modal-footer,
+  body.printing-rapor-santri #modal-ppg-rapor-santri .modal-close-btn,
+  #modal-ppg-rapor-santri.active .modal-header,
+  #modal-ppg-rapor-santri.active .modal-footer,
+  #modal-ppg-rapor-santri.active .modal-close-btn {
     display: none !important;
   }
 
-  #modal-ppg-rapor-santri .modal-body {
+  body.printing-rapor-santri #modal-ppg-rapor-santri .modal-body,
+  #modal-ppg-rapor-santri.active .modal-body {
     padding: 0 !important;
     color: #111827 !important;
   }
 
-  #modal-ppg-rapor-santri .card-glass,
-  #modal-ppg-rapor-santri .table-custom th,
-  #modal-ppg-rapor-santri .table-custom td {
+  body.printing-rapor-santri #modal-ppg-rapor-santri .card-glass,
+  body.printing-rapor-santri #modal-ppg-rapor-santri .table-custom th,
+  body.printing-rapor-santri #modal-ppg-rapor-santri .table-custom td,
+  #modal-ppg-rapor-santri.active .card-glass,
+  #modal-ppg-rapor-santri.active .table-custom th,
+  #modal-ppg-rapor-santri.active .table-custom td {
     background: #ffffff !important;
     color: #111827 !important;
     border-color: #cbd5e1 !important;
   }
 
-  #modal-ppg-rapor-santri .table-custom th {
+  body.printing-rapor-santri #modal-ppg-rapor-santri .table-custom th,
+  #modal-ppg-rapor-santri.active .table-custom th {
     background-color: #f1f5f9 !important;
   }
 }
