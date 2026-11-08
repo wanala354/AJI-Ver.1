@@ -41,7 +41,8 @@ interface DataRepository {
     
     suspend fun getAllJamaah(): List<Jamaah>
     suspend fun getKelompokList(): List<String>
-    suspend fun registerLinkedUser(username: String, passwordHash: String, jamaahId: String, kelompok: String): Boolean
+    suspend fun getRegisteredUsers(): List<User>
+    suspend fun registerLinkedUser(username: String, passwordHash: String, jamaahId: String, kelompok: String): RegisterResult
     suspend fun registerNewUser(
         username: String,
         passwordHash: String,
@@ -174,7 +175,11 @@ class DefaultDataRepository(private val context: Context) : DataRepository {
         api.getKelompokList()
     }
 
-    override suspend fun registerLinkedUser(username: String, passwordHash: String, jamaahId: String, kelompok: String): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun getRegisteredUsers(): List<User> = withContext(Dispatchers.IO) {
+        api.getRegisteredUsers()
+    }
+
+    override suspend fun registerLinkedUser(username: String, passwordHash: String, jamaahId: String, kelompok: String): RegisterResult = withContext(Dispatchers.IO) {
         api.registerLinkedUser(username, passwordHash, jamaahId, kelompok)
     }
 

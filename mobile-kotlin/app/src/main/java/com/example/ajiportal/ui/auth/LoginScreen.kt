@@ -19,11 +19,15 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.HomeWork
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -50,8 +54,11 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ajiportal.data.DataRepository
 import com.example.ajiportal.data.model.Jamaah
+import com.example.ajiportal.data.model.User
+import com.example.ajiportal.data.model.RegisterResult
 import com.example.ajiportal.theme.EmeraldDark
 import com.example.ajiportal.theme.EmeraldPrimary
+import com.example.ajiportal.theme.TextMuted
 import com.example.ajiportal.theme.CreamLight
 import com.example.ajiportal.theme.CreamDark
 import com.example.ajiportal.theme.NavyBlue
@@ -81,6 +88,7 @@ fun LoginScreen(
     
     var allJamaah by remember { mutableStateOf<List<Jamaah>>(emptyList()) }
     var kelompokList by remember { mutableStateOf<List<String>>(emptyList()) }
+    var registeredUsersMap by remember { mutableStateOf<Map<String, User>>(emptyMap()) }
     var isFetchingRegisterData by remember { mutableStateOf(false) }
 
     LaunchedEffect(showRegisterDialog) {
@@ -89,6 +97,8 @@ fun LoginScreen(
             try {
                 allJamaah = repository.getAllJamaah()
                 kelompokList = repository.getKelompokList()
+                val users = repository.getRegisteredUsers()
+                registeredUsersMap = users.filter { !it.jamaahId.isNullOrBlank() }.associateBy { it.jamaahId!! }
             } catch (e: Exception) {
                 e.printStackTrace()
             } finally {
@@ -415,53 +425,134 @@ fun LoginScreen(
         
         var isSubmitting by remember { mutableStateOf(false) }
         var isDropdownExpanded by remember { mutableStateOf(false) }
-        var isJkDropdownExpanded by remember { mutableStateOf(false) }
-        var isKelompokDropdownExpanded by remember { mutableStateOf(false) }
-        var isPernikahanDropdownExpanded by remember { mutableStateOf(false) }
+        var registeredUserAlert by remember { mutableStateOf<Pair<Jamaah, User>?>(null) }
 
         val filteredJamaah = remember(regNamaSearch, allJamaah) {
-            if (regNamaSearch.length < 2) emptyList()
-            else allJamaah.filter { it.namaLengkap.contains(regNamaSearch, ignoreCase = true) }
+            val query = regNamaSearch.trim()
+            if (query.length < 2) emptyList()
+            else allJamaah.filter { it.namaLengkap.contains(query, ignoreCase = true) }
         }
 
         fun validateAndSubmit() {
-            if (regNamaSearch.trim().isEmpty()) { Toast.makeText(context, "Nama Lengkap wajib diisi.", Toast.LENGTH_SHORT).show(); return }
-            if (regKelompok.isEmpty()) { Toast.makeText(context, "Kelompok wajib dipilih.", Toast.LENGTH_SHORT).show(); return }
-            if (regUsername.trim().isEmpty()) { Toast.makeText(context, "Username wajib diisi.", Toast.LENGTH_SHORT).show(); return }
-            if (regPassword.length < 6) { Toast.makeText(context, "Password minimal 6 karakter.", Toast.LENGTH_SHORT).show(); return }
-            if (regPassword != regPasswordConfirm) { Toast.makeText(context, "Konfirmasi password tidak cocok.", Toast.LENGTH_SHORT).show(); return }
+            if (regSelectedJamaahId == null) {
+                Toast.makeText(context, "Silakan cari dan pilih nama jamaah Anda dari database terlebih dahulu.", Toast.LENGTH_LONG).show()
+                return
+            }
+            if (regUsername.trim().isEmpty()) { 
+                Toast.makeText(context, "Username wajib diisi.", Toast.LENGTH_SHORT).show()
+                return 
+            }
+            if (regPassword.length < 6) { 
+                Toast.makeText(context, "Password minimal 6 karakter.", Toast.LENGTH_SHORT).show()
+                return 
+            }
+            if (regPassword != regPasswordConfirm) { 
+                Toast.makeText(context, "Konfirmasi password tidak cocok.", Toast.LENGTH_SHORT).show()
+                return 
+            }
             
             isSubmitting = true
             coroutineScope.launch {
                 val passHash = HashUtils.sha256(regPassword)
-                val success = if (regSelectedJamaahId != null) {
-                    repository.registerLinkedUser(
-                        username = regUsername.trim().lowercase(),
-                        passwordHash = passHash,
-                        jamaahId = regSelectedJamaahId!!,
-                        kelompok = regKelompok
-                    )
-                } else {
-                    repository.registerNewUser(
-                        username = regUsername.trim().lowercase(),
-                        passwordHash = passHash,
-                        namaLengkap = regNamaSearch.trim(),
-                        kelompok = regKelompok,
-                        jenisKelamin = regJk,
-                        tanggalLahir = regTglLahir.ifEmpty { null },
-                        nomorHp = regHp.ifEmpty { null },
-                        statusPernikahan = regPernikahan,
-                        fotoUrl = null
-                    )
-                }
+                val result = repository.registerLinkedUser(
+                    username = regUsername.trim().lowercase(),
+                    passwordHash = passHash,
+                    jamaahId = regSelectedJamaahId!!,
+                    kelompok = regKelompok
+                )
                 isSubmitting = false
-                if (success) {
-                    Toast.makeText(context, "Pendaftaran berhasil dikirim! Akun Anda menunggu persetujuan dari admin/operator kelompok $regKelompok.", Toast.LENGTH_LONG).show()
-                    showRegisterDialog = false
-                } else {
-                    Toast.makeText(context, "Pendaftaran gagal. Username mungkin sudah digunakan.", Toast.LENGTH_LONG).show()
+                when (result) {
+                    is RegisterResult.Success -> {
+                        Toast.makeText(context, "Pendaftaran berhasil dikirim! Akun Anda menunggu persetujuan dari operator kelompok $regKelompok.", Toast.LENGTH_LONG).show()
+                        showRegisterDialog = false
+                    }
+                    is RegisterResult.UsernameTaken -> {
+                        Toast.makeText(context, "Username \"$regUsername\" sudah digunakan oleh akun lain. Silakan gunakan username lain.", Toast.LENGTH_LONG).show()
+                    }
+                    is RegisterResult.JamaahAlreadyRegistered -> {
+                        Toast.makeText(context, "Jamaah ini sudah memiliki akun terdaftar dengan username \"${result.username}\".", Toast.LENGTH_LONG).show()
+                    }
+                    is RegisterResult.Error -> {
+                        Toast.makeText(context, "Pendaftaran gagal: ${result.message}", Toast.LENGTH_LONG).show()
+                    }
                 }
             }
+        }
+
+        // Dialog peringatan jika jamaah sudah terdaftar
+        if (registeredUserAlert != null) {
+            val (alertJamaah, alertUser) = registeredUserAlert!!
+            AlertDialog(
+                onDismissRequest = { registeredUserAlert = null },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        tint = Color(0xFFD97706),
+                        modifier = Modifier.size(36.dp)
+                    )
+                },
+                title = {
+                    Text(
+                        text = "Jamaah Sudah Terdaftar",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                },
+                text = {
+                    Column {
+                        Text(
+                            text = "Jamaah atas nama \"${alertJamaah.namaLengkap}\" (${alertJamaah.kelompokPengajian}) sudah memiliki akun pengguna di sistem dengan:",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color(0xFFFEF3C7), RoundedCornerShape(8.dp))
+                                .padding(10.dp)
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Username: ${alertUser.username}",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = Color(0xFF92400E)
+                                )
+                                Text(
+                                    text = "Status: ${alertUser.status.uppercase()}",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFFB45309)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Silakan langsung masuk menggunakan akun tersebut. Jika Anda lupa kata sandi, silakan hubungi operator kelompok.",
+                            fontSize = 12.sp,
+                            color = TextMuted
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            username = alertUser.username
+                            registeredUserAlert = null
+                            showRegisterDialog = false
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
+                    ) {
+                        Text("Ke Halaman Login", color = Color.White)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { registeredUserAlert = null }) {
+                        Text("Tutup", color = TextMuted)
+                    }
+                }
+            )
         }
 
         Dialog(
@@ -573,23 +664,23 @@ fun LoginScreen(
                                     color = EmeraldDark
                                 )
                                 Text(
-                                    text = "Pendaftaran Akun",
+                                    text = "Pendaftaran Akun Jamaah",
                                     fontSize = 13.sp,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                                 )
                             }
                         }
 
-                        // Warning banner
+                        // Info banner: registrasi khusus jamaah terdaftar
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 12.dp),
+                                .padding(vertical = 10.dp),
                             shape = RoundedCornerShape(12.dp),
                             colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF3C7))
                         ) {
                             Row(
-                                modifier = Modifier.padding(16.dp),
+                                modifier = Modifier.padding(14.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
@@ -599,9 +690,10 @@ fun LoginScreen(
                                     modifier = Modifier.padding(end = 12.dp)
                                 )
                                 Text(
-                                    text = "Setelah mendaftar, akun Anda harus disetujui terlebih dahulu oleh operator/admin kelompok sebelum bisa digunakan untuk masuk.",
+                                    text = "Pendaftaran akun ini khusus untuk jamaah yang sudah terdaftar di database. Setelah mendaftar, akun menunggu persetujuan operator kelompok.",
                                     fontSize = 12.sp,
-                                    color = Color(0xFF92400E)
+                                    color = Color(0xFF92400E),
+                                    lineHeight = 16.sp
                                 )
                             }
                         }
@@ -610,53 +702,29 @@ fun LoginScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(100.dp),
+                                    .height(120.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                CircularProgressIndicator(color = EmeraldPrimary)
-                            }
-                        } else {
-                            // Form Input Nama Lengkap (Autocomplete)
-                            // Info Banner for Autofill Locked Data
-                            if (regSelectedJamaahId != null) {
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(bottom = 16.dp),
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = CardDefaults.cardColors(containerColor = Color(0xFFD1FAE5))
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Info,
-                                            contentDescription = null,
-                                            tint = Color(0xFF047857),
-                                            modifier = Modifier.padding(end = 12.dp)
-                                        )
-                                        Text(
-                                            text = "Data terhubung dengan database jamaah dan dikunci untuk keamanan. Jika ada kesalahan data, silakan login terlebih dahulu dan ubah melalui menu Keluarga > Edit Biodata.",
-                                            fontSize = 11.sp,
-                                            color = Color(0xFF065F46)
-                                        )
-                                    }
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    CircularProgressIndicator(color = EmeraldPrimary)
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text("Memuat data jamaah...", fontSize = 12.sp, color = TextMuted)
                                 }
                             }
-
-                            // Form Input Nama Lengkap (Autocomplete)
+                        } else {
+                            // Section: Pencarian Anggota Jamaah
                             Text(
-                                text = "Pencarian Anggota Jamaah",
+                                text = "Cari Nama Anda di Database",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = EmeraldDark,
                                 modifier = Modifier.padding(bottom = 6.dp)
                             )
+
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(bottom = 16.dp)
+                                    .padding(bottom = 12.dp)
                             ) {
                                 OutlinedTextField(
                                     value = regNamaSearch,
@@ -668,6 +736,8 @@ fun LoginScreen(
                                     },
                                     readOnly = regSelectedJamaahId != null,
                                     label = { Text("Nama Lengkap (Sesuai KTP)*") },
+                                    placeholder = { Text("Ketik nama Anda...") },
+                                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = EmeraldPrimary) },
                                     singleLine = true,
                                     modifier = Modifier.fillMaxWidth(),
                                     trailingIcon = {
@@ -683,7 +753,7 @@ fun LoginScreen(
                                             }) {
                                                 Icon(
                                                     imageVector = Icons.Default.Close,
-                                                    contentDescription = "Reset Pencarian",
+                                                    contentDescription = "Ganti Jamaah",
                                                     tint = Color.Red
                                                 )
                                             }
@@ -696,37 +766,85 @@ fun LoginScreen(
                                     shape = RoundedCornerShape(12.dp)
                                 )
 
+                                // Dropdown hasil pencarian
                                 if (isDropdownExpanded && filteredJamaah.isNotEmpty() && regSelectedJamaahId == null) {
                                     Card(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(top = 64.dp)
-                                            .heightIn(max = 200.dp),
+                                            .heightIn(max = 240.dp),
                                         shape = RoundedCornerShape(12.dp),
                                         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                                     ) {
                                         Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                                             filteredJamaah.forEach { jamaah ->
+                                                val existingUser = registeredUsersMap[jamaah.id]
+                                                val isAlreadyRegistered = existingUser != null
+                                                
                                                 Row(
                                                     modifier = Modifier
                                                         .fillMaxWidth()
                                                         .clickable {
-                                                            regNamaSearch = jamaah.namaLengkap
-                                                            regSelectedJamaahId = jamaah.id
-                                                            regKelompok = jamaah.kelompokPengajian
-                                                            regJk = jamaah.jenisKelamin
-                                                            regTglLahir = jamaah.tanggalLahir ?: ""
-                                                            regHp = jamaah.nomorHp ?: ""
-                                                            regPernikahan = jamaah.statusPernikahan ?: "Belum Menikah"
-                                                            isDropdownExpanded = false
+                                                            if (existingUser != null) {
+                                                                registeredUserAlert = Pair(jamaah, existingUser)
+                                                            } else {
+                                                                regNamaSearch = jamaah.namaLengkap
+                                                                regSelectedJamaahId = jamaah.id
+                                                                regKelompok = jamaah.kelompokPengajian
+                                                                regJk = jamaah.jenisKelamin
+                                                                regTglLahir = jamaah.tanggalLahir ?: ""
+                                                                regHp = jamaah.nomorHp ?: ""
+                                                                regPernikahan = jamaah.statusPernikahan ?: "Belum Menikah"
+                                                                isDropdownExpanded = false
+                                                            }
                                                         }
-                                                        .padding(16.dp),
-                                                    verticalAlignment = Alignment.CenterVertically
+                                                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.SpaceBetween
                                                 ) {
-                                                    Column {
-                                                        Text(text = jamaah.namaLengkap, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                                                        Text(text = "Kelompok: ${jamaah.kelompokPengajian}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                                                    Column(modifier = Modifier.weight(1f)) {
+                                                        Text(
+                                                            text = jamaah.namaLengkap,
+                                                            fontWeight = FontWeight.Bold,
+                                                            fontSize = 14.sp,
+                                                            color = MaterialTheme.colorScheme.onSurface
+                                                        )
+                                                        Text(
+                                                            text = "Kelompok: ${jamaah.kelompokPengajian} • ${jamaah.jenisKelamin}",
+                                                            fontSize = 11.sp,
+                                                            color = TextMuted
+                                                        )
+                                                    }
+                                                    Spacer(modifier = Modifier.width(8.dp))
+                                                    if (isAlreadyRegistered) {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .background(Color(0xFFFEF3C7), RoundedCornerShape(8.dp))
+                                                                .border(1.dp, Color(0xFFF59E0B), RoundedCornerShape(8.dp))
+                                                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                                        ) {
+                                                            Text(
+                                                                text = "Sudah Terdaftar",
+                                                                fontSize = 10.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = Color(0xFFB45309)
+                                                            )
+                                                        }
+                                                    } else {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .background(EmeraldPrimary.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
+                                                                .border(1.dp, EmeraldPrimary.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                                        ) {
+                                                            Text(
+                                                                text = "Tersedia",
+                                                                fontSize = 10.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = EmeraldDark
+                                                            )
+                                                        }
                                                     }
                                                 }
                                                 HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
@@ -736,269 +854,197 @@ fun LoginScreen(
                                 }
                             }
 
-                            // Form Input Kelompok
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 16.dp)
-                            ) {
-                                OutlinedTextField(
-                                    value = regKelompok,
-                                    onValueChange = {},
-                                    readOnly = true,
-                                    label = { Text("Kelompok Pengajian*") },
-                                    trailingIcon = {
-                                        if (regSelectedJamaahId == null) {
-                                            IconButton(onClick = { isKelompokDropdownExpanded = true }) {
-                                                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = EmeraldPrimary)
-                                            }
-                                        }
-                                    },
-                                    modifier = Modifier.fillMaxWidth().clickable { if (regSelectedJamaahId == null) isKelompokDropdownExpanded = true },
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = EmeraldPrimary,
-                                        focusedLabelColor = EmeraldPrimary
-                                    ),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                                if (regSelectedJamaahId == null) {
-                                    DropdownMenu(
-                                        expanded = isKelompokDropdownExpanded,
-                                        onDismissRequest = { isKelompokDropdownExpanded = false },
-                                        modifier = Modifier.fillMaxWidth(0.85f)
-                                    ) {
-                                        kelompokList.forEach { name ->
-                                            DropdownMenuItem(
-                                                text = { Text(name) },
-                                                onClick = {
-                                                    regKelompok = name
-                                                    isKelompokDropdownExpanded = false
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Row for Gender and Date of Birth
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                // Jenis Kelamin (Dropdown)
-                                Box(
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    OutlinedTextField(
-                                        value = regJk,
-                                        onValueChange = {},
-                                        readOnly = true,
-                                        label = { Text("Jenis Kelamin*") },
-                                        trailingIcon = {
-                                            if (regSelectedJamaahId == null) {
-                                                IconButton(onClick = { isJkDropdownExpanded = true }) {
-                                                    Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = EmeraldPrimary)
-                                                }
-                                            }
-                                        },
-                                        modifier = Modifier.fillMaxWidth().clickable { if (regSelectedJamaahId == null) isJkDropdownExpanded = true },
-                                        colors = OutlinedTextFieldDefaults.colors(
-                                            focusedBorderColor = EmeraldPrimary,
-                                            focusedLabelColor = EmeraldPrimary
-                                        ),
-                                        shape = RoundedCornerShape(12.dp)
-                                    )
-                                    if (regSelectedJamaahId == null) {
-                                        DropdownMenu(
-                                            expanded = isJkDropdownExpanded,
-                                            onDismissRequest = { isJkDropdownExpanded = false }
-                                        ) {
-                                            listOf("Laki-laki", "Perempuan").forEach { item ->
-                                                DropdownMenuItem(
-                                                    text = { Text(item) },
-                                                    onClick = {
-                                                        regJk = item
-                                                        isJkDropdownExpanded = false
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-
-                                // Tanggal Lahir
-                                OutlinedTextField(
-                                    value = regTglLahir,
-                                    onValueChange = {
-                                        if (regSelectedJamaahId == null) {
-                                            regTglLahir = it
-                                        }
-                                    },
-                                    readOnly = regSelectedJamaahId != null,
-                                    label = { Text("Tgl Lahir (YYYY-MM-DD)") },
-                                    placeholder = { Text("2000-01-31") },
-                                    singleLine = true,
-                                    modifier = Modifier.weight(1f),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = EmeraldPrimary,
-                                        focusedLabelColor = EmeraldPrimary
-                                    ),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                            }
-
-                            // Row for Phone and Marriage Status
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                // Nomor HP
-                                OutlinedTextField(
-                                    value = regHp,
-                                    onValueChange = {
-                                        if (regSelectedJamaahId == null) {
-                                            regHp = it
-                                        }
-                                    },
-                                    readOnly = regSelectedJamaahId != null,
-                                    label = { Text("Nomor HP") },
-                                    placeholder = { Text("08123...") },
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                                    singleLine = true,
-                                    modifier = Modifier.weight(1f),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = EmeraldPrimary,
-                                        focusedLabelColor = EmeraldPrimary
-                                    ),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-
-                                // Status Pernikahan (Dropdown)
-                                Box(
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    OutlinedTextField(
-                                        value = regPernikahan,
-                                        onValueChange = {},
-                                        readOnly = true,
-                                        label = { Text("Pernikahan") },
-                                        trailingIcon = {
-                                            if (regSelectedJamaahId == null) {
-                                                IconButton(onClick = { isPernikahanDropdownExpanded = true }) {
-                                                    Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = EmeraldPrimary)
-                                                }
-                                            }
-                                        },
-                                        modifier = Modifier.fillMaxWidth().clickable { if (regSelectedJamaahId == null) isPernikahanDropdownExpanded = true },
-                                        colors = OutlinedTextFieldDefaults.colors(
-                                            focusedBorderColor = EmeraldPrimary,
-                                            focusedLabelColor = EmeraldPrimary
-                                        ),
-                                        shape = RoundedCornerShape(12.dp)
-                                    )
-                                    if (regSelectedJamaahId == null) {
-                                        DropdownMenu(
-                                            expanded = isPernikahanDropdownExpanded,
-                                            onDismissRequest = { isPernikahanDropdownExpanded = false }
-                                        ) {
-                                            listOf("Belum Menikah", "Menikah", "Cerai Hidup", "Cerai Mati").forEach { item ->
-                                                DropdownMenuItem(
-                                                    text = { Text(item) },
-                                                    onClick = {
-                                                        regPernikahan = item
-                                                        isPernikahanDropdownExpanded = false
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            HorizontalDivider(
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
-                                modifier = Modifier.padding(vertical = 12.dp)
-                            )
-
-                            // Username
-                            OutlinedTextField(
-                                value = regUsername,
-                                onValueChange = { regUsername = it },
-                                label = { Text("Username login baru*") },
-                                singleLine = true,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 16.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = EmeraldPrimary,
-                                    focusedLabelColor = EmeraldPrimary
-                                ),
-                                shape = RoundedCornerShape(12.dp)
-                            )
-
-                            // Password
-                            OutlinedTextField(
-                                value = regPassword,
-                                onValueChange = { regPassword = it },
-                                label = { Text("Password*") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                                visualTransformation = PasswordVisualTransformation(),
-                                singleLine = true,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 16.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = EmeraldPrimary,
-                                    focusedLabelColor = EmeraldPrimary
-                                ),
-                                shape = RoundedCornerShape(12.dp)
-                            )
-
-                            // Confirm Password
-                            OutlinedTextField(
-                                value = regPasswordConfirm,
-                                onValueChange = { regPasswordConfirm = it },
-                                label = { Text("Konfirmasi Password*") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                                visualTransformation = PasswordVisualTransformation(),
-                                singleLine = true,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(bottom = 24.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = EmeraldPrimary,
-                                    focusedLabelColor = EmeraldPrimary
-                                ),
-                                shape = RoundedCornerShape(12.dp)
-                            )
-
-                            // Submit Button
-                            if (isSubmitting) {
-                                Box(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    CircularProgressIndicator(color = EmeraldPrimary)
-                                }
-                            } else {
-                                Button(
-                                    onClick = { validateAndSubmit() },
+                            // Notifikasi jika nama tidak ditemukan di database
+                            if (regNamaSearch.trim().length >= 2 && filteredJamaah.isEmpty() && regSelectedJamaahId == null) {
+                                Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(50.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
-                                    shape = RoundedCornerShape(12.dp)
+                                        .padding(bottom = 16.dp),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFEE2E2)),
+                                    border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f))
                                 ) {
-                                    Text(
-                                        text = "Kirim Pendaftaran",
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White
-                                    )
+                                    Row(
+                                        modifier = Modifier.padding(14.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Cancel,
+                                            contentDescription = null,
+                                            tint = Color(0xFFDC2626),
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(
+                                            text = "Nama jamaah tidak tersedia di database sehingga registrasi tidak dapat dilakukan. Silakan hubungi operator kelompok untuk didaftarkan terlebih dahulu.",
+                                            fontSize = 12.sp,
+                                            color = Color(0xFF991B1B),
+                                            lineHeight = 16.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Petunjuk jika belum mencari nama
+                            if (regSelectedJamaahId == null && regNamaSearch.trim().length < 2) {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 16.dp),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(14.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Info,
+                                            contentDescription = null,
+                                            tint = EmeraldPrimary,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text(
+                                            text = "Ketik minimal 2 huruf nama lengkap Anda untuk mencari data di database jamaah.",
+                                            fontSize = 12.sp,
+                                            color = TextMuted,
+                                            lineHeight = 16.sp
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Info Biodata Terverifikasi jika jamaah sudah dipilih
+                            if (regSelectedJamaahId != null) {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 16.dp),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xFFD1FAE5)),
+                                    border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.5f))
+                                ) {
+                                    Column(modifier = Modifier.padding(14.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                imageVector = Icons.Default.CheckCircle,
+                                                contentDescription = null,
+                                                tint = Color(0xFF047857),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = "Data Terverifikasi dari Database Jamaah",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.sp,
+                                                color = Color(0xFF065F46)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text(
+                                            text = "Nama: $regNamaSearch\nKelompok: $regKelompok • $regJk\nStatus: $regPernikahan${if (regTglLahir.isNotBlank()) " • Lahir: $regTglLahir" else ""}",
+                                            fontSize = 11.sp,
+                                            color = Color(0xFF065F46),
+                                            lineHeight = 16.sp
+                                        )
+                                    }
+                                }
+
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                                    modifier = Modifier.padding(vertical = 8.dp)
+                                )
+
+                                Text(
+                                    text = "Buat Akun Login",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = EmeraldDark,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+
+                                // Username
+                                OutlinedTextField(
+                                    value = regUsername,
+                                    onValueChange = { regUsername = it.replace(" ", "") },
+                                    label = { Text("Username Login Baru*") },
+                                    placeholder = { Text("cth: ahmad.fauzi") },
+                                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = EmeraldPrimary) },
+                                    singleLine = true,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 14.dp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = EmeraldPrimary,
+                                        focusedLabelColor = EmeraldPrimary
+                                    ),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+
+                                // Password
+                                OutlinedTextField(
+                                    value = regPassword,
+                                    onValueChange = { regPassword = it },
+                                    label = { Text("Password (minimal 6 karakter)*") },
+                                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = EmeraldPrimary) },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                    visualTransformation = PasswordVisualTransformation(),
+                                    singleLine = true,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 14.dp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = EmeraldPrimary,
+                                        focusedLabelColor = EmeraldPrimary
+                                    ),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+
+                                // Confirm Password
+                                OutlinedTextField(
+                                    value = regPasswordConfirm,
+                                    onValueChange = { regPasswordConfirm = it },
+                                    label = { Text("Konfirmasi Password*") },
+                                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = EmeraldPrimary) },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                                    visualTransformation = PasswordVisualTransformation(),
+                                    singleLine = true,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 20.dp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = EmeraldPrimary,
+                                        focusedLabelColor = EmeraldPrimary
+                                    ),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+
+                                // Submit Button
+                                if (isSubmitting) {
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator(color = EmeraldPrimary)
+                                    }
+                                } else {
+                                    Button(
+                                        onClick = { validateAndSubmit() },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(50.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ) {
+                                        Text(
+                                            text = "Kirim Pendaftaran Akun",
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        )
+                                    }
                                 }
                             }
                         }

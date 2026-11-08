@@ -331,14 +331,40 @@ class SupabaseApi {
         }
     }
 
-    suspend fun registerLinkedUser(username: String, passwordHash: String, jamaahId: String, kelompok: String): Boolean {
+    suspend fun getRegisteredUsers(): List<User> {
         return try {
-            val check: List<User> = client.get("$supabaseUrl/rest/v1/app_users") {
+            client.get("$supabaseUrl/rest/v1/app_users") {
+                supabaseHeaders()
+                parameter("select", "username,role,status,kelompok,jamaah_id")
+                parameter("jamaah_id", "not.is.null")
+            }.body()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun registerLinkedUser(username: String, passwordHash: String, jamaahId: String, kelompok: String): com.example.ajiportal.data.model.RegisterResult {
+        return try {
+            // Cek apakah jamaah_id sudah terdaftar di app_users
+            val checkJamaah: List<User> = client.get("$supabaseUrl/rest/v1/app_users") {
+                supabaseHeaders()
+                parameter("jamaah_id", "eq.$jamaahId")
+                parameter("select", "username,status")
+            }.body()
+            if (checkJamaah.isNotEmpty()) {
+                val existing = checkJamaah.first()
+                return com.example.ajiportal.data.model.RegisterResult.JamaahAlreadyRegistered(existing.username, existing.status)
+            }
+
+            // Cek apakah username sudah digunakan
+            val checkUser: List<User> = client.get("$supabaseUrl/rest/v1/app_users") {
                 supabaseHeaders()
                 parameter("username", "eq.$username")
                 parameter("select", "username")
             }.body()
-            if (check.isNotEmpty()) return false
+            if (checkUser.isNotEmpty()) {
+                return com.example.ajiportal.data.model.RegisterResult.UsernameTaken
+            }
             
             val payload = buildJsonObject {
                 put("username", username)
@@ -356,13 +382,13 @@ class SupabaseApi {
             }
             if (res.status.isSuccess()) {
                 logAction("SYSTEM", "REGISTER_PENDING", "Pendaftaran akun linked: $username menunggu persetujuan kelompok $kelompok.")
-                true
+                com.example.ajiportal.data.model.RegisterResult.Success
             } else {
-                false
+                com.example.ajiportal.data.model.RegisterResult.Error("Gagal mendaftarkan akun di server.")
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            false
+            com.example.ajiportal.data.model.RegisterResult.Error(e.message ?: "Terjadi kesalahan koneksi.")
         }
     }
 
