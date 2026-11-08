@@ -309,6 +309,46 @@ fun PengaturanScreen(
                 }
             }
         }
+
+        // App Version Info Footer
+        item {
+            val packageInfo = remember {
+                try {
+                    context.packageManager.getPackageInfo(context.packageName, 0)
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            val versionName = packageInfo?.versionName ?: "3.2.0"
+            val versionCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                packageInfo?.longVersionCode ?: 4L
+            } else {
+                @Suppress("DEPRECATION")
+                packageInfo?.versionCode?.toLong() ?: 4L
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "AJI Portal Android",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextMuted
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Versi $versionName (Build $versionCode)",
+                        fontSize = 11.sp,
+                        color = TextMuted.copy(alpha = 0.7f)
+                    )
+                }
+            }
+        }
     }
 }
 
