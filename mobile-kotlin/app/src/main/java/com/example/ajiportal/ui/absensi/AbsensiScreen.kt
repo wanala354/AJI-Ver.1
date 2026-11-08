@@ -279,297 +279,332 @@ fun AbsensiScreen(
                     color = EmeraldPrimary.copy(alpha = 0.03f)
                 )
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp)
-                ) {
+                var selectedTab by remember { mutableStateOf(0) } // 0: Semua/Input, 1: Hadir Fisik, 2: Online, 3: Izin, 4: Belum
+                var selectedGender by remember { mutableStateOf("Semua") } // "Semua", "Laki-laki", "Perempuan"
 
+                val baseList = remember(state.allJamaah, state.myRole, state.userKelompok, selectedSession) {
+                    val session = selectedSession
+                    if (session == null) emptyList()
+                    else {
+                        val roleLower = state.myRole.lowercase().trim()
+                        val isRestricted = roleLower == "operator kelompok" || roleLower == "pengurus kelompok" || roleLower == "jamaah" || roleLower == "user"
+                        
+                        val effectiveKelompok = if (state.userKelompok.isNotBlank() && !state.userKelompok.equals("semua", ignoreCase = true)) {
+                            state.userKelompok.trim().lowercase()
+                        } else {
+                            ""
+                        }
 
-                    // Active Session Selector Card (Displayed directly without dropdown)
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 16.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = if (todaySchedules.isNotEmpty()) "Pilih Sesi Pengajian Hari Ini" else "Pilih Sesi Pengajian Terbaru",
-                                fontSize = 13.sp,
-                                color = EmeraldDark,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            if (visibleSessions.isEmpty()) {
-                                Text(
-                                    text = "Tidak ada jadwal pengajian tersedia.",
-                                    fontSize = 14.sp,
-                                    color = TextMuted,
-                                    fontWeight = FontWeight.Medium
-                                )
+                        if (isRestricted && effectiveKelompok.isNotBlank()) {
+                            state.allJamaah.filter { j ->
+                                j.kelompokPengajian.trim().lowercase() == effectiveKelompok
+                            }
+                        } else {
+                            val sessionKelompok = (session.kelompokPengajian ?: "").trim()
+                            if (sessionKelompok.isNotEmpty() && !sessionKelompok.equals("semua", ignoreCase = true) && !sessionKelompok.equals("desa", ignoreCase = true) && !sessionKelompok.equals("daerah", ignoreCase = true)) {
+                                state.allJamaah.filter { j ->
+                                    j.kelompokPengajian.trim().lowercase() == sessionKelompok.lowercase()
+                                }
                             } else {
-                                // Horizontal Row of selectable sessions (Direct Selection)
-                                androidx.compose.foundation.lazy.LazyRow(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    contentPadding = PaddingValues(vertical = 4.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    items(visibleSessions) { s ->
-                                        val isSelected = selectedSession?.id == s.id
-                                        val chipColor = if (isSelected) EmeraldPrimary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                        val textColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
-                                        val borderColor = if (isSelected) EmeraldPrimary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-                                        
-                                        Box(
-                                            modifier = Modifier
-                                                .background(chipColor, RoundedCornerShape(12.dp))
-                                                .border(1.dp, borderColor, RoundedCornerShape(12.dp))
-                                                .clickable {
-                                                    selectedSession = s
+                                state.allJamaah
+                            }
+                        }
+                    }
+                }
+
+                val sessionTargetJamaah = remember(baseList, selectedSession, state.masterJenisList, state.pengurusRoles) {
+                    val session = selectedSession
+                    if (session == null) emptyList()
+                    else {
+                        val eligible = baseList.filter { j ->
+                            EligibilityHelper.isJamaahEligible(j, session, state.masterJenisList, state.pengurusRoles)
+                        }
+                        if (eligible.isNotEmpty()) eligible else baseList
+                    }
+                }
+
+                val currentTargetJamaah = remember(sessionTargetJamaah, selectedGender) {
+                    if (selectedGender == "Semua") sessionTargetJamaah
+                    else sessionTargetJamaah.filter { it.jenisKelamin.trim().equals(selectedGender, ignoreCase = true) }
+                }
+
+                val countFisik = remember(currentTargetJamaah, presensiMap) {
+                    currentTargetJamaah.count { presensiMap[it.id]?.status == "Hadir Fisik" }
+                }
+                val countOnline = remember(currentTargetJamaah, presensiMap) {
+                    currentTargetJamaah.count { presensiMap[it.id]?.status == "Online" }
+                }
+                val countIzin = remember(currentTargetJamaah, presensiMap) {
+                    currentTargetJamaah.count { presensiMap[it.id]?.status == "Izin" }
+                }
+                val countBelum = remember(currentTargetJamaah, presensiMap) {
+                    currentTargetJamaah.count { presensiMap[it.id] == null || presensiMap[it.id]?.status == "Alpha" }
+                }
+
+                val targetCategory = remember(selectedSession, state.masterJenisList) {
+                    val session = selectedSession
+                    if (session == null) ""
+                    else {
+                        val cleanName = (session.jenisPengajian ?: "").trim().lowercase().replace("\\s+".toRegex(), "")
+                        val match = state.masterJenisList.find { item ->
+                            item.nama.trim().lowercase().replace("\\s+".toRegex(), "") == cleanName
+                        }
+                        match?.pesertaPengajian?.takeIf { it.isNotBlank() } ?: (session.tingkatPengajian ?: "Umum")
+                    }
+                }
+
+                data class StatusTabItem(val id: Int, val label: String, val count: Int, val activeColor: Color)
+                val statusTabs = listOf(
+                    StatusTabItem(0, "Semua / Input", baseList.size, EmeraldPrimary),
+                    StatusTabItem(1, "Hadir Fisik", countFisik, Color(0xFF10B981)),
+                    StatusTabItem(2, "Online", countOnline, Color(0xFF3B82F6)),
+                    StatusTabItem(3, "Izin", countIzin, Color(0xFFF59E0B)),
+                    StatusTabItem(4, "Belum", countBelum, Color(0xFF6B7280))
+                )
+
+                val filteredJamaah = remember(selectedTab, searchQuery, selectedGender, baseList, currentTargetJamaah, presensiMap) {
+                    val searchClean = searchQuery.trim()
+                    val tabList = when (selectedTab) {
+                        1 -> baseList.filter { presensiMap[it.id]?.status == "Hadir Fisik" }
+                        2 -> baseList.filter { presensiMap[it.id]?.status == "Online" }
+                        3 -> baseList.filter { presensiMap[it.id]?.status == "Izin" }
+                        4 -> currentTargetJamaah.filter { presensiMap[it.id] == null || presensiMap[it.id]?.status == "Alpha" }
+                        else -> baseList
+                    }
+
+                    val byGender = if (selectedGender == "Semua") {
+                        tabList
+                    } else {
+                        tabList.filter { it.jenisKelamin.trim().equals(selectedGender, ignoreCase = true) }
+                    }
+
+                    if (searchClean.isEmpty()) {
+                        byGender
+                    } else {
+                        byGender.filter { it.namaLengkap.contains(searchClean, ignoreCase = true) }
+                    }
+                }
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Active Session Selector Card
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(14.dp)) {
+                                Text(
+                                    text = if (todaySchedules.isNotEmpty()) "Pilih Sesi Pengajian Hari Ini" else "Pilih Sesi Pengajian Terbaru",
+                                    fontSize = 13.sp,
+                                    color = EmeraldDark,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                if (visibleSessions.isEmpty()) {
+                                    Text(
+                                        text = "Tidak ada jadwal pengajian tersedia.",
+                                        fontSize = 14.sp,
+                                        color = TextMuted,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                } else {
+                                    androidx.compose.foundation.lazy.LazyRow(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        contentPadding = PaddingValues(vertical = 4.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        items(visibleSessions) { s ->
+                                            val isSelected = selectedSession?.id == s.id
+                                            val chipColor = if (isSelected) EmeraldPrimary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                            val textColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
+                                            val borderColor = if (isSelected) EmeraldPrimary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                                            
+                                            Box(
+                                                modifier = Modifier
+                                                    .background(chipColor, RoundedCornerShape(12.dp))
+                                                    .border(1.dp, borderColor, RoundedCornerShape(12.dp))
+                                                    .clickable {
+                                                        selectedSession = s
+                                                    }
+                                                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                                            ) {
+                                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                    Text(
+                                                        text = s.jenisPengajian ?: "Pengajian",
+                                                        fontSize = 13.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = textColor
+                                                    )
+                                                    Text(
+                                                        text = if (s.tanggal == todayStr) "Hari Ini (${s.waktuMulai ?: ""})" else "${s.tanggal} (${s.waktuMulai ?: ""})",
+                                                        fontSize = 10.sp,
+                                                        color = if (isSelected) Color.White.copy(alpha = 0.8f) else TextMuted
+                                                    )
                                                 }
-                                                .padding(horizontal = 14.dp, vertical = 8.dp)
-                                        ) {
-                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                                Text(
-                                                    text = s.jenisPengajian ?: "Pengajian",
-                                                    fontSize = 13.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = textColor
-                                                )
-                                                Text(
-                                                    text = if (s.tanggal == todayStr) "Hari Ini (${s.waktuMulai ?: ""})" else "${s.tanggal} (${s.waktuMulai ?: ""})",
-                                                    fontSize = 10.sp,
-                                                    color = if (isSelected) Color.White.copy(alpha = 0.8f) else TextMuted
-                                                )
                                             }
                                         }
                                     }
-                                }
 
-                                selectedSession?.let { s ->
-                                    Spacer(modifier = Modifier.height(14.dp))
-                                    Text(
-                                        text = "Detail Materi & Pengajar:",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = EmeraldDark
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = formatMateriPengajar(s.materiPengajar),
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        lineHeight = 18.sp
-                                    )
-                                    Spacer(modifier = Modifier.height(6.dp))
-                                    Text(
-                                        text = "Tingkat: ${s.tingkatPengajian ?: "Umum"} | Kelompok: ${s.kelompokPengajian ?: "Semua"}",
-                                        fontSize = 12.sp,
-                                        color = TextMuted
-                                    )
+                                    selectedSession?.let { s ->
+                                        Spacer(modifier = Modifier.height(10.dp))
+                                        Text(
+                                            text = "Detail Materi & Pengajar:",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = EmeraldDark
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = formatMateriPengajar(s.materiPengajar),
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            lineHeight = 16.sp
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = "Tingkat: ${s.tingkatPengajian ?: "Umum"} | Kelompok: ${s.kelompokPengajian ?: "Semua"}",
+                                            fontSize = 11.sp,
+                                            color = TextMuted
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
 
-                    var selectedTab by remember { mutableStateOf(0) } // 0: Cari/Input, 1: Hadir Fisik, 2: Online, 3: Izin, 4: Belum
-                    var selectedGender by remember { mutableStateOf("Semua") } // "Semua", "Laki-laki", "Perempuan"
-
                     if (selectedSession == null) {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "Silakan pilih sesi pengajian terlebih dahulu.",
-                                color = TextMuted,
-                                textAlign = TextAlign.Center
-                            )
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Silakan pilih sesi pengajian terlebih dahulu.",
+                                    color = TextMuted,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
                         }
                     } else {
                         val session = selectedSession!!
-                        
-                        val baseList = remember(state.allJamaah, state.myRole, state.userKelompok, session) {
-                            val roleLower = state.myRole.lowercase().trim()
-                            val isRestricted = roleLower == "operator kelompok" || roleLower == "pengurus kelompok" || roleLower == "jamaah" || roleLower == "user"
-                            
-                            val effectiveKelompok = if (state.userKelompok.isNotBlank() && !state.userKelompok.equals("semua", ignoreCase = true)) {
-                                state.userKelompok.trim().lowercase()
-                            } else {
-                                ""
-                            }
-
-                            if (isRestricted && effectiveKelompok.isNotBlank()) {
-                                state.allJamaah.filter { j ->
-                                    j.kelompokPengajian.trim().lowercase() == effectiveKelompok
-                                }
-                            } else {
-                                val sessionKelompok = (session.kelompokPengajian ?: "").trim()
-                                if (sessionKelompok.isNotEmpty() && !sessionKelompok.equals("semua", ignoreCase = true) && !sessionKelompok.equals("desa", ignoreCase = true) && !sessionKelompok.equals("daerah", ignoreCase = true)) {
-                                    state.allJamaah.filter { j ->
-                                        j.kelompokPengajian.trim().lowercase() == sessionKelompok.lowercase()
-                                    }
-                                } else {
-                                    state.allJamaah
-                                }
-                            }
-                        }
-
-                        val sessionTargetJamaah = remember(baseList, session, state.masterJenisList, state.pengurusRoles) {
-                            val eligible = baseList.filter { j ->
-                                EligibilityHelper.isJamaahEligible(j, session, state.masterJenisList, state.pengurusRoles)
-                            }
-                            if (eligible.isNotEmpty()) eligible else baseList
-                        }
-
-                        val currentTargetJamaah = remember(sessionTargetJamaah, selectedGender) {
-                            if (selectedGender == "Semua") sessionTargetJamaah
-                            else sessionTargetJamaah.filter { it.jenisKelamin.trim().equals(selectedGender, ignoreCase = true) }
-                        }
-
-                        val countFisik = remember(currentTargetJamaah, presensiMap) {
-                            currentTargetJamaah.count { presensiMap[it.id]?.status == "Hadir Fisik" }
-                        }
-                        val countOnline = remember(currentTargetJamaah, presensiMap) {
-                            currentTargetJamaah.count { presensiMap[it.id]?.status == "Online" }
-                        }
-                        val countIzin = remember(currentTargetJamaah, presensiMap) {
-                            currentTargetJamaah.count { presensiMap[it.id]?.status == "Izin" }
-                        }
-                        val countBelum = remember(currentTargetJamaah, presensiMap) {
-                            currentTargetJamaah.count { presensiMap[it.id] == null || presensiMap[it.id]?.status == "Alpha" }
-                        }
-
-                        val targetCategory = remember(session, state.masterJenisList) {
-                            val cleanName = (session.jenisPengajian ?: "").trim().lowercase().replace("\\s+".toRegex(), "")
-                            val match = state.masterJenisList.find { item ->
-                                item.nama.trim().lowercase().replace("\\s+".toRegex(), "") == cleanName
-                            }
-                            match?.pesertaPengajian?.takeIf { it.isNotBlank() } ?: (session.tingkatPengajian ?: "Umum")
-                        }
 
                         // Informasi Prosentase Kehadiran Sesi Sesuai Jadwal
-                        SesiKehadiranStatsCard(
-                            session = session,
-                            targetCategory = targetCategory,
-                            totalTarget = currentTargetJamaah.size,
-                            hadirFisik = countFisik,
-                            online = countOnline,
-                            izin = countIzin,
-                            belum = countBelum,
-                            selectedGender = selectedGender,
-                            modifier = Modifier.padding(bottom = 12.dp)
-                        )
+                        item {
+                            SesiKehadiranStatsCard(
+                                session = session,
+                                targetCategory = targetCategory,
+                                totalTarget = currentTargetJamaah.size,
+                                hadirFisik = countFisik,
+                                online = countOnline,
+                                izin = countIzin,
+                                belum = countBelum,
+                                selectedGender = selectedGender
+                            )
+                        }
 
                         // Search input
-                        OutlinedTextField(
-                            value = searchQuery,
-                            onValueChange = { searchQuery = it },
-                            label = { Text(if (selectedTab == 0) "Cari Nama Jamaah untuk Presensi" else "Filter Nama Jamaah") },
-                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = EmeraldPrimary) },
-                            singleLine = true,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 10.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = EmeraldPrimary,
-                                focusedLabelColor = EmeraldPrimary
-                            ),
-                            shape = RoundedCornerShape(12.dp)
-                        )
+                        item {
+                            OutlinedTextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                label = { Text(if (selectedTab == 0) "Cari Nama Jamaah untuk Presensi" else "Filter Nama Jamaah") },
+                                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = EmeraldPrimary) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = EmeraldPrimary,
+                                    focusedLabelColor = EmeraldPrimary
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                        }
 
                         // Gender Filter Bar
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 10.dp)
-                        ) {
-                            Text("JK:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextMuted)
-                            listOf("Semua", "Laki-laki", "Perempuan").forEach { genderOption ->
-                                val isSelected = selectedGender == genderOption
-                                Box(
-                                    modifier = Modifier
-                                        .background(
-                                            if (isSelected) EmeraldPrimary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                                            RoundedCornerShape(16.dp)
+                        item {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("JK:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextMuted)
+                                listOf("Semua", "Laki-laki", "Perempuan").forEach { genderOption ->
+                                    val isSelected = selectedGender == genderOption
+                                    Box(
+                                        modifier = Modifier
+                                            .background(
+                                                if (isSelected) EmeraldPrimary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                                RoundedCornerShape(16.dp)
+                                            )
+                                            .border(
+                                                1.dp,
+                                                if (isSelected) EmeraldPrimary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                                                RoundedCornerShape(16.dp)
+                                            )
+                                            .clickable { selectedGender = genderOption }
+                                            .padding(horizontal = 12.dp, vertical = 5.dp)
+                                    ) {
+                                        Text(
+                                            text = genderOption,
+                                            fontSize = 11.sp,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isSelected) EmeraldDark else MaterialTheme.colorScheme.onSurface
                                         )
-                                        .border(
-                                            1.dp,
-                                            if (isSelected) EmeraldPrimary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-                                            RoundedCornerShape(16.dp)
-                                        )
-                                        .clickable { selectedGender = genderOption }
-                                        .padding(horizontal = 12.dp, vertical = 5.dp)
-                                ) {
-                                    Text(
-                                        text = genderOption,
-                                        fontSize = 11.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isSelected) EmeraldDark else MaterialTheme.colorScheme.onSurface
-                                    )
+                                    }
                                 }
                             }
                         }
 
                         // Sub-menu Tabs Row for Presence Status Filtering
-                        data class StatusTabItem(val id: Int, val label: String, val count: Int, val activeColor: Color)
-                        val statusTabs = listOf(
-                            StatusTabItem(0, "Cari / Input", baseList.size, EmeraldPrimary),
-                            StatusTabItem(1, "Hadir Fisik", countFisik, Color(0xFF10B981)),
-                            StatusTabItem(2, "Online", countOnline, Color(0xFF3B82F6)),
-                            StatusTabItem(3, "Izin", countIzin, Color(0xFFF59E0B)),
-                            StatusTabItem(4, "Belum", countBelum, Color(0xFF6B7280))
-                        )
+                        item {
+                            androidx.compose.foundation.lazy.LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                contentPadding = PaddingValues(vertical = 2.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                items(statusTabs) { tab ->
+                                    val isSelected = selectedTab == tab.id
+                                    val bgColor = if (isSelected) tab.activeColor else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                    val textColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
+                                    val borderColor = if (isSelected) tab.activeColor else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
 
-                        androidx.compose.foundation.lazy.LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            contentPadding = PaddingValues(vertical = 4.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 12.dp)
-                        ) {
-                            items(statusTabs) { tab ->
-                                val isSelected = selectedTab == tab.id
-                                val bgColor = if (isSelected) tab.activeColor else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                                val textColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
-                                val borderColor = if (isSelected) tab.activeColor else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-
-                                Box(
-                                    modifier = Modifier
-                                        .background(bgColor, RoundedCornerShape(20.dp))
-                                        .border(1.dp, borderColor, RoundedCornerShape(20.dp))
-                                        .clickable { selectedTab = tab.id }
-                                        .padding(horizontal = 14.dp, vertical = 7.dp)
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            text = tab.label,
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = textColor
-                                        )
-                                        if (tab.id != 0) {
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Box(
-                                                modifier = Modifier
-                                                    .background(if (isSelected) Color.White.copy(alpha = 0.25f) else tab.activeColor.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
-                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                                            ) {
-                                                Text(
-                                                    text = "${tab.count}",
-                                                    fontSize = 10.sp,
-                                                    fontWeight = FontWeight.ExtraBold,
-                                                    color = if (isSelected) Color.White else tab.activeColor
-                                                )
+                                    Box(
+                                        modifier = Modifier
+                                            .background(bgColor, RoundedCornerShape(20.dp))
+                                            .border(1.dp, borderColor, RoundedCornerShape(20.dp))
+                                            .clickable { selectedTab = tab.id }
+                                            .padding(horizontal = 14.dp, vertical = 7.dp)
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = tab.label,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = textColor
+                                            )
+                                            if (tab.id != 0) {
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                Box(
+                                                    modifier = Modifier
+                                                        .background(if (isSelected) Color.White.copy(alpha = 0.25f) else tab.activeColor.copy(alpha = 0.15f), RoundedCornerShape(10.dp))
+                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                ) {
+                                                    Text(
+                                                        text = "${tab.count}",
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.ExtraBold,
+                                                        color = if (isSelected) Color.White else tab.activeColor
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -577,155 +612,107 @@ fun AbsensiScreen(
                             }
                         }
 
-                        val filteredJamaah = remember(selectedTab, searchQuery, selectedGender, baseList, currentTargetJamaah, presensiMap) {
-                            val searchClean = searchQuery.trim()
-                            val tabList = when (selectedTab) {
-                                1 -> currentTargetJamaah.filter { presensiMap[it.id]?.status == "Hadir Fisik" }
-                                2 -> currentTargetJamaah.filter { presensiMap[it.id]?.status == "Online" }
-                                3 -> currentTargetJamaah.filter { presensiMap[it.id]?.status == "Izin" }
-                                4 -> currentTargetJamaah.filter { presensiMap[it.id] == null || presensiMap[it.id]?.status == "Alpha" }
-                                else -> {
-                                    if (searchClean.isEmpty()) emptyList() else baseList
+                        if (filteredJamaah.isEmpty()) {
+                            item {
+                                val emptyMessage = when {
+                                    searchQuery.trim().isNotEmpty() -> "Jamaah dengan nama \"$searchQuery\" tidak ditemukan pada tab ini."
+                                    selectedTab == 1 -> "Belum ada jamaah (${selectedGender}) yang tercatat Hadir Fisik pada sesi ini."
+                                    selectedTab == 2 -> "Belum ada jamaah (${selectedGender}) yang tercatat Online pada sesi ini."
+                                    selectedTab == 3 -> "Belum ada jamaah (${selectedGender}) yang tercatat Izin pada sesi ini."
+                                    selectedTab == 4 -> "Alhamdulillah! Semua jamaah (${selectedGender}) sasaran sudah tercatat presensi."
+                                    else -> "Tidak ada data jamaah."
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 32.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = emptyMessage,
+                                        color = TextMuted,
+                                        textAlign = TextAlign.Center,
+                                        fontSize = 13.sp,
+                                        modifier = Modifier.padding(horizontal = 24.dp)
+                                    )
                                 }
                             }
-
-                            val byGender = if (selectedTab == 0 && selectedGender != "Semua") {
-                                tabList.filter { it.jenisKelamin.trim().equals(selectedGender, ignoreCase = true) }
-                            } else {
-                                tabList
-                            }
-
-                            if (searchClean.isEmpty()) {
-                                byGender
-                            } else {
-                                byGender.filter { it.namaLengkap.contains(searchClean, ignoreCase = true) }
+                        } else {
+                            items(filteredJamaah, key = { it.id }) { j ->
+                                val presensi = presensiMap[j.id]
+                                if (selectedTab == 0) {
+                                    JamaahAbsensiCard(
+                                        jamaah = j,
+                                        presensi = presensi,
+                                        canEditOrDelete = canEditOrDelete,
+                                        onStatusSelected = { status ->
+                                            if (status == "Hadir Fisik") {
+                                                isSubmittingPresensi = true
+                                                viewModel.updatePresensi(session.id, j.id, "Hadir Fisik", null) { success ->
+                                                    isSubmittingPresensi = false
+                                                    if (success) {
+                                                        Toast.makeText(context, "Presensi ${j.namaLengkap} berhasil disimpan.", Toast.LENGTH_SHORT).show()
+                                                    } else {
+                                                        Toast.makeText(context, "Gagal mengirim presensi.", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                }
+                                            } else {
+                                                dialogTargetJamaah = Pair(j, status)
+                                                dialogKeterangan = presensi?.keterangan ?: ""
+                                            }
+                                        },
+                                        onReset = {
+                                            isSubmittingPresensi = true
+                                            viewModel.updatePresensi(session.id, j.id, "Alpha", null) { success ->
+                                                isSubmittingPresensi = false
+                                                if (success) {
+                                                    Toast.makeText(context, "Presensi ${j.namaLengkap} berhasil dihapus.", Toast.LENGTH_SHORT).show()
+                                                }
+                                            }
+                                        }
+                                    )
+                                } else if (selectedTab == 4) {
+                                    // Kartu khusus tab Belum dengan tombol Hadir, Online, dan Izin
+                                    JamaahBelumCard(
+                                        jamaah = j,
+                                        onStatusSelected = { status ->
+                                            if (status == "Hadir Fisik") {
+                                                isSubmittingPresensi = true
+                                                viewModel.updatePresensi(session.id, j.id, "Hadir Fisik", null) { success ->
+                                                    isSubmittingPresensi = false
+                                                    if (success) {
+                                                        Toast.makeText(context, "Presensi ${j.namaLengkap} berhasil disimpan.", Toast.LENGTH_SHORT).show()
+                                                    } else {
+                                                        Toast.makeText(context, "Gagal mengirim presensi.", Toast.LENGTH_SHORT).show()
+                                                    }
+                                                }
+                                            } else {
+                                                dialogTargetJamaah = Pair(j, status)
+                                                dialogKeterangan = ""
+                                            }
+                                        }
+                                    )
+                                } else {
+                                    // Compact list item for Hadir Fisik, Online, Izin tabs with delete button
+                                    JamaahListItem(
+                                        jamaah = j,
+                                        presensi = presensi,
+                                        onReset = {
+                                            isSubmittingPresensi = true
+                                            viewModel.updatePresensi(session.id, j.id, "Alpha", null) { success ->
+                                                isSubmittingPresensi = false
+                                                if (success) {
+                                                    Toast.makeText(context, "Presensi ${j.namaLengkap} berhasil dihapus.", Toast.LENGTH_SHORT).show()
+                                                }
+                                            }
+                                        }
+                                    )
+                                }
                             }
                         }
 
-                        if (selectedTab == 0 && searchQuery.trim().isEmpty()) {
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxWidth(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(
-                                        imageVector = Icons.Default.Person,
-                                        contentDescription = null,
-                                        tint = TextMuted.copy(alpha = 0.5f),
-                                        modifier = Modifier.size(64.dp)
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        text = "Ketik nama jamaah pada kolom pencarian untuk melakukan presensi, atau pilih tab Hadir Fisik, Online, Izin, & Belum di atas.",
-                                        fontSize = 13.sp,
-                                        color = TextMuted,
-                                        textAlign = TextAlign.Center,
-                                        modifier = Modifier.padding(horizontal = 32.dp)
-                                    )
-                                }
-                            }
-                        } else if (filteredJamaah.isEmpty()) {
-                            val emptyMessage = when {
-                                searchQuery.trim().isNotEmpty() -> "Jamaah dengan nama \"$searchQuery\" tidak ditemukan pada tab ini."
-                                selectedTab == 1 -> "Belum ada jamaah (${selectedGender}) yang tercatat Hadir Fisik pada sesi ini."
-                                selectedTab == 2 -> "Belum ada jamaah (${selectedGender}) yang tercatat Online pada sesi ini."
-                                selectedTab == 3 -> "Belum ada jamaah (${selectedGender}) yang tercatat Izin pada sesi ini."
-                                selectedTab == 4 -> "Alhamdulillah! Semua jamaah (${selectedGender}) sasaran sudah tercatat presensi."
-                                else -> "Tidak ada data jamaah."
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxWidth(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = emptyMessage,
-                                    color = TextMuted,
-                                    textAlign = TextAlign.Center,
-                                    fontSize = 13.sp,
-                                    modifier = Modifier.padding(horizontal = 32.dp)
-                                )
-                            }
-                        } else {
-                            LazyColumn(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                items(filteredJamaah) { j ->
-                                    val presensi = presensiMap[j.id]
-                                    if (selectedTab == 0) {
-                                        JamaahAbsensiCard(
-                                            jamaah = j,
-                                            presensi = presensi,
-                                            canEditOrDelete = canEditOrDelete,
-                                            onStatusSelected = { status ->
-                                                if (status == "Hadir Fisik") {
-                                                    isSubmittingPresensi = true
-                                                    viewModel.updatePresensi(session.id, j.id, "Hadir Fisik", null) { success ->
-                                                        isSubmittingPresensi = false
-                                                        if (success) {
-                                                            Toast.makeText(context, "Presensi ${j.namaLengkap} berhasil disimpan.", Toast.LENGTH_SHORT).show()
-                                                        } else {
-                                                            Toast.makeText(context, "Gagal mengirim presensi.", Toast.LENGTH_SHORT).show()
-                                                        }
-                                                    }
-                                                } else {
-                                                    dialogTargetJamaah = Pair(j, status)
-                                                    dialogKeterangan = presensi?.keterangan ?: ""
-                                                }
-                                            },
-                                            onReset = {
-                                                isSubmittingPresensi = true
-                                                viewModel.updatePresensi(session.id, j.id, "Alpha", null) { success ->
-                                                    isSubmittingPresensi = false
-                                                    if (success) {
-                                                        Toast.makeText(context, "Presensi ${j.namaLengkap} berhasil dihapus.", Toast.LENGTH_SHORT).show()
-                                                    }
-                                                }
-                                            }
-                                        )
-                                    } else if (selectedTab == 4) {
-                                        // Kartu khusus tab Belum dengan tombol Hadir, Online, dan Izin
-                                        JamaahBelumCard(
-                                            jamaah = j,
-                                            onStatusSelected = { status ->
-                                                if (status == "Hadir Fisik") {
-                                                    isSubmittingPresensi = true
-                                                    viewModel.updatePresensi(session.id, j.id, "Hadir Fisik", null) { success ->
-                                                        isSubmittingPresensi = false
-                                                        if (success) {
-                                                            Toast.makeText(context, "Presensi ${j.namaLengkap} berhasil disimpan.", Toast.LENGTH_SHORT).show()
-                                                        } else {
-                                                            Toast.makeText(context, "Gagal mengirim presensi.", Toast.LENGTH_SHORT).show()
-                                                        }
-                                                    }
-                                                } else {
-                                                    dialogTargetJamaah = Pair(j, status)
-                                                    dialogKeterangan = ""
-                                                }
-                                            }
-                                        )
-                                    } else {
-                                        // Compact list item for Hadir Fisik, Online, Izin tabs with delete button
-                                        JamaahListItem(
-                                            jamaah = j,
-                                            presensi = presensi,
-                                            onReset = {
-                                                isSubmittingPresensi = true
-                                                viewModel.updatePresensi(session.id, j.id, "Alpha", null) { success ->
-                                                    isSubmittingPresensi = false
-                                                    if (success) {
-                                                        Toast.makeText(context, "Presensi ${j.namaLengkap} berhasil dihapus.", Toast.LENGTH_SHORT).show()
-                                                    }
-                                                }
-                                            }
-                                        )
-                                    }
-                                }
-                            }
+                        item {
+                            Spacer(modifier = Modifier.height(16.dp))
                         }
                     }
                 }
