@@ -1257,6 +1257,7 @@ function renderPresensiTable(session) {
       id_jamaah: j.id,
       nama: j.namaLengkap,
       gender: j.jenisKelamin,
+      kelompok: j.kelompokPengajian || "",
       peramutan: j.kelompokPeramutan,
       status: exist ? exist.status : defaultStatus,
       keterangan: exist ? exist.keterangan || "" : ""
@@ -1265,6 +1266,40 @@ function renderPresensiTable(session) {
   
   currentPresensiList.sort((a, b) => a.nama.localeCompare(b.nama));
   
+  // Populate filter kelompok presensi
+  const presensiKelompokSelect = document.getElementById("presensi-kelompok-filter");
+  if (presensiKelompokSelect) {
+    const curVal = presensiKelompokSelect.value;
+    presensiKelompokSelect.innerHTML = '<option value="">Semua Kelompok</option>';
+
+    const rawKel = typeof getKelompokList === 'function' ? getKelompokList() : (typeof localMasterKelompok !== 'undefined' ? localMasterKelompok : []);
+    const masterKel = Array.from(new Set(
+      [
+        ...rawKel.map(k => typeof k === 'object' && k ? (k.nama || k.name || '') : String(k || '')),
+        ...targetJamaah.map(j => j.kelompokPengajian || '')
+      ].filter(Boolean)
+    )).sort();
+
+    masterKel.forEach(k => {
+      const opt = document.createElement("option");
+      opt.value = k;
+      opt.textContent = k;
+      presensiKelompokSelect.appendChild(opt);
+    });
+
+    if (isKelompokRestricted && currentUser && currentUser.kelompok) {
+      presensiKelompokSelect.value = currentUser.kelompok;
+      presensiKelompokSelect.disabled = true;
+    } else {
+      presensiKelompokSelect.disabled = false;
+      if (curVal && masterKel.includes(curVal)) {
+        presensiKelompokSelect.value = curVal;
+      } else {
+        presensiKelompokSelect.value = "";
+      }
+    }
+  }
+
   fillPresensiDOM();
 }
 
@@ -1274,10 +1309,20 @@ function fillPresensiDOM() {
   
   const searchQuery = document.getElementById("presensi-search").value.trim().toLowerCase();
   const genderFilter = document.getElementById("presensi-gender-filter").value;
+  const kelompokFilter = document.getElementById("presensi-kelompok-filter") ? document.getElementById("presensi-kelompok-filter").value : "";
+  const statusFilter = document.getElementById("presensi-status-filter") ? document.getElementById("presensi-status-filter").value : "";
   
   let filtered = currentPresensiList;
   if (searchQuery) filtered = filtered.filter(p => p.nama.toLowerCase().includes(searchQuery));
   if (genderFilter) filtered = filtered.filter(p => p.gender === genderFilter);
+  if (kelompokFilter) filtered = filtered.filter(p => (p.kelompok || "").trim().toLowerCase() === kelompokFilter.trim().toLowerCase());
+  if (statusFilter) {
+    if (statusFilter === "Alpha") {
+      filtered = filtered.filter(p => p.status === "Alpha" || p.status === "BELUM WAKTUNYA" || !p.status);
+    } else {
+      filtered = filtered.filter(p => p.status === statusFilter);
+    }
+  }
   
   if (filtered.length === 0) {
     tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--text-secondary);">Tidak ada jamaah yang cocok dengan filter pencarian.</td></tr>';
@@ -1310,7 +1355,7 @@ function fillPresensiDOM() {
     
     tr.innerHTML = `
       <td>${index + 1}</td>
-      <td><strong>${p.nama}</strong><span style="display:block; font-size:0.75rem; color:var(--text-secondary);">${p.id_jamaah}</span></td>
+      <td><strong>${p.nama}</strong><span style="display:block; font-size:0.75rem; color:var(--text-secondary);">${p.id_jamaah}${p.kelompok ? ' • ' + p.kelompok : ''}</span></td>
       <td>${p.gender === "Laki-laki" ? "L" : "P"}</td>
       <td><span class="status-badge status-active" style="font-size:0.75rem; background:rgba(255,255,255,0.05); color:var(--text-secondary); border: 1px solid var(--border-color);">${p.peramutan}</span></td>
       <td>${statusRadioHtml}</td>
