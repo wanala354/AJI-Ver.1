@@ -687,8 +687,29 @@ fun AbsensiScreen(
                                                 }
                                             }
                                         )
+                                    } else if (selectedTab == 4) {
+                                        // Kartu khusus tab Belum dengan tombol Hadir, Online, dan Izin
+                                        JamaahBelumCard(
+                                            jamaah = j,
+                                            onStatusSelected = { status ->
+                                                if (status == "Hadir Fisik") {
+                                                    isSubmittingPresensi = true
+                                                    viewModel.updatePresensi(session.id, j.id, "Hadir Fisik", null) { success ->
+                                                        isSubmittingPresensi = false
+                                                        if (success) {
+                                                            Toast.makeText(context, "Presensi ${j.namaLengkap} berhasil disimpan.", Toast.LENGTH_SHORT).show()
+                                                        } else {
+                                                            Toast.makeText(context, "Gagal mengirim presensi.", Toast.LENGTH_SHORT).show()
+                                                        }
+                                                    }
+                                                } else {
+                                                    dialogTargetJamaah = Pair(j, status)
+                                                    dialogKeterangan = ""
+                                                }
+                                            }
+                                        )
                                     } else {
-                                        // Compact list item for Hadir Fisik, Online, Izin, Belum tabs with delete button
+                                        // Compact list item for Hadir Fisik, Online, Izin tabs with delete button
                                         JamaahListItem(
                                             jamaah = j,
                                             presensi = presensi,
@@ -882,7 +903,7 @@ fun JamaahAbsensiCard(
                     ),
                     border = androidx.compose.foundation.BorderStroke(1.dp, EmeraldPrimary.copy(alpha = if (isActionEnabled) 0.4f else 0.1f))
                 ) {
-                    Text("Fisik", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text("Hadir", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
 
                 OutlinedButton(
@@ -953,6 +974,116 @@ fun formatMateriPengajar(jsonStr: String?): String {
         }.joinToString("\n• ", prefix = "• ")
     } catch (e: Exception) {
         jsonStr
+    }
+}
+
+@Composable
+fun JamaahBelumCard(
+    jamaah: Jamaah,
+    onStatusSelected: (String) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(EmeraldLight, RoundedCornerShape(8.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = null,
+                        tint = EmeraldDark,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = jamaah.namaLengkap,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "${jamaah.kelompokPengajian} • ${jamaah.jenisKelamin}",
+                        fontSize = 11.sp,
+                        color = TextMuted
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .background(Color(0xFF6B7280).copy(alpha = 0.12f), RoundedCornerShape(6.dp))
+                        .border(1.dp, Color(0xFF6B7280).copy(alpha = 0.25f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 7.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = "Belum",
+                        color = Color(0xFF6B7280),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Action Buttons for Hadir, Online, & Izin
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = { onStatusSelected("Hadir Fisik") },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(vertical = 4.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = Color.White
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Hadir", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
+
+                Button(
+                    onClick = { onStatusSelected("Online") },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(vertical = 4.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B82F6))
+                ) {
+                    Text("Online", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
+
+                OutlinedButton(
+                    onClick = { onStatusSelected("Izin") },
+                    modifier = Modifier.weight(0.8f),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(vertical = 4.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFF59E0B)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.5f))
+                ) {
+                    Text("Izin", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
     }
 }
 
