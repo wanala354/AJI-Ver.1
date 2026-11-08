@@ -18,8 +18,10 @@ object EligibilityHelper {
         if (isKelompok) {
             val sk = (s.kelompokPengajian ?: "").trim().lowercase()
             val jk = (j.kelompokPengajian ?: "").trim().lowercase()
-            if (sk != jk) {
-                return false
+            if (sk.isNotBlank() && !sk.equals("semua", ignoreCase = true) && !sk.equals("desa", ignoreCase = true) && !sk.equals("daerah", ignoreCase = true)) {
+                if (sk != jk) {
+                    return false
+                }
             }
         }
         

@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,6 +35,8 @@ import com.example.ajiportal.data.model.Jadwal
 import com.example.ajiportal.data.model.Jamaah
 import com.example.ajiportal.data.model.Presensi
 import com.example.ajiportal.data.model.Pengurus
+import com.example.ajiportal.data.model.MasterJenisPengajian
+import com.example.ajiportal.utils.EligibilityHelper
 import com.example.ajiportal.theme.*
 import com.example.ajiportal.ui.components.IslamicMedallion
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,7 +58,8 @@ sealed interface AbsensiUiState {
         val allJamaah: List<Jamaah>,
         val pengurusRoles: List<Pengurus>,
         val myRole: String,
-        val userKelompok: String
+        val userKelompok: String,
+        val masterJenisList: List<MasterJenisPengajian> = emptyList()
     ) : AbsensiUiState
     data class Error(val message: String) : AbsensiUiState
 }
@@ -77,6 +81,7 @@ class AbsensiViewModel(private val repository: DataRepository) : ViewModel() {
                 val schedules = repository.getSchedules()
                 val jamaahList = repository.getAllJamaah()
                 val pengurus = repository.getMyPengurusRoles()
+                val masterJenis = try { repository.getMasterJenisPengajian() } catch (e: Exception) { emptyList() }
                 val role = repository.sessionManager.getRole() ?: "jamaah"
                 var userKelompok = repository.sessionManager.getKelompok() ?: ""
                 
@@ -115,14 +120,15 @@ class AbsensiViewModel(private val repository: DataRepository) : ViewModel() {
                     allJamaah = jamaahList,
                     pengurusRoles = pengurus,
                     myRole = role,
-                    userKelompok = userKelompok
+                    userKelompok = userKelompok,
+                    masterJenisList = masterJenis
                 )
 
                 activeSchedule?.let {
                     loadPresensiForSession(it.id)
                 }
             } catch (e: Exception) {
-                _uiState.value = AbsensiUiState.Error(e.message ?: "Gagal memuat data absensi.")
+                _uiState.value = AbsensiUiState.Error(e.message ?: "Gagal memuat data presensi.")
             }
         }
     }
@@ -374,58 +380,6 @@ fun AbsensiScreen(
                     var selectedTab by remember { mutableStateOf(0) } // 0: Cari/Input, 1: Hadir Fisik, 2: Online, 3: Izin, 4: Belum
                     var selectedGender by remember { mutableStateOf("Semua") } // "Semua", "Laki-laki", "Perempuan"
 
-                    // Search input
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        label = { Text(if (selectedTab == 0) "Cari Nama Jamaah untuk Absensi" else "Filter Nama Jamaah") },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = EmeraldPrimary) },
-                        singleLine = true,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 10.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = EmeraldPrimary,
-                            focusedLabelColor = EmeraldPrimary
-                        ),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-
-                    // Gender Filter Bar
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 10.dp)
-                    ) {
-                        Text("JK:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextMuted)
-                        listOf("Semua", "Laki-laki", "Perempuan").forEach { genderOption ->
-                            val isSelected = selectedGender == genderOption
-                            Box(
-                                modifier = Modifier
-                                    .background(
-                                        if (isSelected) EmeraldPrimary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                                        RoundedCornerShape(16.dp)
-                                    )
-                                    .border(
-                                        1.dp,
-                                        if (isSelected) EmeraldPrimary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-                                        RoundedCornerShape(16.dp)
-                                    )
-                                    .clickable { selectedGender = genderOption }
-                                    .padding(horizontal = 12.dp, vertical = 5.dp)
-                            ) {
-                                Text(
-                                    text = genderOption,
-                                    fontSize = 11.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) EmeraldDark else MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                        }
-                    }
-
                     if (selectedSession == null) {
                         Box(
                             modifier = Modifier
@@ -468,28 +422,101 @@ fun AbsensiScreen(
                             }
                         }
 
-                        val countFisik = remember(baseList, presensiMap, selectedGender) {
-                            baseList.count { j ->
-                                val matchGender = selectedGender == "Semua" || j.jenisKelamin.trim().equals(selectedGender, ignoreCase = true)
-                                matchGender && presensiMap[j.id]?.status == "Hadir Fisik"
+                        val sessionTargetJamaah = remember(baseList, session, state.masterJenisList, state.pengurusRoles) {
+                            val eligible = baseList.filter { j ->
+                                EligibilityHelper.isJamaahEligible(j, session, state.masterJenisList, state.pengurusRoles)
                             }
+                            if (eligible.isNotEmpty()) eligible else baseList
                         }
-                        val countOnline = remember(baseList, presensiMap, selectedGender) {
-                            baseList.count { j ->
-                                val matchGender = selectedGender == "Semua" || j.jenisKelamin.trim().equals(selectedGender, ignoreCase = true)
-                                matchGender && presensiMap[j.id]?.status == "Online"
+
+                        val currentTargetJamaah = remember(sessionTargetJamaah, selectedGender) {
+                            if (selectedGender == "Semua") sessionTargetJamaah
+                            else sessionTargetJamaah.filter { it.jenisKelamin.trim().equals(selectedGender, ignoreCase = true) }
+                        }
+
+                        val countFisik = remember(currentTargetJamaah, presensiMap) {
+                            currentTargetJamaah.count { presensiMap[it.id]?.status == "Hadir Fisik" }
+                        }
+                        val countOnline = remember(currentTargetJamaah, presensiMap) {
+                            currentTargetJamaah.count { presensiMap[it.id]?.status == "Online" }
+                        }
+                        val countIzin = remember(currentTargetJamaah, presensiMap) {
+                            currentTargetJamaah.count { presensiMap[it.id]?.status == "Izin" }
+                        }
+                        val countBelum = remember(currentTargetJamaah, presensiMap) {
+                            currentTargetJamaah.count { presensiMap[it.id] == null || presensiMap[it.id]?.status == "Alpha" }
+                        }
+
+                        val targetCategory = remember(session, state.masterJenisList) {
+                            val cleanName = (session.jenisPengajian ?: "").trim().lowercase().replace("\\s+".toRegex(), "")
+                            val match = state.masterJenisList.find { item ->
+                                item.nama.trim().lowercase().replace("\\s+".toRegex(), "") == cleanName
                             }
+                            match?.pesertaPengajian?.takeIf { it.isNotBlank() } ?: (session.tingkatPengajian ?: "Umum")
                         }
-                        val countIzin = remember(baseList, presensiMap, selectedGender) {
-                            baseList.count { j ->
-                                val matchGender = selectedGender == "Semua" || j.jenisKelamin.trim().equals(selectedGender, ignoreCase = true)
-                                matchGender && presensiMap[j.id]?.status == "Izin"
-                            }
-                        }
-                        val countBelum = remember(baseList, presensiMap, selectedGender) {
-                            baseList.count { j ->
-                                val matchGender = selectedGender == "Semua" || j.jenisKelamin.trim().equals(selectedGender, ignoreCase = true)
-                                matchGender && (presensiMap[j.id] == null || presensiMap[j.id]?.status == "Alpha")
+
+                        // Informasi Prosentase Kehadiran Sesi Sesuai Jadwal
+                        SesiKehadiranStatsCard(
+                            session = session,
+                            targetCategory = targetCategory,
+                            totalTarget = currentTargetJamaah.size,
+                            hadirFisik = countFisik,
+                            online = countOnline,
+                            izin = countIzin,
+                            belum = countBelum,
+                            selectedGender = selectedGender,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+
+                        // Search input
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            label = { Text(if (selectedTab == 0) "Cari Nama Jamaah untuk Presensi" else "Filter Nama Jamaah") },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = EmeraldPrimary) },
+                            singleLine = true,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 10.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = EmeraldPrimary,
+                                focusedLabelColor = EmeraldPrimary
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        // Gender Filter Bar
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 10.dp)
+                        ) {
+                            Text("JK:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextMuted)
+                            listOf("Semua", "Laki-laki", "Perempuan").forEach { genderOption ->
+                                val isSelected = selectedGender == genderOption
+                                Box(
+                                    modifier = Modifier
+                                        .background(
+                                            if (isSelected) EmeraldPrimary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                            RoundedCornerShape(16.dp)
+                                        )
+                                        .border(
+                                            1.dp,
+                                            if (isSelected) EmeraldPrimary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                                            RoundedCornerShape(16.dp)
+                                        )
+                                        .clickable { selectedGender = genderOption }
+                                        .padding(horizontal = 12.dp, vertical = 5.dp)
+                                ) {
+                                    Text(
+                                        text = genderOption,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) EmeraldDark else MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
                             }
                         }
 
@@ -550,22 +577,22 @@ fun AbsensiScreen(
                             }
                         }
 
-                        val filteredJamaah = remember(selectedTab, searchQuery, selectedGender, baseList, presensiMap) {
+                        val filteredJamaah = remember(selectedTab, searchQuery, selectedGender, baseList, currentTargetJamaah, presensiMap) {
                             val searchClean = searchQuery.trim()
                             val tabList = when (selectedTab) {
-                                1 -> baseList.filter { presensiMap[it.id]?.status == "Hadir Fisik" }
-                                2 -> baseList.filter { presensiMap[it.id]?.status == "Online" }
-                                3 -> baseList.filter { presensiMap[it.id]?.status == "Izin" }
-                                4 -> baseList.filter { presensiMap[it.id] == null || presensiMap[it.id]?.status == "Alpha" }
+                                1 -> currentTargetJamaah.filter { presensiMap[it.id]?.status == "Hadir Fisik" }
+                                2 -> currentTargetJamaah.filter { presensiMap[it.id]?.status == "Online" }
+                                3 -> currentTargetJamaah.filter { presensiMap[it.id]?.status == "Izin" }
+                                4 -> currentTargetJamaah.filter { presensiMap[it.id] == null || presensiMap[it.id]?.status == "Alpha" }
                                 else -> {
                                     if (searchClean.isEmpty()) emptyList() else baseList
                                 }
                             }
 
-                            val byGender = if (selectedGender == "Semua") {
-                                tabList
-                            } else {
+                            val byGender = if (selectedTab == 0 && selectedGender != "Semua") {
                                 tabList.filter { it.jenisKelamin.trim().equals(selectedGender, ignoreCase = true) }
+                            } else {
+                                tabList
                             }
 
                             if (searchClean.isEmpty()) {
@@ -591,7 +618,7 @@ fun AbsensiScreen(
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
-                                        text = "Ketik nama jamaah pada kolom pencarian untuk melakukan absensi, atau pilih tab Hadir Fisik, Online, Izin, & Belum di atas.",
+                                        text = "Ketik nama jamaah pada kolom pencarian untuk melakukan presensi, atau pilih tab Hadir Fisik, Online, Izin, & Belum di atas.",
                                         fontSize = 13.sp,
                                         color = TextMuted,
                                         textAlign = TextAlign.Center,
@@ -605,7 +632,7 @@ fun AbsensiScreen(
                                 selectedTab == 1 -> "Belum ada jamaah (${selectedGender}) yang tercatat Hadir Fisik pada sesi ini."
                                 selectedTab == 2 -> "Belum ada jamaah (${selectedGender}) yang tercatat Online pada sesi ini."
                                 selectedTab == 3 -> "Belum ada jamaah (${selectedGender}) yang tercatat Izin pada sesi ini."
-                                selectedTab == 4 -> "Alhamdulillah! Semua jamaah (${selectedGender}) sudah tercatat absensi."
+                                selectedTab == 4 -> "Alhamdulillah! Semua jamaah (${selectedGender}) sasaran sudah tercatat presensi."
                                 else -> "Tidak ada data jamaah."
                             }
                             Box(
@@ -896,7 +923,7 @@ fun JamaahAbsensiCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Cancel,
-                            contentDescription = "Reset Absensi",
+                            contentDescription = "Reset Presensi",
                             tint = ColorDanger,
                             modifier = Modifier.size(16.dp)
                         )
@@ -1030,5 +1057,227 @@ fun JamaahListItem(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun SesiKehadiranStatsCard(
+    session: Jadwal,
+    targetCategory: String,
+    totalTarget: Int,
+    hadirFisik: Int,
+    online: Int,
+    izin: Int,
+    belum: Int,
+    selectedGender: String,
+    modifier: Modifier = Modifier
+) {
+    val totalHadir = hadirFisik + online
+    val pctKehadiran = if (totalTarget > 0) Math.round((totalHadir.toFloat() / totalTarget) * 100) else 0
+    val safePct = pctKehadiran.coerceIn(0, 100)
+
+    val pctFisik = if (totalTarget > 0) Math.round((hadirFisik.toFloat() / totalTarget) * 100) else 0
+    val pctOnline = if (totalTarget > 0) Math.round((online.toFloat() / totalTarget) * 100) else 0
+    val pctIzin = if (totalTarget > 0) Math.round((izin.toFloat() / totalTarget) * 100) else 0
+    val pctBelum = if (totalTarget > 0) Math.round((belum.toFloat() / totalTarget) * 100) else 0
+
+    val pctColor = when {
+        safePct >= 75 -> Color(0xFF10B981) // Green
+        safePct >= 50 -> Color(0xFFF59E0B) // Amber
+        else -> Color(0xFFEF4444) // Red
+    }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            // Header Row: Title & Percentage
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .background(EmeraldPrimary.copy(alpha = 0.12f), RoundedCornerShape(8.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Analytics,
+                                contentDescription = null,
+                                tint = EmeraldPrimary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "PROSENTASE KEHADIRAN",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = EmeraldDark,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "${session.jenisPengajian ?: "Pengajian"} • Sasaran: $totalTarget Jamaah ($targetCategory)${if (selectedGender != "Semua") " • $selectedGender" else ""}",
+                        fontSize = 11.sp,
+                        color = TextMuted,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                // Percentage Badge
+                Column(horizontalAlignment = Alignment.End) {
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(
+                            text = "$safePct",
+                            fontSize = 26.sp,
+                            fontWeight = FontWeight.Black,
+                            color = pctColor,
+                            lineHeight = 26.sp
+                        )
+                        Text(
+                            text = "%",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = pctColor,
+                            modifier = Modifier.padding(bottom = 2.dp, start = 1.dp)
+                        )
+                    }
+                    Text(
+                        text = "$totalHadir/$totalTarget Hadir",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextMuted
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Multi-segment progress bar
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
+            ) {
+                if (totalTarget > 0) {
+                    Row(modifier = Modifier.fillMaxSize()) {
+                        val weightFisik = (hadirFisik.toFloat() / totalTarget).coerceIn(0f, 1f)
+                        val weightOnline = (online.toFloat() / totalTarget).coerceIn(0f, 1f)
+                        val weightIzin = (izin.toFloat() / totalTarget).coerceIn(0f, 1f)
+                        val weightBelum = (belum.toFloat() / totalTarget).coerceIn(0f, 1f)
+
+                        if (weightFisik > 0f) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .weight(weightFisik)
+                                    .background(Color(0xFF10B981))
+                            )
+                        }
+                        if (weightOnline > 0f) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .weight(weightOnline)
+                                    .background(Color(0xFF3B82F6))
+                            )
+                        }
+                        if (weightIzin > 0f) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .weight(weightIzin)
+                                    .background(Color(0xFFF59E0B))
+                            )
+                        }
+                        if (weightBelum > 0f) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .weight(weightBelum)
+                                    .background(Color(0xFF9CA3AF).copy(alpha = 0.35f))
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // 4 Mini Breakdown Chips
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                StatusMiniChip(
+                    label = "Fisik",
+                    count = hadirFisik,
+                    pct = pctFisik,
+                    color = Color(0xFF10B981)
+                )
+                StatusMiniChip(
+                    label = "Online",
+                    count = online,
+                    pct = pctOnline,
+                    color = Color(0xFF3B82F6)
+                )
+                StatusMiniChip(
+                    label = "Izin",
+                    count = izin,
+                    pct = pctIzin,
+                    color = Color(0xFFF59E0B)
+                )
+                StatusMiniChip(
+                    label = "Belum",
+                    count = belum,
+                    pct = pctBelum,
+                    color = Color(0xFF6B7280)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatusMiniChip(
+    label: String,
+    count: Int,
+    pct: Int,
+    color: Color
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .background(color, RoundedCornerShape(3.dp))
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = label,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                color = TextMuted
+            )
+        }
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = "$count ($pct%)",
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }

@@ -180,7 +180,7 @@ fun MainScreen(
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
                     icon = { Icon(Icons.Default.Assignment, contentDescription = null) },
-                    label = { Text("Absensi") },
+                    label = { Text("Presensi") },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = MaterialTheme.colorScheme.primary,
                         selectedTextColor = MaterialTheme.colorScheme.primary,

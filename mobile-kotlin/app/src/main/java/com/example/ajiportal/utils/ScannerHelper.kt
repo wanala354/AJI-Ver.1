@@ -164,10 +164,10 @@ object ScannerHelper {
                                         val timeState = DateUtils.getCheckInTimeState(match.waktuMulai, match.waktuSelesai)
                                         when (timeState) {
                                             CheckInTimeState.NOT_OPENED -> {
-                                                Toast.makeText(context, "Absensi belum dibuka untuk pengajian $jenis.", Toast.LENGTH_LONG).show()
+                                                Toast.makeText(context, "Presensi belum dibuka untuk pengajian $jenis.", Toast.LENGTH_LONG).show()
                                             }
                                             CheckInTimeState.CLOSED -> {
-                                                Toast.makeText(context, "Absensi sudah ditutup untuk pengajian $jenis.", Toast.LENGTH_LONG).show()
+                                                Toast.makeText(context, "Presensi sudah ditutup untuk pengajian $jenis.", Toast.LENGTH_LONG).show()
                                             }
                                             CheckInTimeState.OPENED -> {
                                                 showConfirmationDialog(context, match, repository, coroutineScope, onSuccess)

@@ -504,7 +504,7 @@ fun FamilyMemberCard(
                     colors = ButtonDefaults.textButtonColors(contentColor = EmeraldPrimary)
                 ) {
                     Text(
-                        text = "Lihat Detail & Absensi",
+                        text = "Lihat Detail & Presensi",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 13.sp
                     )
@@ -573,7 +573,7 @@ fun FamilyMemberDetailDialog(
                     Tab(
                         selected = activeTab == 1,
                         onClick = { activeTab = 1 },
-                        text = { Text("Statistik Absensi", fontWeight = FontWeight.Bold, fontSize = 14.sp) }
+                        text = { Text("Statistik Presensi", fontWeight = FontWeight.Bold, fontSize = 14.sp) }
                     )
                 }
 

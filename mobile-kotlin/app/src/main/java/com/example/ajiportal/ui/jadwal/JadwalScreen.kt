@@ -557,7 +557,7 @@ fun ScheduleDetailCard(
                             ),
                             shape = RoundedCornerShape(10.dp)
                         ) {
-                            Text("Absensi Belum Dibuka", fontWeight = FontWeight.Bold)
+                            Text("Presensi Belum Dibuka", fontWeight = FontWeight.Bold)
                         }
                     }
                     CheckInTimeState.CLOSED -> {
@@ -571,7 +571,7 @@ fun ScheduleDetailCard(
                             ),
                             shape = RoundedCornerShape(10.dp)
                         ) {
-                            Text("Absensi Sudah Ditutup", fontWeight = FontWeight.Bold)
+                            Text("Presensi Sudah Ditutup", fontWeight = FontWeight.Bold)
                         }
                     }
                     CheckInTimeState.OPENED -> {
