@@ -235,24 +235,74 @@ fun AbsensiScreen(
         }
         is AbsensiUiState.Success -> {
             var searchQuery by remember { mutableStateOf("") }
-            // Filter today's schedules & define wildcard visible sessions
+
+            val roleLower = state.myRole.lowercase().trim()
+            val isDesaOrHigher = remember(roleLower, state.pengurusRoles, state.userKelompok) {
+                roleLower == "admin" ||
+                roleLower.contains("desa") ||
+                roleLower.contains("daerah") ||
+                state.userKelompok.equals("semua", ignoreCase = true) ||
+                state.pengurusRoles.any { p ->
+                    val t = (p.tingkatPengurus ?: "").lowercase()
+                    t.contains("desa") || t.contains("daerah")
+                }
+            }
+
+            val isKelompokLocked = remember(state.userKelompok, isDesaOrHigher) {
+                !isDesaOrHigher && 
+                state.userKelompok.isNotBlank() && 
+                !state.userKelompok.equals("semua", ignoreCase = true)
+            }
+
+            val allKelompokOptions = remember(state.allJamaah) {
+                val fromDb = state.allJamaah.map { it.kelompokPengajian.trim() }.filter { it.isNotBlank() }.distinct()
+                val standard = listOf("Pondok Melati", "Pondok Melati Selatan", "Jatiranggon", "Chandra")
+                val combined = (standard + fromDb).distinct().sorted()
+                listOf("Semua") + combined
+            }
+
+            var selectedKelompok by remember(state.userKelompok, isKelompokLocked, isDesaOrHigher) {
+                mutableStateOf(if (isKelompokLocked) state.userKelompok.trim() else "Semua")
+            }
+
+            val activeKelompok = if (isKelompokLocked) state.userKelompok.trim() else selectedKelompok
+
+            // Filter schedules according to selected / active kelompok
+            val filteredSchedulesByKelompok = remember(state.schedules, activeKelompok) {
+                val k = activeKelompok.trim().lowercase()
+                if (k.isEmpty() || k == "semua") {
+                    state.schedules
+                } else {
+                    state.schedules.filter { s ->
+                        val sk = (s.kelompokPengajian ?: "").trim().lowercase()
+                        sk == k || sk == "semua"
+                    }
+                }
+            }
+
+            // Filter today's schedules & define visible sessions based on filtered schedules
             val todayStr = LocalDate.now().toString()
-            val todaySchedules = state.schedules.filter { it.tanggal == todayStr }
+            val todaySchedules = filteredSchedulesByKelompok.filter { it.tanggal == todayStr }
             
-            // Show today's sessions, or fallback to the latest 5 sessions in the database
-            val visibleSessions = remember(todaySchedules, state.schedules) {
+            // Show today's sessions for selected kelompok, or fallback to the latest 5 sessions
+            val visibleSessions = remember(todaySchedules, filteredSchedulesByKelompok) {
                 if (todaySchedules.isNotEmpty()) {
                     todaySchedules
                 } else {
-                    state.schedules.sortedByDescending { it.tanggal + " " + (it.waktuMulai ?: "") }.take(5)
+                    filteredSchedulesByKelompok.sortedByDescending { it.tanggal + " " + (it.waktuMulai ?: "") }.take(5)
                 }
             }
 
             var selectedSession by remember { mutableStateOf<Jadwal?>(null) }
             
             LaunchedEffect(viewModel.activeSchedule, visibleSessions) {
-                if (selectedSession == null) {
-                    selectedSession = viewModel.activeSchedule ?: visibleSessions.firstOrNull()
+                if (visibleSessions.isNotEmpty()) {
+                    if (selectedSession == null || visibleSessions.none { it.id == selectedSession?.id }) {
+                        selectedSession = viewModel.activeSchedule?.takeIf { act -> visibleSessions.any { it.id == act.id } }
+                            ?: visibleSessions.firstOrNull()
+                    }
+                } else {
+                    selectedSession = null
                 }
             }
 
@@ -295,37 +345,6 @@ fun AbsensiScreen(
 
                 var selectedTab by remember { mutableStateOf(0) } // 0: Semua/Input, 1: Hadir Fisik, 2: Online, 3: Izin, 4: Belum
                 var selectedGender by remember { mutableStateOf("Semua") } // "Semua", "Laki-laki", "Perempuan"
-
-                val roleLower = state.myRole.lowercase().trim()
-                val isDesaOrHigher = remember(roleLower, state.pengurusRoles, state.userKelompok) {
-                    roleLower == "admin" ||
-                    roleLower.contains("desa") ||
-                    roleLower.contains("daerah") ||
-                    state.userKelompok.equals("semua", ignoreCase = true) ||
-                    state.pengurusRoles.any { p ->
-                        val t = (p.tingkatPengurus ?: "").lowercase()
-                        t.contains("desa") || t.contains("daerah")
-                    }
-                }
-
-                val isKelompokLocked = remember(state.userKelompok, isDesaOrHigher) {
-                    !isDesaOrHigher && 
-                    state.userKelompok.isNotBlank() && 
-                    !state.userKelompok.equals("semua", ignoreCase = true)
-                }
-
-                val allKelompokOptions = remember(state.allJamaah) {
-                    val fromDb = state.allJamaah.map { it.kelompokPengajian.trim() }.filter { it.isNotBlank() }.distinct()
-                    val standard = listOf("Pondok Melati", "Pondok Melati Selatan", "Jatiranggon", "Chandra")
-                    val combined = (standard + fromDb).distinct().sorted()
-                    listOf("Semua") + combined
-                }
-
-                var selectedKelompok by remember(state.userKelompok, isKelompokLocked, isDesaOrHigher) {
-                    mutableStateOf(if (isKelompokLocked) state.userKelompok.trim() else "Semua")
-                }
-
-                val activeKelompok = if (isKelompokLocked) state.userKelompok.trim() else selectedKelompok
 
                 val baseList = remember(state.allJamaah, activeKelompok, selectedSession) {
                     val session = selectedSession
@@ -434,6 +453,84 @@ fun AbsensiScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    // Kelompok Filter Bar
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                            ) {
+                                Text("Kelompok:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextMuted)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                if (isKelompokLocked) {
+                                    // Terkunci untuk jamaah/operator yang memiliki kelompok spesifik
+                                    Box(
+                                        modifier = Modifier
+                                            .background(EmeraldPrimary.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
+                                            .border(1.dp, EmeraldPrimary.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+                                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Lock,
+                                                contentDescription = "Terkunci",
+                                                tint = EmeraldDark,
+                                                modifier = Modifier.size(13.dp)
+                                            )
+                                            Text(
+                                                text = activeKelompok,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = EmeraldDark
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    // Pilihan kelompok untuk user dengan status Semua atau Operator/Pengurus Desa
+                                    androidx.compose.foundation.lazy.LazyRow(
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        contentPadding = PaddingValues(vertical = 2.dp)
+                                    ) {
+                                        items(allKelompokOptions) { kOption ->
+                                            val isSelected = activeKelompok.equals(kOption, ignoreCase = true)
+                                            Box(
+                                                modifier = Modifier
+                                                    .background(
+                                                        if (isSelected) EmeraldPrimary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                                                        RoundedCornerShape(16.dp)
+                                                    )
+                                                    .border(
+                                                        1.dp,
+                                                        if (isSelected) EmeraldPrimary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                                                        RoundedCornerShape(16.dp)
+                                                    )
+                                                    .clickable { selectedKelompok = kOption }
+                                                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                                            ) {
+                                                Text(
+                                                    text = kOption,
+                                                    fontSize = 12.sp,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     // Active Session Selector Card
                     item {
                         Card(
@@ -574,74 +671,7 @@ fun AbsensiScreen(
                             )
                         }
 
-                        // Kelompok Filter Bar
-                        item {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Kelompok:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextMuted)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                if (isKelompokLocked) {
-                                    // Terkunci untuk jamaah/operator yang memiliki kelompok spesifik
-                                    Box(
-                                        modifier = Modifier
-                                            .background(EmeraldPrimary.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
-                                            .border(1.dp, EmeraldPrimary.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
-                                            .padding(horizontal = 10.dp, vertical = 5.dp)
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Lock,
-                                                contentDescription = "Terkunci",
-                                                tint = EmeraldDark,
-                                                modifier = Modifier.size(13.dp)
-                                            )
-                                            Text(
-                                                text = activeKelompok,
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = EmeraldDark
-                                            )
-                                        }
-                                    }
-                                } else {
-                                    // Pilihan kelompok untuk user dengan status Semua atau Admin
-                                    androidx.compose.foundation.lazy.LazyRow(
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                        contentPadding = PaddingValues(vertical = 2.dp)
-                                    ) {
-                                        items(allKelompokOptions) { kOption ->
-                                            val isSelected = activeKelompok.equals(kOption, ignoreCase = true)
-                                            Box(
-                                                modifier = Modifier
-                                                    .background(
-                                                        if (isSelected) EmeraldPrimary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                                                        RoundedCornerShape(16.dp)
-                                                    )
-                                                    .border(
-                                                        1.dp,
-                                                        if (isSelected) EmeraldPrimary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
-                                                        RoundedCornerShape(16.dp)
-                                                    )
-                                                    .clickable { selectedKelompok = kOption }
-                                                    .padding(horizontal = 12.dp, vertical = 5.dp)
-                                            ) {
-                                                Text(
-                                                    text = kOption,
-                                                    fontSize = 11.sp,
-                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                                    color = if (isSelected) EmeraldDark else MaterialTheme.colorScheme.onSurface
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+
 
                         // Gender Filter Bar
                         item {
