@@ -85,25 +85,36 @@ class AbsensiViewModel(private val repository: DataRepository) : ViewModel() {
                 val masterJenis = try { repository.getMasterJenisPengajian() } catch (e: Exception) { emptyList() }
                 val role = repository.sessionManager.getRole() ?: "jamaah"
                 var userKelompok = repository.sessionManager.getKelompok() ?: ""
+                val roleLower = role.lowercase().trim()
+
+                val isDesaOrHigher = roleLower == "admin" ||
+                    roleLower.contains("desa") ||
+                    roleLower.contains("daerah") ||
+                    userKelompok.equals("semua", ignoreCase = true) ||
+                    pengurus.any { p ->
+                        val t = (p.tingkatPengurus ?: "").lowercase()
+                        t.contains("desa") || t.contains("daerah")
+                    }
                 
-                // Fallback to linked jamaah's kelompok only if userKelompok is blank and not admin
-                if (userKelompok.isBlank() && !role.equals("admin", ignoreCase = true)) {
+                // Fallback to linked jamaah's kelompok only if userKelompok is blank and not desa/admin
+                if (userKelompok.isBlank() && !isDesaOrHigher) {
                     val myProfile = repository.getMyProfile()
                     if (myProfile != null && !myProfile.kelompokPengajian.isNullOrBlank()) {
                         userKelompok = myProfile.kelompokPengajian.trim()
                     }
                 }
 
-                val roleLower = role.lowercase().trim()
-                val isRestricted = roleLower == "operator kelompok" || roleLower == "pengurus kelompok" || roleLower == "jamaah" || roleLower == "user"
+                // Operator Desa dan Pengurus Desa dapat melihat semua kelompok
+                val effectiveUserKelompok = if (isDesaOrHigher) "Semua" else userKelompok
+                val isRestricted = !isDesaOrHigher && (roleLower == "operator kelompok" || roleLower == "pengurus kelompok" || roleLower == "jamaah" || roleLower == "user")
                 
-                val filteredSchedules = if (isRestricted && userKelompok.isNotBlank() && !userKelompok.equals("semua", ignoreCase = true)) {
+                val filteredSchedules = if (isRestricted && effectiveUserKelompok.isNotBlank() && !effectiveUserKelompok.equals("semua", ignoreCase = true)) {
                     schedules.filter { s ->
                         val tk = (s.tingkatPengajian ?: "").lowercase()
                         val isKelompok = tk.contains("kelompok") || (!tk.contains("desa") && !tk.contains("daerah"))
                         if (isKelompok) {
                             val sk = (s.kelompokPengajian ?: "").trim().lowercase()
-                            val jk = userKelompok.trim().lowercase()
+                            val jk = effectiveUserKelompok.trim().lowercase()
                             sk == jk
                         } else {
                             true
@@ -121,7 +132,7 @@ class AbsensiViewModel(private val repository: DataRepository) : ViewModel() {
                     allJamaah = jamaahList,
                     pengurusRoles = pengurus,
                     myRole = role,
-                    userKelompok = userKelompok,
+                    userKelompok = effectiveUserKelompok,
                     masterJenisList = masterJenis
                 )
 
@@ -253,14 +264,16 @@ fun AbsensiScreen(
 
             // Check if current user is authorized (admin/operator/pengurus)
             val isAuthorized = remember(state.myRole, state.pengurusRoles) {
-                state.myRole.lowercase() == "admin" || 
-                state.myRole.lowercase() == "operator" || 
+                val r = state.myRole.lowercase().trim()
+                r == "admin" || 
+                r.contains("operator") || 
+                r.contains("pengurus") || 
                 state.pengurusRoles.isNotEmpty()
             }
 
             val canEditOrDelete = remember(state.myRole) {
-                state.myRole.lowercase() == "admin" || 
-                state.myRole.lowercase() == "operator"
+                val r = state.myRole.lowercase().trim()
+                r == "admin" || r.contains("operator")
             }
 
             var dialogTargetJamaah by remember { mutableStateOf<Pair<Jamaah, String>?>(null) } // Jamaah and Status (Online/Izin)
@@ -284,8 +297,19 @@ fun AbsensiScreen(
                 var selectedGender by remember { mutableStateOf("Semua") } // "Semua", "Laki-laki", "Perempuan"
 
                 val roleLower = state.myRole.lowercase().trim()
-                val isKelompokLocked = remember(state.userKelompok, roleLower) {
-                    roleLower != "admin" && 
+                val isDesaOrHigher = remember(roleLower, state.pengurusRoles, state.userKelompok) {
+                    roleLower == "admin" ||
+                    roleLower.contains("desa") ||
+                    roleLower.contains("daerah") ||
+                    state.userKelompok.equals("semua", ignoreCase = true) ||
+                    state.pengurusRoles.any { p ->
+                        val t = (p.tingkatPengurus ?: "").lowercase()
+                        t.contains("desa") || t.contains("daerah")
+                    }
+                }
+
+                val isKelompokLocked = remember(state.userKelompok, isDesaOrHigher) {
+                    !isDesaOrHigher && 
                     state.userKelompok.isNotBlank() && 
                     !state.userKelompok.equals("semua", ignoreCase = true)
                 }
@@ -297,7 +321,7 @@ fun AbsensiScreen(
                     listOf("Semua") + combined
                 }
 
-                var selectedKelompok by remember(state.userKelompok, isKelompokLocked) {
+                var selectedKelompok by remember(state.userKelompok, isKelompokLocked, isDesaOrHigher) {
                     mutableStateOf(if (isKelompokLocked) state.userKelompok.trim() else "Semua")
                 }
 

@@ -59,7 +59,9 @@ sealed interface JadwalUiState {
         val myPresensi: List<Presensi>,
         val masterJenisList: List<MasterJenisPengajian>,
         val pengurusRoles: List<Pengurus>,
-        val jamaah: Jamaah
+        val jamaah: Jamaah,
+        val myRole: String = "jamaah",
+        val userKelompok: String = ""
     ) : JadwalUiState
     data class Error(val message: String) : JadwalUiState
 }
@@ -81,12 +83,16 @@ class JadwalViewModel(private val repository: DataRepository) : ViewModel() {
                 val presensi = repository.getMyPresensi()
                 val masterJenisList = repository.getMasterJenisPengajian()
                 val pengurusRoles = repository.getMyPengurusRoles()
+                val role = repository.sessionManager.getRole() ?: "jamaah"
+                val userKelompok = repository.sessionManager.getKelompok() ?: ""
                 _uiState.value = JadwalUiState.Success(
                     allSchedules = schedules,
                     myPresensi = presensi,
                     masterJenisList = masterJenisList,
                     pengurusRoles = pengurusRoles,
-                    jamaah = jamaah
+                    jamaah = jamaah,
+                    myRole = role,
+                    userKelompok = userKelompok
                 )
             } catch (e: Exception) {
                 _uiState.value = JadwalUiState.Error(e.message ?: "Gagal memuat jadwal.")
@@ -104,12 +110,16 @@ class JadwalViewModel(private val repository: DataRepository) : ViewModel() {
                     val presensi = repository.getMyPresensi()
                     val masterJenisList = repository.getMasterJenisPengajian()
                     val pengurusRoles = repository.getMyPengurusRoles()
+                    val role = repository.sessionManager.getRole() ?: "jamaah"
+                    val userKelompok = repository.sessionManager.getKelompok() ?: ""
                     _uiState.value = JadwalUiState.Success(
                         allSchedules = schedules,
                         myPresensi = presensi,
                         masterJenisList = masterJenisList,
                         pengurusRoles = pengurusRoles,
-                        jamaah = jamaah
+                        jamaah = jamaah,
+                        myRole = role,
+                        userKelompok = userKelompok
                     )
                 }
             }
@@ -226,13 +236,24 @@ fun JadwalContent(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
 
-        // Filter schedules for the selected day (shows ALL schedules matching user kelompok or Desa/Daerah)
-        val daySchedules = remember(selectedDate, state.allSchedules, state.jamaah) {
+        // Filter schedules for the selected day (shows ALL schedules for Desa/Admin/Pengurus Desa, or matching user kelompok)
+        val daySchedules = remember(selectedDate, state.allSchedules, state.jamaah, state.pengurusRoles, state.myRole, state.userKelompok) {
+            val roleLower = state.myRole.lowercase().trim()
+            val userKelompok = state.userKelompok
+            val isDesaOrHigher = roleLower == "admin" ||
+                roleLower.contains("desa") ||
+                roleLower.contains("daerah") ||
+                userKelompok.equals("semua", ignoreCase = true) ||
+                state.pengurusRoles.any { p ->
+                    val t = (p.tingkatPengurus ?: "").lowercase()
+                    t.contains("desa") || t.contains("daerah")
+                }
+
             state.allSchedules.filter { s ->
                 if (s.tanggal != selectedDate.toString()) return@filter false
                 val tk = (s.tingkatPengajian ?: "").lowercase()
                 val isKelompok = tk.contains("kelompok") || (!tk.contains("desa") && !tk.contains("daerah"))
-                if (isKelompok) {
+                if (isKelompok && !isDesaOrHigher) {
                     val sk = (s.kelompokPengajian ?: "").trim().lowercase()
                     val jk = (state.jamaah.kelompokPengajian ?: "").trim().lowercase()
                     sk == jk
