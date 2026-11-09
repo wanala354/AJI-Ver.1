@@ -268,6 +268,7 @@ fun AbsensiScreen(
             val activeKelompok = if (isKelompokLocked) state.userKelompok.trim() else selectedKelompok
 
             // Filter schedules according to selected / active kelompok
+            // Pengajian Tingkat Desa dan Daerah tetap muncul untuk semua kelompok karena melibatkan seluruh jamaah
             val filteredSchedulesByKelompok = remember(state.schedules, activeKelompok) {
                 val k = activeKelompok.trim().lowercase()
                 if (k.isEmpty() || k == "semua") {
@@ -275,7 +276,9 @@ fun AbsensiScreen(
                 } else {
                     state.schedules.filter { s ->
                         val sk = (s.kelompokPengajian ?: "").trim().lowercase()
-                        sk == k || sk == "semua"
+                        val tk = (s.tingkatPengajian ?: "").trim().lowercase()
+                        val isDesaOrDaerah = tk.contains("desa") || tk.contains("daerah") || sk == "desa" || sk == "daerah" || sk == "semua"
+                        sk == k || isDesaOrDaerah
                     }
                 }
             }
